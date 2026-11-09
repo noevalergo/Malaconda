@@ -264,10 +264,10 @@ Shipping status is set by the admin.
 | Rule | Value (server-enforced) |
 |---|---|
 | Products | `B2B_LULO_24`, `B2B_GUAVA_24`: case of **24 bottles, one flavour per case** (no mixed cases) |
-| Base price | CHF 54.00 (`5400`) |
+| Base price | CHF 54.00 (`5400`) per case, VAT included |
 | Partner discount | 10%, automatic for **approved** partners |
 | Partner price | CHF 48.60 (`4860`) per case |
-| Quantity | Whole cases, integer, **5 ≤ total cases ≤ 10** (whether flavours can be combined in one order: §11 B3b) |
+| Quantity | **Exactly 5 or 10 cases**, all of **one flavour** per order. Allowed orders: 5 Lulo · 10 Lulo · 5 Guava · 10 Guava. Anything else is rejected by the server. |
 | Deposit | 20% of the discounted total |
 
 | Cases | Base | −10% | Total | 20% deposit | 80% balance |
@@ -292,7 +292,7 @@ session**. They are not in the public HTML or JavaScript.
 ### 4.2 Pre-order and payment
 
 ```
-5. B2B cart: case quantity 5–10 → summary (quantity, base price, 10% discount,
+5. B2B cart: flavour (Lulo or Guava) + 5 or 10 cases → summary (quantity, base price, 10% discount,
    total, deposit today, balance on delivery)
 6. Choose payment:
    A) STRIPE  → POST /api/b2b/preorder { qty, workflow: "STRIPE" }
@@ -409,10 +409,35 @@ is bound to that customer's Stripe customer ID and email.
 
 ---
 
+## 5b. Ambassador codes (in the MVP, rules to confirm in §11 A1–A7)
+
+Each ambassador has one personal code. A customer using it gets a discount;
+the ambassador earns a commission on the paid order.
+
+**`ambassadors/{ambassadorId}`**
+
+```js
+{ name, email, code: "MARIA", commissionPct: 20, active: true, createdAt }
+```
+
+**`promoCodes/{CODE}`**: same collection as WELCOME20, with
+`ambassadorId` set, `firstPurchaseOnly: false`,
+`requiresVerifiedEmail: false` (proposed), its own discount value.
+
+**On the order**: `ambassadorId`, `commissionBaseCents`, `commissionCents`,
+`commissionStatus: "PENDING" | "PAYABLE" | "PAID" | "CANCELLED"`.
+Commission is calculated by the server **only when Stripe confirms payment**,
+stored on the order (so later rate changes don't alter history), and set to
+`PAID` by the admin after paying the ambassador.
+
+Validation: code exists, active, valid dates, channel B2C, ambassador active.
+No reservation is needed for multi-use codes; one-per-customer limits (if
+chosen, A3) reuse the same deterministic-ID mechanism as WELCOME20.
+
 ## 6. Google Sheets: how it receives data
 
-One spreadsheet, five tabs: **Customers · Orders · Partners · Discount
-redemptions · Payments**. Columns are listed in §6.2.
+One spreadsheet, six tabs: **Customers · Orders · Partners · Discount
+redemptions · Payments · Ambassadors**. Columns are listed in §6.2.
 
 ### 6.1 Mechanism
 
@@ -446,6 +471,7 @@ event (webhook / form / admin action)
 | Partners | Customer ID | company, address, VAT, contact, approval status, pre-orders, cases |
 | Discount redemptions | Code + customer | code, customer ID, status, order ref, reserved/confirmed date |
 | Payments | Payment ID | order ref, kind, provider, amount, status, Stripe reference, date |
+| Ambassadors | Ambassador ID | name, code, orders attributed, sales, commission %, commission earned / paid / pending |
 
 B2B outstanding balance = total − paid, shown per order. Totals and reports are
 spreadsheet formulas in an extra "Reports" tab (not written by the server).
@@ -464,7 +490,8 @@ spreadsheet formulas in an extra "Reports" tab (not written by the server).
      (amount, date), confirm pre-order, mark delivered, cancel
   3. B2C orders: mark shipped / delivered
   4. Resend a confirmation email
-  5. Resync Google Sheets
+  5. Add / deactivate ambassadors and their codes; mark commissions paid
+  6. Resync Google Sheets
 - Every admin change is stored with who and when.
 
 ---
@@ -492,6 +519,15 @@ deployed to Hostinger before anything else is built. If it fails, we know on
 day 1, not at launch.
 
 ---
+
+## 8b. Database alternatives compatible with Hostinger
+
+| Option | Type | Hostinger | Zürich region | Cost at MVP volume | Fit for this project |
+|---|---|---|---|---|---|
+| **Firestore** (recommended) | NoSQL, managed by Google | Via outbound HTTPS (to verify in step 1) | Yes (`europe-west6`) | Free quota; never paused | Transactions + deterministic IDs cover one-time codes simply; no server to manage |
+| Supabase | PostgreSQL (SQL), managed | Listed in Hostinger's database connect wizard | Yes (`eu-central-2`) | Free plan pauses inactive projects; paid plan ~USD 25/month | Strong, but it's an SQL database (rejected direction) and the free plan's pausing is risky for a shop |
+| MongoDB Atlas | NoSQL, managed | Listed in Hostinger's database connect wizard | To be checked for the free tier | Free tier 512 MB | Works, but transactions are more involved than Firestore's for this use case |
+| Hostinger MySQL | SQL, on the hosting | Native (`localhost`) | Hostinger's data-centre region | Included | Owner asked to avoid a traditional SQL database |
 
 ## 9. Estimated recurring costs
 
@@ -546,29 +582,41 @@ Shipping, VAT and packaging costs aren't included above.
 | # | Decision |
 |---|---|
 | C1 | B2C price **CHF 39.00 per case of 12, VAT included** (both flavours). The current design shows CHF 36; the page will display the server price. |
+| C2 | B2C: maximum **10 cases** per order. |
 | C3 | **No.** WELCOME20 only for customers with **zero** paid orders. |
-| B3 | B2B cases contain **one flavour only** (no mixed cases). |
+| C4 | Guest checkout allowed. Email verification required for WELCOME20. |
+| B1 | Pre-order becomes `CONFIRMED_PREORDER` **when the 20% deposit is paid** (Stripe: automatically by webhook; invoice: when the admin records the payment). |
+| B2 | **Deposit 20% only.** No 100% upfront payment. |
+| B3 | B2B cases contain **one flavour only**. An order is **5 or 10 cases of one flavour**: 5 Lulo, 10 Lulo, 5 Guava or 10 Guava. |
 | B4 | **Approved:** partner approval; pre-order prices and form move from the home page to `/partners`. |
+| B7 | B2B CHF 54 per case **VAT included**. |
 | G3 | All payments through **Stripe Checkout**. Payment methods are switched on in the Stripe Dashboard (no code change). |
+| G4 | Email addresses: postponed until after architecture approval. |
+| G5 | **Ambassador codes and commissions are in the MVP** (§5b). |
+| G6 | Contact and ambassador application forms send an email to the team. |
 
 ### Still open
 
 B2C
-- **C2. Max cases per B2C order?** (Proposed: 1–10.)
-- **C4. Guest checkout without the code:** allowed without email verification?
-  (Proposed: **yes**. Verification only to use WELCOME20.)
 - **C5. Refund of a WELCOME20 order:** does the customer get the code back?
   (Proposed: no.)
 
 B2B
-- **B1. When is a pre-order "Confirmed"?** (Proposed: automatically when the
-  deposit is paid; or by admin.)
-- **B2. 100% upfront via Stripe:** allow or not?
-- **B3b. Flavours in one order:** can a partner combine cases of both flavours
-  in one pre-order (e.g. 3 Lulo + 2 Guava = 5 cases), or one flavour per order?
 - **B5. VAT/UID number required** for partner applications?
 - **B6. Close pre-orders automatically after Jan 31, 2027?**
-- **B7. VAT on B2B:** is CHF 54 also VAT-included?
+
+Ambassadors
+- **A1. Customer discount** with an ambassador code (e.g. 10%)?
+- **A2. Commission:** 20% (as shown on the site)? Calculated on the amount
+  actually paid for products (after discount, VAT incl., excluding shipping)?
+- **A3. Uses:** can the same customer use an ambassador code on every order?
+  (Proposed: yes.)
+- **A4. Combining:** ambassador code + WELCOME20 in the same order?
+  (Proposed: no. One code per order.)
+- **A5. Email verification** needed for ambassador codes? (Proposed: no.)
+- **A6. When is commission payable?** (Proposed: 14 days after payment if not
+  refunded; paid manually by Malaconda.)
+- **A7. B2B orders** count for ambassadors? (Proposed: no, B2C only.)
 
 General
 - **G1. VAT registration:** is Malaconda VAT-registered, and at what rate
@@ -577,13 +625,8 @@ General
   order or per case, free-shipping threshold?
 - **G3b. Which methods to enable in Stripe:** card, Apple Pay / Google Pay,
   TWINT? (Recommended: all three.)
-- **G4. Emails:** only Malaconda's confirmation (Stripe receipts off)? Sender
-  address? Team notification address? Admin email(s)?
-- **G5. Ambassadors:** ambassador codes and commissions in the MVP, or later?
-  (The data model supports adding them later.)
-- **G6. Contact and ambassador application forms** (currently broken):
-  include simple "email to the team" endpoints in the MVP? (Proposed: yes, small.)
-- **G7. Data location:** Firestore in Zürich (`europe-west6`)?
+- **G7. Database provider and location:** Firestore in Zürich
+  (`europe-west6`), or an alternative (see §8b).
 - **G8. Legal pages:** privacy policy, terms, imprint needed before live
   payments (we store customer data).
 
