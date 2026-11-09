@@ -1,0 +1,67 @@
+# =============================================================
+# MALACONDA — .gitignore
+# Rule of thumb: secrets, credentials and generated files never
+# enter Git. If in doubt, leave it out and ask.
+# =============================================================
+
+# ---------- Secrets & environment ----------
+# Real environment files are NEVER committed. Only .env.example is.
+.env
+.env.*
+!.env.example
+
+# Google service account keys and any other credential files
+*service-account*.json
+*credentials*.json
+*-key.json
+*.pem
+*.key
+*.p12
+*.pfx
+secrets/
+.secrets/
+
+# Stripe CLI local config
+.stripe/
+
+# ---------- Dependencies ----------
+node_modules/
+.npm/
+.pnpm-store/
+.yarn/
+
+# ---------- Build output & caches ----------
+dist/
+build/
+.cache/
+.vite/
+coverage/
+*.tsbuildinfo
+
+# ---------- Logs ----------
+logs/
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# ---------- Test artifacts ----------
+playwright-report/
+test-results/
+
+# ---------- Local scratch ----------
+tmp/
+*.tmp
+*.bak
+
+# ---------- OS / editor ----------
+.DS_Store
+Thumbs.db
+desktop.ini
+*.swp
+*~
+.idea/
+# Keep shared VS Code settings if we add them later, ignore personal ones
+.vscode/*
+!.vscode/extensions.json
+!.vscode/settings.json
