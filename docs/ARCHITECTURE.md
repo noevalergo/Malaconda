@@ -606,6 +606,10 @@ Shipping, VAT and packaging costs aren't included above.
 | A6 | Commissions paid **at the end of each month** (orders of that month, not refunded). |
 | A5 | **Email verification required** for ambassador codes (same as WELCOME20). |
 | A7 | B2C orders only. |
+| B5 | **No** VAT/UID number required for partner applications. |
+| B6 | Pre-orders are **not** closed automatically after Jan 31, 2027 (admin decides). |
+| G2 | B2C shipping: **Switzerland only** (cost and free-shipping threshold still open). |
+| G3b | Enable **card, Apple Pay / Google Pay and TWINT** in Stripe. |
 
 ### Still open
 
@@ -613,19 +617,13 @@ B2C
 - **C5. Refund of a WELCOME20 order:** does the customer get the code back?
   (Proposed: no.)
 
-B2B
-- **B5. VAT/UID number required** for partner applications?
-- **B6. Close pre-orders automatically after Jan 31, 2027?**
-
 General
 - **G1. VAT registration:** is Malaconda VAT-registered, and at what rate
   (for showing VAT on confirmation emails)?
-- **G2. Shipping (B2C):** which countries (CH only? CH + LI? EU?), cost per
-  order or per case, free-shipping threshold?
-- **G3b. Which methods to enable in Stripe:** card, Apple Pay / Google Pay,
-  TWINT? (Recommended: all three.)
-- **G7. Database provider and location:** Firestore in Zürich
-  (`europe-west6`), or an alternative (see §8b).
+- **G2b. Shipping cost (Switzerland):** cost per order or per case, and a
+  free-shipping threshold, if any?
+- **G7. Database provider: owner is evaluating alternatives** (see §8b).
+  Blocks the Hostinger compatibility test and implementation.
 - **G8. Legal pages:** privacy policy, terms, imprint needed before live
   payments (we store customer data).
 
