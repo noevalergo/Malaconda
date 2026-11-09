@@ -217,13 +217,13 @@ fails the `create()` and is skipped.
 
 ## 3. B2C purchasing flow (individual customers, `/`)
 
-Product (to confirm, §11 C1): **case of 12 bottles (12 × 20 cl), CHF 36.00**,
+Product (decided, §11): **case of 12 bottles (12 × 20 cl), CHF 39.00 incl. VAT**,
 one product per flavour:
 
 | SKU | Product | Price |
 |---|---|---|
-| `B2C_LULO_12` | Biting Lulo, case of 12 | 3600 |
-| `B2C_GUAVA_12` | Pink Guava, case of 12 | 3600 |
+| `B2C_LULO_12` | Biting Lulo, case of 12 | 3900 |
+| `B2C_GUAVA_12` | Pink Guava, case of 12 | 3900 |
 
 No single bottles and no 24-bottle cases in the B2C store; the server rejects
 any other SKU.
@@ -263,11 +263,11 @@ Shipping status is set by the admin.
 
 | Rule | Value (server-enforced) |
 |---|---|
-| Product | `B2B_CASE_24`: case of **24 bottles** |
+| Products | `B2B_LULO_24`, `B2B_GUAVA_24`: case of **24 bottles, one flavour per case** (no mixed cases) |
 | Base price | CHF 54.00 (`5400`) |
 | Partner discount | 10%, automatic for **approved** partners |
 | Partner price | CHF 48.60 (`4860`) per case |
-| Quantity | Whole cases, integer, **5 ≤ qty ≤ 10** |
+| Quantity | Whole cases, integer, **5 ≤ total cases ≤ 10** (whether flavours can be combined in one order: §11 B3b) |
 | Deposit | 20% of the discounted total |
 
 | Cases | Base | −10% | Total | 20% deposit | 80% balance |
@@ -507,8 +507,8 @@ Stripe fee examples (Swiss card):
 
 | Payment | Amount | Approx. fee |
 |---|---|---|
-| B2C 1 case | CHF 36.00 | CHF 1.34 |
-| B2C 1 case with WELCOME20 | CHF 28.80 | CHF 1.14 |
+| B2C 1 case | CHF 39.00 | CHF 1.43 |
+| B2C 1 case with WELCOME20 | CHF 31.20 | CHF 1.20 |
 | B2B deposit 5 cases | CHF 48.60 | CHF 1.71 |
 | B2B deposit 10 cases | CHF 97.20 | CHF 3.12 |
 
@@ -539,35 +539,44 @@ Shipping, VAT and packaging costs aren't included above.
 
 ---
 
-## 11. Decisions needed from the owner
+## 11. Decisions
 
-### B2C
-- **C1. Retail price:** confirm **CHF 36.00 per case of 12** for both
-  flavours. Incl. VAT?
+### Decided by the owner
+
+| # | Decision |
+|---|---|
+| C1 | B2C price **CHF 39.00 per case of 12, VAT included** (both flavours). The current design shows CHF 36; the page will display the server price. |
+| C3 | **No.** WELCOME20 only for customers with **zero** paid orders. |
+| B3 | B2B cases contain **one flavour only** (no mixed cases). |
+| B4 | **Approved:** partner approval; pre-order prices and form move from the home page to `/partners`. |
+| G3 | All payments through **Stripe Checkout**. Payment methods are switched on in the Stripe Dashboard (no code change). |
+
+### Still open
+
+B2C
 - **C2. Max cases per B2C order?** (Proposed: 1–10.)
-- **C3. "First purchase":** can someone who already bought **without**
-  WELCOME20 still use it later? (Proposed: **no**: WELCOME20 only for
-  customers with zero paid orders.)
 - **C4. Guest checkout without the code:** allowed without email verification?
   (Proposed: **yes**. Verification only to use WELCOME20.)
 - **C5. Refund of a WELCOME20 order:** does the customer get the code back?
   (Proposed: no.)
 
-### B2B
+B2B
 - **B1. When is a pre-order "Confirmed"?** (Proposed: automatically when the
   deposit is paid; or by admin.)
 - **B2. 100% upfront via Stripe:** allow or not?
-- **B3. Flavours per case:** does a partner choose Lulo / Guava / mixed per
-  case? (24-bottle case of one flavour, or mixed?)
-- **B4. Partner approval** (§4.1): confirm prices stay hidden until approved.
-  This changes the current home page, which shows pre-order prices publicly.
+- **B3b. Flavours in one order:** can a partner combine cases of both flavours
+  in one pre-order (e.g. 3 Lulo + 2 Guava = 5 cases), or one flavour per order?
 - **B5. VAT/UID number required** for partner applications?
 - **B6. Close pre-orders automatically after Jan 31, 2027?**
+- **B7. VAT on B2B:** is CHF 54 also VAT-included?
 
-### General
-- **G1. VAT:** prices incl. or excl. VAT; is Malaconda VAT-registered?
-- **G2. Shipping (B2C):** countries (CH / LI / EU?), cost, free-shipping threshold.
-- **G3. Payment methods:** card, Apple/Google Pay, TWINT?
+General
+- **G1. VAT registration:** is Malaconda VAT-registered, and at what rate
+  (for showing VAT on confirmation emails)?
+- **G2. Shipping (B2C):** which countries (CH only? CH + LI? EU?), cost per
+  order or per case, free-shipping threshold?
+- **G3b. Which methods to enable in Stripe:** card, Apple Pay / Google Pay,
+  TWINT? (Recommended: all three.)
 - **G4. Emails:** only Malaconda's confirmation (Stripe receipts off)? Sender
   address? Team notification address? Admin email(s)?
 - **G5. Ambassadors:** ambassador codes and commissions in the MVP, or later?
