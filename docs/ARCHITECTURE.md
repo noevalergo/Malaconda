@@ -610,6 +610,7 @@ Shipping, VAT and packaging costs aren't included above.
 | B6 | Pre-orders are **not** closed automatically after Jan 31, 2027 (admin decides). |
 | G2 | B2C shipping: **Switzerland only** (cost and free-shipping threshold still open). |
 | G3b | Enable **card, Apple Pay / Google Pay and TWINT** in Stripe. |
+| G7 | Database: **Google Firestore** (for now). All database access is kept in one service module so a later switch stays contained. |
 
 ### Still open
 
@@ -622,8 +623,8 @@ General
   (for showing VAT on confirmation emails)?
 - **G2b. Shipping cost (Switzerland):** cost per order or per case, and a
   free-shipping threshold, if any?
-- **G7. Database provider: owner is evaluating alternatives** (see §8b).
-  Blocks the Hostinger compatibility test and implementation.
+- **G7b. Firestore location:** Zürich (`europe-west6`) proposed. The location
+  can't be changed after the database is created.
 - **G8. Legal pages:** privacy policy, terms, imprint needed before live
   payments (we store customer data).
 
