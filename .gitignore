@@ -65,3 +65,9 @@ desktop.ini
 .vscode/*
 !.vscode/extensions.json
 !.vscode/settings.json
+
+# ---------- Firebase emulator / CLI ----------
+firebase-debug.log*
+firestore-debug.log*
+ui-debug.log*
+.firebase/

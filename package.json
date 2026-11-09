@@ -1,0 +1,27 @@
+{
+  "name": "malaconda",
+  "version": "0.1.0",
+  "private": true,
+  "description": "MALACONDA e-commerce: static frontend + Express backend (Firestore, Stripe, Google Sheets).",
+  "type": "module",
+  "main": "server/index.js",
+  "engines": {
+    "node": ">=22"
+  },
+  "scripts": {
+    "start": "node server/index.js",
+    "dev": "node --watch --env-file-if-exists=.env server/index.js",
+    "test": "node --test --test-concurrency=1 \"test/**/*.test.js\"",
+    "test:emulator": "firebase emulators:exec --only firestore --project demo-malaconda \"npm test\"",
+    "seed": "node --env-file-if-exists=.env scripts/seed.js"
+  },
+  "dependencies": {
+    "@googleapis/sheets": "18.1.1",
+    "express": "5.3.0",
+    "express-rate-limit": "8.7.1",
+    "firebase-admin": "14.5.0",
+    "helmet": "8.3.0",
+    "nodemailer": "10.2.1",
+    "stripe": "23.0.1"
+  }
+}
