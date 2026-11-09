@@ -417,15 +417,19 @@ the ambassador earns a commission on the paid order.
 **`ambassadors/{ambassadorId}`**
 
 ```js
-{ name, email, code: "MARIA", commissionPct: 20, active: true, createdAt }
+{ name, email, code: "MARIA", commissionCents: 500, active: true, createdAt }  // CHF 5 fixed
 ```
 
 **`promoCodes/{CODE}`**: same collection as WELCOME20, with
 `ambassadorId` set, `firstPurchaseOnly: false`,
-`requiresVerifiedEmail: false` (proposed), its own discount value.
+`requiresVerifiedEmail` (see A5), 20% discount, valid on the customer's **first order only**
+(same first-purchase rule as WELCOME20), not combinable with WELCOME20.
 
 **On the order**: `ambassadorId`, `commissionBaseCents`, `commissionCents`,
 `commissionStatus: "PENDING" | "PAYABLE" | "PAID" | "CANCELLED"`.
+Commission: **CHF 5 fixed** (per order or per case: A2b). Commissions of a
+calendar month become `PAYABLE` at month end (orders not refunded) and are
+paid manually by Malaconda.
 Commission is calculated by the server **only when Stripe confirms payment**,
 stored on the order (so later rate changes don't alter history), and set to
 `PAID` by the admin after paying the ambassador.
@@ -594,6 +598,12 @@ Shipping, VAT and packaging costs aren't included above.
 | G4 | Email addresses: postponed until after architecture approval. |
 | G5 | **Ambassador codes and commissions are in the MVP** (§5b). |
 | G6 | Contact and ambassador application forms send an email to the team. |
+| A1 | Ambassador code gives the customer **20%**, on the **first order only** (scope "first box": A1b). |
+| A2 | Ambassador commission: **CHF 5 fixed** (not 20%). The site text "Earn 20% commission" must be updated (design text change). |
+| A3 | Follows from A1: an ambassador code can be used **once per customer** (first order). |
+| A4 | **Not combinable** with WELCOME20. One code per order. |
+| A6 | Commissions paid **at the end of each month** (orders of that month, not refunded). |
+| A7 | B2C orders only. |
 
 ### Still open
 
@@ -606,17 +616,14 @@ B2B
 - **B6. Close pre-orders automatically after Jan 31, 2027?**
 
 Ambassadors
-- **A1. Customer discount** with an ambassador code (e.g. 10%)?
-- **A2. Commission:** 20% (as shown on the site)? Calculated on the amount
-  actually paid for products (after discount, VAT incl., excluding shipping)?
-- **A3. Uses:** can the same customer use an ambassador code on every order?
-  (Proposed: yes.)
-- **A4. Combining:** ambassador code + WELCOME20 in the same order?
-  (Proposed: no. One code per order.)
-- **A5. Email verification** needed for ambassador codes? (Proposed: no.)
-- **A6. When is commission payable?** (Proposed: 14 days after payment if not
-  refunded; paid manually by Malaconda.)
-- **A7. B2B orders** count for ambassadors? (Proposed: no, B2C only.)
+- **A1b. Scope of the 20%:** whole first order, or only the first case of it?
+  (e.g. 3 cases × CHF 39 = 117: 20% of all = −23.40; 20% of one case = −7.80)
+- **A2b. CHF 5 per order or per case?**
+- **A5. Email verification for ambassador codes:** the owner answered "no",
+  but "first order only" can't be enforced before payment without a verified
+  email (anyone could type a new email). Options: (a) require verification,
+  like WELCOME20 (recommended); (b) no verification: repeat use is only
+  detected after payment and flagged in /admin.
 
 General
 - **G1. VAT registration:** is Malaconda VAT-registered, and at what rate
