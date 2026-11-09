@@ -2,9 +2,8 @@
 
 E-commerce website for **MALACONDA**, a sparkling soda from the Amazon (Biting Lulo · Pink Guava).
 
-> **Status:** project setup. No application code yet.
-> The frontend will come from the owner's existing Claude Artifact design.
-> Backend work starts only after the architecture (Phase 2) is approved.
+> **Status:** architecture proposal v2 awaiting owner approval. No application code yet.
+> Full details: [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md).
 
 This repository is the **single source of truth** for the project.
 The project starts from scratch: no code from earlier experimental
@@ -12,52 +11,99 @@ implementations is reused.
 
 ---
 
-## Goals (initial version)
+## What the website does
 
-1. Sell the two products individually through **Stripe Checkout**.
-2. Let bars, hotels and restaurants register **B2B pre-orders** with a **20% downpayment**.
-3. Record customers, orders and payments in **Google Sheets**.
-4. Send **confirmation emails** after verified payments or registrations.
-5. Track **promo codes** and **ambassador commissions**.
+Two **separate** purchasing experiences on top of the existing Artifact design:
 
-Out of scope for now: customer accounts, admin dashboard, extra pages or features not listed above.
+| | B2C: individual customers | B2B: partners (bars, hotels, restaurants) |
+|---|---|---|
+| Where | `/` (existing shop + cart) | `/partners` (separate partner store) |
+| Product | Case of **12 bottles**, Lulo or Guava | Case of **24 bottles**, one flavour per case |
+| Price | **CHF 39.00** per case, VAT incl. | CHF 54.00 −10% partner discount = **CHF 48.60** per case, VAT incl. |
+| Quantity | 1–10 cases per order | **5 or 10 cases of one flavour** (5 Lulo · 10 Lulo · 5 Guava · 10 Guava) |
+| Discounts | **WELCOME20** (20%, first purchase only, verified email) · **ambassador codes** | Automatic 10% for **approved** partners |
+| Payment | Stripe Checkout, full amount | **20% deposit** via Stripe **or** manual invoice; 80% on delivery (never charged automatically) |
+| Account | Guest checkout; email verification (6-digit code, no password) for WELCOME20 | Partner application → admin approval → sign-in with email code |
 
-## Planned stack (to be confirmed in Phase 2)
+Also:
+
+- One **confirmation email** per verified payment.
+- **Google Sheets** reporting: Customers, Orders, Partners, Discount redemptions, Payments, Ambassadors.
+- **Ambassador codes** with commission tracking.
+- Minimal protected **admin page** (`/admin`): approve partners, record manual payments, update order status, mark commissions paid, resync Sheets.
+- Contact and ambassador application forms email the team.
+
+## Architecture
+
+```
+Browser: static HTML + CSS + vanilla JS (existing Artifact design)
+   │  /api/* (same domain, HTTPS)
+   ▼
+Node.js 22 + Express (one process on Hostinger Business)
+   ├── Firestore      source of truth (customers, orders, codes, redemptions)
+   ├── Stripe         Checkout + verified webhooks
+   ├── Google Sheets  one-way reporting copy (Firestore → Sheets, never back)
+   └── SMTP           confirmation and verification emails
+```
 
 | Area | Choice | Why |
 |---|---|---|
-| Frontend | The existing Artifact (preserved, not redesigned) | It is the approved brand design |
-| Backend | Node.js + Express (REST) | Simple, runs on Hostinger Business Node.js hosting |
+| Frontend | Existing Artifact: static HTML, CSS, vanilla JS | Preserves the design; no frontend packages; easy to edit in VS Code |
+| Backend | Node.js 22 + Express | Supported on Hostinger Business Node.js hosting |
+| Database | **Firestore** (Zürich region proposed) | Managed, no server to maintain, transactions for one-time discounts, free at MVP volume |
 | Payments | Stripe Checkout + webhooks | No card data on our server |
-| Reporting | Google Sheets API (service account) | Business admin already works in Sheets |
-| Email | SMTP via a modular email service | Provider can be swapped by configuration |
-| Hosting | Hostinger Business — Node.js Web App, deployed from GitHub | Owner's existing hosting |
+| Reporting | Google Sheets API | Daily overview; never used for decisions |
+| Email | SMTP (`nodemailer`) | Provider swappable by configuration |
+| Hosting | Hostinger Business, Node.js Web App from GitHub | Owner's hosting; auto-deploy off until approved |
 
-Explicitly **not** used unless a concrete need appears: Next.js, Prisma, Docker, Redis, microservices.
+Not used: React, Next.js, SQL databases, ORMs, Docker, Redis, microservices.
+
+Key safety rules (details in [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md)):
+
+- The server is the only authority on prices, quantities, discounts and eligibility.
+- WELCOME20 is reserved during checkout and confirmed only after a verified Stripe webhook; one redemption per customer, enforced by Firestore transactions.
+- Duplicate webhooks are detected and skipped.
+- If Google Sheets is unavailable, checkout keeps working.
+
+## Planned project structure
+
+```
+client/          existing Artifact (index.html, css/, js/, images/) + /partners, /admin, success/cancel pages
+server/
+  index.js       Express app
+  routes/        b2c · b2b · auth · admin · stripe-webhook · forms
+  services/      pricing · promo · firestore · stripe · sheets · email
+  config/        catalog.js (products, prices, limits, dates)
+docs/            architecture, audits, workflow
+```
 
 ## Development phases
 
 | Phase | Content | Status |
 |---|---|---|
-| 1 | Audit of the existing Artifact and requirements | Done (presented in chat) |
-| 0 | Repository setup, Git workflow, docs | In progress |
-| 2 | Architecture: structure, endpoints, config, integrations, env vars | Waiting for Artifact export |
-| 3 | Frontend integration (move Artifact into project, connect forms/buttons) | — |
-| 4 | Backend (Stripe, webhooks, Sheets, email, promo codes) | — |
-| 5 | Testing (Stripe test mode) | — |
-| 6 | Hostinger deployment | — |
+| 0 | Repository setup, Git workflow, docs | PR [#1](https://github.com/noevalergo/Malaconda/pull/1) open |
+| 1 | Audit of the existing Artifact; import unchanged + frontend audit | PR [#2](https://github.com/noevalergo/Malaconda/pull/2) open |
+| 2 | Architecture and business rules | PR [#3](https://github.com/noevalergo/Malaconda/pull/3): **awaiting approval** |
+| 3 | Hostinger compatibility test (Firestore + Stripe from Hostinger) | Next, after approval |
+| 4 | Backend: B2C checkout, WELCOME20, B2B pre-orders, webhooks, emails, Sheets, admin | — |
+| 5 | Frontend wiring on the existing design | — |
+| 6 | Testing in Stripe test mode | — |
+| 7 | Hostinger deployment (owner approval required) | — |
 
-Each phase ends with a Pull Request and the owner's approval before the next one starts.
+Each step is a feature branch and a Pull Request into `develop`. Nothing is merged into `main` or deployed without the owner's approval.
 
 ## Documentation
 
-- [docs/GIT_WORKFLOW.md](docs/GIT_WORKFLOW.md): branches, commits, Pull Requests, releases
-- [docs/FRONTEND_PRESERVATION.md](docs/FRONTEND_PRESERVATION.md): how the Artifact design is protected
-- [.env.example](.env.example): environment variables (names only, provisional)
+- [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md): architecture, data model, flows, decisions and open questions
+- [docs/FRONTEND_AUDIT.md](docs/FRONTEND_AUDIT.md): audit of the imported Artifact (PR #2)
+- [docs/FRONTEND_PRESERVATION.md](docs/FRONTEND_PRESERVATION.md): how the Artifact design is protected (PR #1)
+- [docs/GIT_WORKFLOW.md](docs/GIT_WORKFLOW.md): branches, commits, Pull Requests, releases (PR #1)
+- [.env.example](.env.example): environment variables (PR #1; updated at implementation)
 
 ## Security basics
 
 - Secrets live only in environment variables (`.env` locally, hPanel on Hostinger). Never in code or Git.
 - Development uses **Stripe test mode only**.
-- No card data is ever handled by our server.
+- No card data and no passwords are stored.
+- Firestore denies all direct browser access; only the backend reads and writes.
 - `main` is changed only through an approved Pull Request.
