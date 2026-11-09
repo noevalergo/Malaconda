@@ -2,8 +2,9 @@
 
 E-commerce website for **MALACONDA**, a sparkling soda from the Amazon (Biting Lulo · Pink Guava).
 
-> **Status:** architecture proposal v2 awaiting owner approval. No application code yet.
-> Full details: [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md).
+> **Status:** backend implemented and tested (Firestore emulator, Stripe simulated), in review.
+> Frontend not yet connected. Architecture: [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) ·
+> Developer guide: [docs/BACKEND.md](docs/BACKEND.md).
 
 This repository is the **single source of truth** for the project.
 The project starts from scratch: no code from earlier experimental
@@ -65,16 +66,20 @@ Key safety rules (details in [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md)):
 - Duplicate webhooks are detected and skipped.
 - If Google Sheets is unavailable, checkout keeps working.
 
-## Planned project structure
+## Project structure
 
 ```
-client/          existing Artifact (index.html, css/, js/, images/) + /partners, /admin, success/cancel pages
+client/          existing Artifact (index.html, css/, js/, images/), served as static files
 server/
-  index.js       Express app
-  routes/        b2c · b2b · auth · admin · stripe-webhook · forms
-  services/      pricing · promo · firestore · stripe · sheets · email
-  config/        catalog.js (products, prices, limits, dates)
-docs/            architecture, audits, workflow
+  index.js       entry point (npm start)
+  app.js         Express app
+  config/        catalog.js (products, prices, limits, dates) · env.js
+  db/            ALL Firestore access
+  services/      pricing · promo rules · checkout · b2b · webhook · stripe · email · sheets
+  routes/        public · auth · b2c · b2b · forms · admin · stripe webhook
+  emails/        editable email texts + templates
+test/            unit + integration tests (Firestore emulator)
+docs/            architecture, backend guide, audits, workflow
 ```
 
 ## Development phases
@@ -84,21 +89,31 @@ docs/            architecture, audits, workflow
 | 0 | Repository setup, Git workflow, docs | PR [#1](https://github.com/noevalergo/Malaconda/pull/1) open |
 | 1 | Audit of the existing Artifact; import unchanged + frontend audit | PR [#2](https://github.com/noevalergo/Malaconda/pull/2) open |
 | 2 | Architecture and business rules | PR [#3](https://github.com/noevalergo/Malaconda/pull/3): **awaiting approval** |
-| 3 | Hostinger compatibility test (Firestore + Stripe from Hostinger) | Next, after approval |
-| 4 | Backend: B2C checkout, WELCOME20, B2B pre-orders, webhooks, emails, Sheets, admin | — |
+| 3 | Hostinger compatibility test (Firestore + Stripe from Hostinger) | Skipped for now (owner decision) |
+| 4 | Backend: B2C checkout, WELCOME20, B2B pre-orders, webhooks, emails, Sheets, admin API | In review (`feature/backend`) |
 | 5 | Frontend wiring on the existing design | — |
 | 6 | Testing in Stripe test mode | — |
 | 7 | Hostinger deployment (owner approval required) | — |
 
 Each step is a feature branch and a Pull Request into `develop`. Nothing is merged into `main` or deployed without the owner's approval.
 
+## Quick start (developers)
+
+```bash
+npm install
+npm run test:emulator
+```
+
+Needs the Firebase CLI and Java. Setup, local run, API and deployment: [docs/BACKEND.md](docs/BACKEND.md).
+
 ## Documentation
 
+- [docs/BACKEND.md](docs/BACKEND.md): developer guide (structure, local setup, tests, API, services setup)
 - [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md): architecture, data model, flows, decisions and open questions
 - [docs/FRONTEND_AUDIT.md](docs/FRONTEND_AUDIT.md): audit of the imported Artifact (PR #2)
 - [docs/FRONTEND_PRESERVATION.md](docs/FRONTEND_PRESERVATION.md): how the Artifact design is protected (PR #1)
 - [docs/GIT_WORKFLOW.md](docs/GIT_WORKFLOW.md): branches, commits, Pull Requests, releases (PR #1)
-- [.env.example](.env.example): environment variables (PR #1; updated at implementation)
+- [.env.example](.env.example): all environment variables, documented
 
 ## Security basics
 
