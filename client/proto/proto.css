@@ -805,3 +805,7 @@ dialog form > .label:first-of-type { margin-top:var(--s2); }
   .nav__cta > .theme-btn { display:none; }
   .nav__links { z-index:51; }
 }
+
+/* hero title: no forced line breaks, the text wraps to the screen width; on phones the size follows the width so it settles on three lines */
+.hero h1.h1 { text-wrap:balance; }
+@media (max-width:720px) { .hero h1.h1 { font-size:clamp(36px, 12.5vw, 64px); } }
