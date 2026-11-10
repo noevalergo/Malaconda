@@ -273,3 +273,18 @@ test("consumer first-order offer is for accounts only: a guest pays the full pri
   assert.equal(S.consumerPreview(buyer.email, 1, buyer.id).welcomePct, 0, "used once");
   assert.ok(anna);
 });
+
+test("a pro pays online by card: the order is created paid, welcome offer and referral qualification apply", () => {
+  const S = fresh();
+  const t = byName(S, "Terraza 7");
+  const before = S.ordersOfPro(t.id).length;
+  const o = S.payProOrder({ proId: t.id, lines: [{ flavor: "lulo", boxes: 6 }, { flavor: "guava", boxes: 6 }], shipping: { address: "Rue 1", zip: "1200", city: "Geneva" }, paymentRef: "pi_test_x" });
+  assert.equal(S.ordersOfPro(t.id).length, before + 1);
+  assert.equal(o.status, "paid");
+  assert.ok(o.paidAt);
+  assert.equal(o.payment.method, "Card (online)");
+  assert.equal(o.payment.reference, "pi_test_x");
+  assert.equal(o.welcomePct, 10, "a first order keeps the welcome offer");
+  assert.equal(o.shipping.city, "Geneva");
+  assert.throws(() => S.payProOrder({ proId: t.id, lines: [] }), /at least one box/);
+});

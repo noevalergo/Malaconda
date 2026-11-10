@@ -12,7 +12,7 @@
   const PRO_TYPES = ["Bar", "Restaurant", "Club", "Hotel", "Shop", "Distributor"];
   const STATUS_FLOW = ["placed", "invoiced", "paid", "shipped", "delivered"];
   const PAYMENT_METHODS = ["Bank transfer", "Cash", "Card in person", "Card (online)", "Other"];
-  const VIA_OPTIONS = ["In person visit", "Email", "Phone", "Website request", "Other"];
+  const VIA_OPTIONS = ["In person visit", "Email", "Phone", "Website", "Website request", "Other"];
   const CARRIERS = ["Swiss Post", "DHL", "UPS", "DPD", "Own delivery", "Other"];
   // only carriers with a stable public tracking URL get a link
   function trackingUrl(carrier, number) {
@@ -281,6 +281,16 @@
       if (meta.shipping) Object.assign(order.shipping, meta.shipping);
     }
     s.orders.push(order); save(); return order;
+  }
+
+  /* A pro pays online by card: the order is created already paid, with the card payment reference, and the referral credit is recorded
+     exactly as for any paid order. (Prototype: no real charge; the real site hands this to Stripe Checkout.) */
+  function payProOrder({ proId, lines, shipping, paymentRef, now }) {
+    const created = now || nowIso();
+    const o = placeProOrder({ proId, lines, channel: "site", now: created,
+      meta: { via: "Website", payment: { method: "Card (online)", reference: paymentRef || "" }, shipping: shipping || {} } });
+    o.paidAt = created; o.editLog.push({ at: created, by: "pro", changes: ["Paid online by card"] });
+    rebuildHistory(o, STATUS_FLOW); recordQualification(o); save(); return o;
   }
 
   /* A manual order: a visit, an email, a phone call. Everything about the deal is recorded when it is created. */
@@ -640,7 +650,7 @@
     resolveRef, refLabel, setAttribution, createPro, createAmbassador, submitProRequest, submitAmbassadorApplication, closeRequest,
     FLAVORS_ALL: FLAVORS, unitPricesOf, priceSheetOf, conditionsOf, setProPrices, priceConflicts, submitOrderRequest, requestDiff, createOrderFromRequest,
     PAYMENT_METHODS, VIA_OPTIONS, CARRIERS, trackingUrl, createManualOrder, updateOrder, updateConsumerOrder,
-    ordersOfPro, creditOf, previewProOrder, placeProOrder, nextStatus, advanceOrder, cancelOrder,
+    ordersOfPro, creditOf, previewProOrder, placeProOrder, payProOrder, nextStatus, advanceOrder, cancelOrder,
     CONSUMER_FLOW, CONSUMER_LABEL, registerConsumer, updateProfile, consumerIsFirst, consumerOrdersOf, nextConsumerStatus, advanceConsumerOrder, cancelConsumerOrder, stats,
     consumerPreview, consumerCheckout, ledger, ambassadorView, isPaidOut, markPaidOut, unmarkPaidOut, updateSettings,
   };

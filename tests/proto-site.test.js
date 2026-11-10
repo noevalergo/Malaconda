@@ -186,3 +186,17 @@ test("view-as stays on the page (only private spaces move)", () => {
   const js = read("common.js");
   assert.ok(js.includes("location.reload()") && /SPACES\.includes\(page\)/.test(js));
 });
+
+test("a pro can pay by card: the picker leads to the pro checkout, no request-only button, a message link for other ways", () => {
+  const idx = read("index.html"), pc = read("pro-checkout.html");
+  assert.ok(idx.includes("pro-checkout.html") && idx.includes("Pay and order"));
+  assert.ok(!idx.includes("Request this order") && !idx.includes("submitOrderRequest"), "pros are no longer limited to requests");
+  assert.ok(idx.includes('href="#contact">Message us'), "another way to order goes through a message");
+  assert.ok(pc.includes("Store.payProOrder") && pc.includes('name="robots"'));
+});
+
+test("the picker keeps the bottle still: sticky stage, section grows instead of clipping", () => {
+  const css = read("proto.css");
+  assert.ok(/@media \(min-width:901px\)[\s\S]*#flavors \{[^}]*overflow:clip/.test(css));
+  assert.ok(/\.picker__stage \{ position:sticky/.test(css));
+});

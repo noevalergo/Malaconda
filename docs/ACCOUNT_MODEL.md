@@ -18,7 +18,7 @@ Reviewed by an independent agent; its findings are folded in (section 10). Every
 Rules:
 - Only founders set negotiated prices. Every change is logged (date, who, old to new, reason).
 - A pro sees only their own prices. An ambassador never sees a unit price.
-- **Price invariant** (checked when saving Settings): the list box price (ex VAT) stays below the consumer first-order price ex VAT: `retail / (1 + VAT) × (1 − 15%)` = CHF 30.67 per box. Saving a list price above the floor change, or a floor above any negotiated price, lists the affected pros and is refused until fixed.
+- **Price invariant** (checked when saving Settings): the list box price (ex VAT) stays below the consumer first-order price ex VAT: `retail / (1 + VAT) × (1 − 10%)` = CHF 32.47 per box. Saving a list price above the floor change, or a floor above any negotiated price, lists the affected pros and is refused until fixed.
 - The floor is on the base price. The admin shows each pro's **best-case effective price** (base × best tier × max credit) so founders see what the combined discounts can reach.
 
 ## 3. Discounts on a pro order (sequential)
@@ -46,20 +46,19 @@ Rules:
 ## 6. Who sees what
 | Profile | Public site while logged in | Own space | Cannot |
 |---|---|---|---|
-| Unlogged visitor | Retail prices, guest checkout | None | See any pro price |
-| Logged visitor (customer) | Retail prices, 15% first order | Orders, delivery details | See any pro price |
+| Unlogged visitor | Retail prices, guest checkout at full price (the first-order offer needs an account) | None | See any pro price |
+| Logged visitor (customer) | Retail prices, 10% off the first order | Orders, delivery details | See any pro price |
 | New pro | Own prices in real time on the flavour picker, tier table, welcome 10% flagged | My prices, My orders, Recommend, Account | Check out online |
 | Pro with referral credit | Same, credit applied to the next order | Same, with credit earned, used, available | Check out online |
 | Pro with negotiated prices | Own negotiated prices everywhere | Same | See the list price |
 | Ambassador | Public site as a visitor | Venues, statements, code and link, account | See prices, discounts, lines |
 | Founders | Everything | Admin | None |
 
-## 7. Pros do not order from their space
-- A logged-in pro sees their prices and a live total for any quantity on the site. No cart, no online payment.
-- The pro presses **Request this order**. This stores an **order request** with the boxes, the unit prices and the quoted total.
-- In the admin, the founder presses **Create order**. If the current pricing differs from the quote, the difference is shown and the founder confirms. Then: invoice sent, paid (bank transfer), shipped, delivered.
-- Founders can also create an order directly (phone, email, visit). Both paths use the same engine.
-- Admin Requests tab has filters: Access, Ambassadors, Orders, Messages.
+## 7. Pros pay online, like anyone else
+- A logged-in pro sees their prices and a live total for any quantity on the site.
+- The pro presses **Pay and order**, confirms the delivery address and pays by card (Stripe) on the pro payment page, VAT added at the end. The order is created already **paid**, with the card payment reference; a first paid order of 10 boxes or more credits the recommender.
+- A pro who prefers an invoice, a bank transfer or a negotiation writes through the contact form (**Message us**); the founders create the order by hand (phone, email, visit, message). Every path uses the same engine.
+- Admin Requests tab has filters: Access, Ambassadors, Orders (legacy order requests), Messages.
 
 ## 8. Admin rights
 - Create pro accounts; choose the source; edit company details.

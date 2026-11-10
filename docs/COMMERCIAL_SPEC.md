@@ -10,19 +10,19 @@ The full price, discount, credit and rights model, with the example profiles, is
 
 | Audience | Sees | Can do |
 |---|---|---|
-| Visitor | Retail prices, story, flavours | Buy as a guest at retail price, with 15% off the first order |
+| Visitor | Retail prices, story, flavours | Buy as a guest at the full retail price, or create an account for 10% off the first order |
 | Customer (individual account) | Own orders and delivery details | Order, track orders, edit details and password |
 | Pro (bar, restaurant, club, hotel, shop, distributor) | Retail prices, "wholesale prices after login" | Request access |
 | Logged-in pro | **Own prices in real time on the site** (list or negotiated), live total for any quantity | Request an order (no online checkout), see prices and tiers, track orders, recommend other pros, see referral credit |
 | Ambassador | Own venues and commissions | Share code and link, read statements |
 | Founders (admin) | Everything | Create accounts, enter orders, manage attribution and commissions, edit settings |
 
-Pages: Home (hero, flavour picker with add to cart for visitors and customers, price sheet and "Request this order" for logged-in pros, story, pros, ambassadors, contact) · Cart and checkout · Pros · Ambassadors · Customer account · Pro space · Ambassador space · Admin.
+Pages: Home (hero, flavour picker with add to cart for visitors and customers, price sheet and "Pay and order" (card payment at the pro's prices) for logged-in pros, story, pros, ambassadors, contact) · Cart and checkout · Pros · Ambassadors · Customer account · Pro space · Ambassador space · Admin.
 Public site never shows pro prices, discount rules or commission rates.
 
 ## 2. Accounts
 
-- Consumers: optional individual account (name, email, password, delivery details). Guest checkout stays possible; guest orders join the account when the same email registers. The 15% first-order offer is tied to the account or the email.
+- Consumers: optional individual account (name, email, password, delivery details). Guest checkout stays possible; guest orders join the account when the same email registers. The 10% first-order offer is for accounts only: a guest checkout pays the full price, and the offer is used once per account.
 - Pros and ambassadors: accounts created by the founders (from the admin, also on the spot after a tasting) or after approving an access request.
 - Credentials: email + random temporary password, forced change at first login.
 - Founders: admin login, same email + password mechanism.
@@ -36,7 +36,7 @@ Prices are stored **per bottle** in cents. A box is 12 bottles of 20 cl. Screens
 | Retail price | CHF 39.00 per box, VAT included (existing site) |
 | Pro list price | CHF 2.20 per bottle = CHF 26.40 per box (placeholder, founders to confirm) |
 | Negotiated price | Optional, per pro and per flavour, to the cent, set in the admin. Floor CHF 1.80, never above the list price |
-| Consumer welcome offer | 15% off the first order, no quantity cap |
+| Consumer welcome offer | 10% off the first order of an account, no quantity cap |
 | Pro welcome offer | 10% off the first order |
 | Volume tiers (per order) | 1-9 boxes: 0% · 10-20 boxes: -5% · 21+ boxes: -10% |
 
@@ -47,7 +47,7 @@ Prices are stored **per bottle** in cents. A box is 12 bottles of 20 cl. Screens
 
 Per-pro switches: "volume tiers apply" and "welcome and credit apply" (both on by default; Hotel Selva has the second one off).
 The order stores the unit prices and percentages it was priced with.
-Invariant checked in Settings: the list box price excl. VAT stays below the consumer first-order price excl. VAT (CHF 30.67).
+Invariant checked in Settings: the list box price excl. VAT stays below the consumer first-order price excl. VAT (CHF 32.47).
 "First order" = the pro's first order that is not cancelled. Shipping is outside the discount base. Delivery: "within 4 weeks".
 
 ## 4. Pro-to-pro referral

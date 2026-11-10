@@ -25,7 +25,7 @@
 
 <section class="photo" aria-label="Bottles on ice" data-parallax-host>
   <figure class="photo__frame"><img src="../images/hero-bottles.jpg" alt="Malaconda bottles on ice" width="2000" height="1333" fetchpriority="high" data-parallax></figure>
-  <aside class="photo__card">
+  <aside class="photo__card" data-photo-card role="button" tabindex="0" aria-expanded="false" aria-label="Every bottle carries more than soda">
     <p class="small" style="color:#E9E9E1">Every bottle carries more than soda. It carries the bite of Malaconda. Brewed in Colombia, bound for the bold.</p>
     <img class="badge-spin" src="../images/badge.svg" alt="" width="84" height="86" aria-hidden="true">
   </aside>
@@ -34,7 +34,7 @@
 <section class="band-dark" id="flavors" data-parallax-host>
   <div class="block">
     <div class="picker" data-picker data-flavor="lulo">
-      <div class="picker__stage" data-parallax-host tabindex="0" role="group" aria-roledescription="carousel" aria-label="Flavours, swipe or use the arrow keys">
+      <div class="picker__stage" tabindex="0" role="group" aria-roledescription="carousel" aria-label="Flavours, swipe or use the arrow keys">
         <div class="picker__words" aria-hidden="true" data-parallax><span class="picker__word is-on" data-for="lulo">Lulo</span><span class="picker__word" data-for="guava">Guava</span></div>
         <img class="picker__img is-active" data-i="0" src="../images/lulo-cutout.webp" alt="Biting Lulo bottle" width="1000" height="1250">
         <img class="picker__img" data-i="1" src="../images/guava-cutout.webp" alt="Sweet Guava bottle" width="1000" height="1250">
@@ -157,6 +157,12 @@
 <script src="common.js"></script>
 <script>
 Common.mount({active:"index.html"});
+(function(){ // mobile: the card is only the badge; a tap opens it to the left to show the sentence, a second tap closes it
+  const c=document.querySelector("[data-photo-card]"); if(!c) return;
+  const flip=()=>{ const on=c.classList.toggle("is-open"); c.setAttribute("aria-expanded",on); };
+  c.addEventListener("click",flip);
+  c.addEventListener("keydown",e=>{ if(e.key==="Enter"||e.key===" "){ e.preventDefault(); flip(); } });
+})();
 (function(){
   const {$,$$,chf,Cart,toast}=Common, S=Store.get().settings;
   const root=$("[data-picker]"), stage=$(".picker__stage");
@@ -196,9 +202,9 @@ Common.mount({active:"index.html"});
   q.addEventListener("input",()=>setQ(parseInt(q.value)));
   $("[data-add]").addEventListener("click",()=>{
     if(pro){
-      try{ Store.submitOrderRequest({proId:pro.id,lines:F.map(f=>({flavor:f.k,boxes:qty[f.k]}))}); qty.lulo=0; qty.guava=0; q.value=0; paintPro(); toast("Order request sent.",{href:"pro-space.html#orders",label:"My orders"}); }
-      catch(err){ toast(err.message); }
-      return;
+      // a pro pays like anyone else: the quantities go to the pro checkout page
+      try{ sessionStorage.setItem("mlc_pro_order",JSON.stringify(F.map(f=>({flavor:f.k,boxes:qty[f.k]})).filter(l=>l.boxes>0))); }catch(e){}
+      location.href="pro-checkout.html"; return;
     }
     const k=F[i].k, n=qty[k]; Cart.add(k,n); Common.openCart();
   });
@@ -209,18 +215,18 @@ Common.mount({active:"index.html"});
     $("[data-add]").disabled=!p.boxes;
     const nextTier=S.tiers.find(t=>t.min>p.boxes);
     sum.innerHTML=p.boxes
-      ? '<table class="breakdown">'+p.lines.map(r=>`<tr><td>${r.boxes} × ${F.find(f=>f.k===r.flavor).name} at ${chf(r.boxPrice)}</td><td>${chf(r.amount)}</td></tr>`).join("")
+      ? '<table class="breakdown">'+p.lines.map(r=>`<tr><td>${r.boxes} box${r.boxes>1?"es":""} of ${F.find(f=>f.k===r.flavor).name}<br><span class="small muted">12 bottles of 20 cl each, ${chf(r.boxPrice)} per box</span></td><td>${chf(r.amount)}</td></tr>`).join("")
         +(p.tierPct?`<tr class="neg"><td>Volume −${p.tierPct}%</td><td>−${chf(p.tierAmount)}</td></tr>`:"")
         +(p.welcomePct?`<tr class="neg"><td>Welcome −${p.welcomePct}%</td><td>−${chf(p.extraAmount)}</td></tr>`:"")
         +(p.creditPct?`<tr class="neg"><td>Referral credit −${p.creditPct}%</td><td>−${chf(p.extraAmount)}</td></tr>`:"")
         +`<tr class="total"><td>Total excl. VAT</td><td>${chf(p.net)}</td></tr></table>`
         +(nextTier&&c.flags.tiers?`<p class="small muted">${nextTier.min-p.boxes} more box${nextTier.min-p.boxes>1?"es":""} for −${nextTier.pct}% on the whole order.</p>`:"")
-        +(p.welcomePct?'<p class="small muted">The welcome offer applies to your first confirmed order.</p>':"")
+        +(p.welcomePct?'<p class="small muted">The welcome offer applies to your first order.</p>':"")
       : '<p class="small muted">Choose quantities to see your total. Prices exclude VAT.</p>';
   }
   if(pro){
-    $("[data-add]").textContent="Request this order";
-    $(".picker__meta").textContent="Orders are confirmed and invoiced by the team. Delivery within 4 weeks.";
+    $("[data-add]").textContent="Pay and order";
+    $(".picker__meta").innerHTML='1 box = 12 bottles of 20 cl. Pay by card, delivery within 4 weeks. Prefer an invoice or to talk first? <a class="link-quiet" href="#contact">Message us</a>.';
     const lab=document.createElement("p"); lab.className="label"; lab.textContent="Your prices, "+pro.name; $(".picker__info h2").after(lab);
     sum=document.createElement("div"); sum.className="picker__sum"; $(".picker__buy").after(sum);
   }

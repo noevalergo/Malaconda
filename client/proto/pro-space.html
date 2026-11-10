@@ -20,8 +20,8 @@
 <script src="auth.js"></script>
 <script>
 /* Pro space: prices, order tracking, recommendations, account.
-   Pros do not order here. Their prices show on the website while they are logged in,
-   and "Request this order" there sends the request to the founders. */
+   Pros order from the website: their prices show there while they are logged in,
+   and "Pay and order" takes them to the card payment (pro-checkout.html). */
 Auth.gate("pro","Pro space","Your prices, your orders and your recommendations.",function(user){
   const {esc,chf,pct,date,$,$$}=Common, F=Store.FLAVORS;
   let tab=(["prices","orders","recommend","account"].indexOf((location.hash||"").slice(1))>-1)?location.hash.slice(1):"prices";
