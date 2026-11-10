@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="robots" content="noindex, nofollow">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Prototype guide — MALACONDA</title>
+<meta name="description" content="Demo accounts and reset for the Malaconda commercial prototype.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Chivo:wght@400;500&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<script src="theme.js"></script>
+<link rel="stylesheet" href="proto.css">
+</head>
+<body>
+<div id="site-nav"></div>
+<main><section class="block stack">
+  <h1 class="display h2">Demo accounts</h1>
+  <p class="lead">Fictional data stored in this browser. Open the admin and a pro or ambassador space in two tabs: changes appear in both.</p>
+  <div class="tablewrap"><table class="tbl"><thead><tr><th>Space</th><th>Who</th><th>Email</th><th>Password</th><th>Note</th></tr></thead><tbody>
+    <tr><td><a class="link-quiet" href="admin.html">Admin</a></td><td>Founders</td><td>founders@malaconda.demo</td><td>demo</td><td>Everything</td></tr>
+    <tr><td><a class="link-quiet" href="account.html">Customer</a></td><td>Anna Keller</td><td>anna@customer.demo</td><td>demo</td><td>Individual account with two orders (first order used the welcome offer)</td></tr>
+    <tr><td><a class="link-quiet" href="pro-space.html">Pro</a></td><td>Bar Cobra</td><td>bar@cobra.demo</td><td>demo</td><td>Introduced by Camila. Recommended three pros: one credit already used, one (5%) still available.</td></tr>
+    <tr><td><a class="link-quiet" href="pro-space.html">Pro</a></td><td>Hotel Selva</td><td>hotel@selva.demo</td><td>demo</td><td>Introduced by Camila</td></tr>
+    <tr><td><a class="link-quiet" href="pro-space.html">Pro</a></td><td>Club Anaconda</td><td>club@anaconda.demo</td><td>demo</td><td>Recommended by Bar Cobra</td></tr>
+    <tr><td><a class="link-quiet" href="pro-space.html">Pro</a></td><td>Terraza 7</td><td>terraza@seven.demo</td><td>temp-7743</td><td>Temporary password: forced change at first login. Introduced by Luca, no orders yet.</td></tr>
+    <tr><td><a class="link-quiet" href="ambassador-space.html">Ambassador</a></td><td>Camila Restrepo</td><td>camila@ambassador.demo</td><td>demo</td><td>Two venues, commissions</td></tr>
+    <tr><td><a class="link-quiet" href="ambassador-space.html">Ambassador</a></td><td>Luca Meier</td><td>luca@ambassador.demo</td><td>demo</td><td>One venue without orders</td></tr>
+  </tbody></table></div>
+  <p class="small">Public pages: <a class="link-quiet" href="index.html">Home</a> · <a class="link-quiet" href="shop.html">Cart</a> · <a class="link-quiet" href="account.html">Account</a> · <a class="link-quiet" href="for-pros.html">For pros</a> · <a class="link-quiet" href="ambassadors.html">Ambassadors</a></p>
+  <div class="row"><button class="btn btn--danger btn--sm" id="reset" type="button">Reset demo data</button></div>
+</section></main>
+<div id="site-footer"></div>
+<script src="engine.js"></script>
+<script src="store.js"></script>
+<script src="common.js"></script>
+<script>
+Common.mount({active:"demo.html"});
+document.getElementById("reset").addEventListener("click",()=>{ Store.reset(); ["admin","pro","ambassador"].forEach(r=>Store.logout(r)); Common.toast("Demo data reset."); });
+</script>
+</body>
+</html>

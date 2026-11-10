@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Commission statement - MALACONDA</title>
+<meta name="robots" content="noindex, nofollow">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Chivo:wght@400;500&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<script src="theme.js"></script>
+<link rel="stylesheet" href="proto.css">
+</head>
+<body class="statement-page">
+<main id="doc-root"></main>
+<script src="engine.js"></script>
+<script src="store.js"></script>
+<script src="common.js"></script>
+<script>
+/* Commission statement for one ambassador and one month. A real document: issuer, recipient, period,
+   lines per venue, adjustments, totals, payout status. It never shows unit prices, discounts or order lines. */
+(function () {
+  const { esc, chf, date, monthLabel, $ } = Common;
+  const q = new URLSearchParams(location.search), ambId = q.get("amb"), month = q.get("month");
+  const root = document.getElementById("doc-root");
+  const viewerAmb = Store.currentUser("ambassador"), viewerAdmin = Store.currentUser("admin");
+  const amb = Store.get().ambassadors.find((a) => a.id === ambId);
+  const allowed = amb && ((viewerAmb && viewerAmb.id === amb.id) || viewerAdmin);
+  if (!allowed || !/^\d{4}-\d{2}$/.test(month || "")) { root.innerHTML = '<div class="doc"><p>This statement is not available.</p><p><a class="link-quiet" href="index.html">Back to the site</a></p></div>'; return; }
+
+  const v = Store.ambassadorView(amb.id), st = v.statements.find((x) => x.month === month);
+  if (!st) { root.innerHTML = `<div class="doc"><p>No commission in ${esc(monthLabel(month))}.</p></div>`; return; }
+  const led = Store.ledger(amb.id).lines.filter((l) => l.month === month);
+  const paidAt = Store.get().payouts[`${amb.id}:${month}`] || null;
+  const number = `ST-${month}-${amb.code.replace("AMB-", "")}`;
+  const issued = new Date(Date.UTC(+month.slice(0, 4), +month.slice(5, 7), 1)); // first day of the next month
+  const rows = [];
+  v.venues.forEach((ven) => {
+    const lines = led.filter((l) => l.proId === ven.id); if (!lines.length) return;
+    const pos = lines.filter((l) => l.base > 0), neg = lines.filter((l) => l.base < 0);
+    const sum = (arr, k) => Math.round(arr.reduce((n, l) => n + l[k], 0) * 100) / 100;
+    if (pos.length) rows.push({ venue: ven.name, note: ven.endsAt ? "commission until " + date(ven.endsAt) : "", base: sum(pos, "base"), amount: sum(pos, "amount") });
+    if (neg.length) rows.push({ venue: ven.name, note: "adjustment: paid order cancelled", base: sum(neg, "base"), amount: sum(neg, "amount") });
+  });
+
+  root.innerHTML = `<div class="doc-bar"><a class="link-quiet" href="${viewerAdmin && !viewerAmb ? "admin.html" : "ambassador-space.html#statements"}">← Back</a>
+      <div class="row"><button class="btn btn--sm btn--ghost" id="csv" type="button">Download CSV</button><button class="btn btn--sm" id="print" type="button">Print or save as PDF</button></div></div>
+    <article class="doc">
+      <header class="doc__head"><img src="../images/logo-wordmark.svg" alt="MALACONDA" width="150" height="31" class="doc__logo"><div><p class="doc__title">Commission statement</p><p class="doc__no">${esc(number)}</p></div></header>
+      <dl class="doc__meta">
+        <div><dt>Period</dt><dd>${esc(monthLabel(month))}</dd></div>
+        <div><dt>Issued</dt><dd>${date(issued.toISOString())}</dd></div>
+        <div><dt>Ambassador</dt><dd>${esc(amb.name)}<br>${esc(amb.email)}</dd></div>
+        <div><dt>Code</dt><dd>${esc(amb.code)}</dd></div>
+        <div><dt>Paid to</dt><dd>${esc(amb.iban || "IBAN missing")}</dd></div>
+        <div><dt>Status</dt><dd>${paidAt ? "Paid out on " + date(paidAt) : "To be paid"}</dd></div>
+      </dl>
+      <table class="doc__table"><thead><tr><th>Venue</th><th class="num">Commissionable revenue</th><th class="num">Rate</th><th class="num">Commission</th></tr></thead><tbody>
+        ${rows.map((r) => `<tr><td>${esc(r.venue)}${r.note ? `<br><span class="doc__note">${esc(r.note)}</span>` : ""}</td><td class="num">${chf(r.base)}</td><td class="num">${v.pct}%</td><td class="num">${chf(r.amount)}</td></tr>`).join("")}
+      </tbody><tfoot><tr><td>Total</td><td class="num">${chf(st.base)}</td><td></td><td class="num">${chf(st.total)}</td></tr></tfoot></table>
+      <p class="doc__foot">Amounts in CHF, excluding VAT. Commission is ${v.pct}% of the net invoiced amount of paid orders, for ${v.months} months from each venue's first paid order. ${paidAt ? "Paid by bank transfer to the IBAN above." : "To be paid by bank transfer to the IBAN above."}</p>
+    </article>`;
+
+  $("#print").addEventListener("click", () => window.print());
+  $("#csv").addEventListener("click", () => {
+    const lines = [["statement", "period", "venue", "note", "commissionable_revenue_chf", "rate_pct", "commission_chf"], ...rows.map((r) => [number, month, r.venue, r.note, r.base.toFixed(2), v.pct, r.amount.toFixed(2)]), [number, month, "TOTAL", "", st.base.toFixed(2), v.pct, st.total.toFixed(2)]];
+    const csv = lines.map((r) => r.map((c) => `"${String(c).replace(/"/g, '""')}"`).join(",")).join("\n");
+    const url = URL.createObjectURL(new Blob([csv], { type: "text/csv" })); const a = document.createElement("a"); a.href = url; a.download = `${number}.csv`; a.click(); URL.revokeObjectURL(url);
+  });
+  if (q.get("print") === "1") setTimeout(() => window.print(), 600);
+})();
+</script>
+</body>
+</html>

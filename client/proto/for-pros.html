@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="robots" content="noindex, nofollow">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Pros - MALACONDA</title>
+<meta name="description" content="Wholesale prices, volume pricing and order tracking for bars, restaurants, clubs, hotels, shops and distributors.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Chivo:wght@400;500&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<script src="theme.js"></script>
+<link rel="stylesheet" href="proto.css">
+</head>
+<body>
+<div id="site-nav"></div>
+<main>
+  <!-- 1. The promise and the one action -->
+  <section class="pagehero force-dark">
+    <img src="../images/partners.jpg" alt="Biting Lulo bottles racked up on a pool table" width="1800" height="1272" fetchpriority="high" style="object-position:50% 100%">
+    <div class="block">
+      <div class="pagehero__copy">
+        <h1 class="display h1">Behind the bar.</h1>
+        <p class="lead" style="color:#E9E9E1">The best bars, restaurants, clubs, hotels and distributors serve Malaconda to their clients.</p>
+        <div class="row"><a class="btn" href="#access">Request access ↓</a><a class="link-quiet" href="pro-space.html" style="color:#E9E9E1">Already a pro? Log in</a></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 2. What a pro gets -->
+  <section class="block">
+    <div class="benefits">
+      <article class="benefit" data-flavor="lulo"><h2 class="display h2">Wholesale prices</h2><p class="lead">One price list for every venue, from your first box.</p></article>
+      <article class="benefit" data-flavor="guava"><h2 class="display h2">Volume pricing</h2><p class="lead">The more you buy, the cheaper it gets.</p></article>
+    </div>
+  </section>
+
+  <!-- 3. The ask -->
+  <section class="block" id="access" style="padding-top:0">
+    <div class="access">
+      <div class="stack">
+        <h2 class="display h2">Serve it to your clients.</h2>
+        <p class="lead">Wholesale prices appear when you log in. Until then, a box of 12 × 20 cl is <span class="paper">CHF 39</span>.</p>
+        <p class="small muted">Delivery within 4 weeks.</p>
+      </div>
+      <form class="lineform stack" id="reqform" data-flavor="lulo">
+        <div class="form-grid">
+          <div class="field"><label class="label" for="r-business">Business</label><input class="input" id="r-business" required></div>
+          <div class="field"><label class="label" for="r-type">Type</label><select class="select input" id="r-type"></select></div>
+          <div class="field"><label class="label" for="r-city">City</label><input class="input" id="r-city" required></div>
+          <div class="field"><label class="label" for="r-contact">Contact name</label><input class="input" id="r-contact" required></div>
+          <div class="field"><label class="label" for="r-email">Email</label><input class="input" id="r-email" type="email" required></div>
+          <div class="field"><label class="label" for="r-phone">Phone</label><input class="input" id="r-phone" type="tel"></div>
+          <div class="field full"><label class="label" for="r-ref">Recommended by (code or name)</label><input class="input" id="r-ref" placeholder="Optional"></div>
+          <div class="field full"><label class="label" for="r-notes">Anything we should know</label><textarea class="input" id="r-notes" rows="2"></textarea></div>
+        </div>
+        <div class="row"><button class="btn" type="submit">Request access →</button></div>
+        <div id="rdone"></div>
+      </form>
+    </div>
+  </section>
+</main>
+<div id="site-footer"></div>
+<script src="engine.js"></script>
+<script src="store.js"></script>
+<script src="common.js"></script>
+<script>
+Common.mount({active:"for-pros.html"});
+(function(){
+  const {$}=Common;
+  $("#r-type").innerHTML=Store.PRO_TYPES.map(t=>`<option>${t}</option>`).join("");
+  const ref=new URLSearchParams(location.search).get("ref"); if(ref){ $("#r-ref").value=ref; }
+  $("#reqform").addEventListener("submit",e=>{
+    e.preventDefault();
+    Store.submitProRequest({business:$("#r-business").value.trim(),type:$("#r-type").value,city:$("#r-city").value.trim(),contact:$("#r-contact").value.trim(),email:$("#r-email").value.trim(),phone:$("#r-phone").value.trim(),recommendedBy:$("#r-ref").value.trim(),notes:$("#r-notes").value.trim()});
+    $("#rdone").innerHTML='<div class="alert alert--ok">Request sent.</div>'; e.target.reset();
+  });
+})();
+</script>
+</body>
+</html>

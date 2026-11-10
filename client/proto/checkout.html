@@ -1,0 +1,123 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="robots" content="noindex, nofollow">
+<title>Payment - MALACONDA</title>
+<meta name="description" content="Pay for your Malaconda order. Log in, create an account or check out as a guest.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Chivo:wght@400;500&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<script src="theme.js"></script>
+<link rel="stylesheet" href="proto.css">
+</head>
+<body>
+<div id="site-nav"></div>
+<main><section class="block" id="co-root"></section></main>
+<div id="site-footer"></div>
+<script src="engine.js"></script>
+<script src="store.js"></script>
+<script src="common.js"></script>
+<script>
+Common.mount({active:"checkout.html"});
+(function(){
+  const {esc,chf,pct,$,$$,Cart,IMG}=Common, F=Store.FLAVORS, S=()=>Store.get().settings;
+  let mode="guest";            // guest | login | signup (only used when nobody is signed in)
+  let msg={};                  // inline messages per block
+  const user=()=>Store.currentUser("customer");
+
+  function summary(sum){
+    const p=sum.price;
+    return `<aside class="card stack"><p class="label">Your order</p>
+      ${sum.lines.map(l=>`<div class="cline" data-flavor="${l.flavor}"><img src="${IMG[l.flavor]}" alt="" width="56" height="70"><div class="cline__txt"><h3 class="flavor-name flavor-name--sm">${esc(l.name)}</h3><p class="small">${l.boxes} box${l.boxes>1?"es":""} of 12</p></div><span class="mono">${chf(l.boxes*sum.unit)}</span></div>`).join("")}
+      <table class="breakdown"><tr><td>${sum.boxes} box${sum.boxes>1?"es":""} × ${chf(sum.unit)}</td><td>${chf(p.gross)}</td></tr>
+      ${p.welcomePct?`<tr class="neg"><td>First order −${pct(p.welcomePct)}</td><td>−${chf(p.discount)}</td></tr>`:""}
+      <tr class="total"><td>Total (VAT incl.)</td><td>${chf(p.net)}</td></tr></table>
+      <a class="link-quiet" href="shop.html">Edit cart</a></aside>`;
+  }
+
+  function contactBlock(u,sum){
+    if(u) return `<div class="co-block"><h2 class="co-title"><span>1</span>Contact</h2>
+      <p class="small">Signed in as <span class="paper">${esc(u.email)}</span>. <a class="link-quiet" href="account.html">My account</a></p>
+      ${sum.price.welcomePct?`<p class="small">${pct(sum.price.welcomePct)} off your first order is applied.</p>`:""}</div>`;
+    const tabs=`<div class="choice" role="tablist">${[["guest","Guest"],["login","Log in"],["signup","Create an account"]].map(([k,l])=>`<button type="button" role="tab" data-mode="${k}" aria-selected="${mode===k}">${l}</button>`).join("")}</div>`;
+    const cta=`<div class="offer"><p><strong>Create an account and get ${pct(S().consumerWelcomePct)} on your first order.</strong></p>${mode!=="signup"?'<button class="btn btn--sm btn--ghost" type="button" data-mode="signup">Create an account</button>':""}</div>`;
+    let body="";
+    if(mode==="guest") body=`<div class="field full"><label class="label" for="c-email">Email</label><input class="input" id="c-email" type="email" autocomplete="email" value="${esc(msg.email||"")}" required></div><p class="hint">We send your order confirmation here. No account needed.</p>${cta}`;
+    if(mode==="login") body=`<form class="stack" id="f-login" novalidate><div class="field"><label class="label" for="l-email">Email</label><input class="input" id="l-email" autocomplete="username" required></div>
+      <div class="field"><label class="label" for="l-pw">Password</label><input class="input" id="l-pw" type="password" autocomplete="current-password" required></div>
+      <div class="row"><button class="btn btn--sm" type="submit">Log in</button></div>${msg.login||""}<p class="hint">Prototype: see <a class="link-quiet" href="demo.html">demo accounts</a>.</p></form>${cta}`;
+    if(mode==="signup") body=`<form class="stack" id="f-signup" novalidate>${cta}<div class="form-grid"><div class="field full"><label class="label" for="s-name">Name</label><input class="input" id="s-name" autocomplete="name" required></div>
+      <div class="field"><label class="label" for="s-email">Email</label><input class="input" id="s-email" type="email" autocomplete="email" required></div>
+      <div class="field"><label class="label" for="s-pw">Password</label><input class="input" id="s-pw" type="password" minlength="8" autocomplete="new-password" required></div></div>
+      <div class="row"><button class="btn btn--sm" type="submit">Create my account</button></div>${msg.signup||""}</form>`;
+    return `<div class="co-block"><h2 class="co-title"><span>1</span>Contact</h2>${tabs}<div class="stack">${body}</div></div>`;
+  }
+
+  function render(){
+    const sum=Common.cartSummary(), u=user(), root=$("#co-root");
+    const keep={}; $$("#co input").forEach(i=>{ if(i.value) keep[i.id]=i.value; });
+    if(msg.done){ return done(msg.done); }
+    if(!sum.boxes){ root.innerHTML=`<ol class="steps"><li><a href="index.html#flavors">Shop</a></li><li><a href="shop.html">Cart</a></li><li aria-current="step">Payment</li></ol><div class="stack narrow"><h1 class="display h2">Your cart is empty</h1><p>Add a box before paying.</p><div><a class="btn" href="index.html#flavors">Pick a flavour</a></div></div>`; return; }
+    root.innerHTML=`<ol class="steps"><li><a href="index.html#flavors">Shop</a></li><li><a href="shop.html">Cart</a></li><li aria-current="step">Payment</li></ol>
+      <div class="shopgrid"><div class="stack"><h1 class="display h2">Checkout</h1>
+        ${contactBlock(u,sum)}
+        <form class="stack" id="co" novalidate>
+          <div class="co-block"><h2 class="co-title"><span>2</span>Delivery</h2><div class="form-grid">
+            <div class="field full"><label class="label" for="c-name">Name</label><input class="input" id="c-name" autocomplete="name" value="${esc(u?u.name||"":"")}" required></div>
+            <div class="field full"><label class="label" for="c-address">Street and number</label><input class="input" id="c-address" autocomplete="street-address" value="${esc(u?u.address||"":"")}" required></div>
+            <div class="field"><label class="label" for="c-zip">Postcode</label><input class="input" id="c-zip" autocomplete="postal-code" value="${esc(u?u.zip||"":"")}" required></div>
+            <div class="field"><label class="label" for="c-city">City</label><input class="input" id="c-city" autocomplete="address-level2" value="${esc(u?u.city||"":"")}" required></div>
+            <div class="field full"><label class="label" for="c-phone">Phone (for the carrier)</label><input class="input" id="c-phone" type="tel" autocomplete="tel" value="${esc(u?u.phone||"":"")}"></div></div></div>
+          <div class="co-block"><h2 class="co-title"><span>3</span>Payment</h2>
+            <p class="small">Secure card payment by Stripe. <span class="badge">Test mode</span></p>
+            <div class="form-grid">
+              <div class="field full"><label class="label" for="p-num">Card number</label><input class="input" id="p-num" inputmode="numeric" autocomplete="off" placeholder="4242 4242 4242 4242" required></div>
+              <div class="field"><label class="label" for="p-exp">Expiry</label><input class="input" id="p-exp" inputmode="numeric" autocomplete="off" placeholder="MM / YY" required></div>
+              <div class="field"><label class="label" for="p-cvc">CVC</label><input class="input" id="p-cvc" inputmode="numeric" autocomplete="off" placeholder="123" required></div></div>
+            <p class="hint">Prototype: no real payment. Any test card works, for example 4242 4242 4242 4242.</p></div>
+          <button class="btn" id="pay" type="submit">Pay ${chf(sum.price.net)}</button><div id="co-err"></div>
+        </form></div>${summary(sum)}</div>`;
+    if(mode==="guest"&&msg.email&&$("#c-email")) $("#c-email").value=msg.email;
+    Object.keys(keep).forEach(k=>{ const n=$("#"+k); if(n&&!n.value) n.value=keep[k]; });
+  }
+
+  function done(o){
+    const u=user();
+    $("#co-root").innerHTML=`<ol class="steps"><li>Shop</li><li>Cart</li><li aria-current="step">Payment</li></ol>
+      <div class="stack narrow"><h1 class="display h2">Thank you.</h1>
+      <div class="alert alert--ok">Order ${esc(o.id)} is paid: ${o.boxes} box${o.boxes>1?"es":""}, ${chf(o.net)}${o.welcomePct?` (first order −${pct(o.welcomePct)})`:""}.</div>
+      <p>Your confirmation goes to <span class="paper">${esc(o.email)}</span>. Delivery within 4 weeks.</p>
+      ${u?`<div class="row"><a class="btn" href="account.html">Track my order</a><a class="link-quiet" href="index.html">Back to the site</a></div>`:
+        `<div class="offer"><p><strong>Create an account to follow your order.</strong></p><a class="btn btn--sm" href="account.html?signup=1">Create an account</a></div><div><a class="link-quiet" href="index.html">Back to the site</a></div>`}</div>`;
+    scrollTo(0,0);
+  }
+
+  document.addEventListener("click",e=>{ const m=e.target.closest("[data-mode]"); if(m){ msg.email=($("#c-email")||{}).value||msg.email; mode=m.dataset.mode; msg.login=msg.signup=""; render(); } });
+  document.addEventListener("submit",e=>{
+    const id=e.target.id;
+    if(id==="f-login"){ e.preventDefault(); const u=Store.login("customer",$("#l-email").value,$("#l-pw").value); if(!u){ msg.login='<div class="alert alert--bad">Wrong email or password.</div>'; } render(); }
+    if(id==="f-signup"){ e.preventDefault(); try{ const c=Store.registerConsumer({name:$("#s-name").value,email:$("#s-email").value,password:$("#s-pw").value}); Store.login("customer",c.email,$("#s-pw").value); msg.signup=""; }catch(err){ msg.signup=`<div class="alert alert--bad">${esc(err.message)}</div>`; } render(); }
+    if(id==="co"){
+      e.preventDefault(); const v=i=>$("#"+i).value.trim(), u=user(), err=t=>{ $("#co-err").innerHTML=`<div class="alert alert--warn">${t}</div>`; };
+      const email=u?u.email:v("c-email");
+      if(!u&&!/^\S+@\S+\.\S+$/.test(email||"")) return err("Enter your email in the contact block, or log in.");
+      if(!v("c-name")||!v("c-address")||!v("c-zip")||!v("c-city")) return err("Fill in your name and delivery address.");
+      const digits=v("p-num").replace(/\D/g,"");
+      if(digits.length<12||!/\d{2}\s*\/?\s*\d{2}/.test(v("p-exp"))||v("p-cvc").replace(/\D/g,"").length<3) return err("Check your card details.");
+      try{
+        const sum=Common.cartSummary();
+        const o=Store.consumerCheckout({email,name:v("c-name"),accountId:u?u.id:null,address:v("c-address"),zip:v("c-zip"),city:v("c-city"),phone:v("c-phone"),
+          lines:sum.lines.map(l=>({flavor:l.flavor,boxes:l.boxes})),paid:true,paymentRef:"pi_test_"+Math.random().toString(36).slice(2,12)});
+        // card details are never stored: only the test payment reference stays on the order
+        Cart.clear(); msg.done=o; render();
+      }catch(x){ err(esc(x.message)); }
+    }
+  });
+  document.addEventListener("proto:changed",()=>{ if(!msg.done&&!document.activeElement.closest("form")) render(); });
+  render();
+})();
+</script>
+</body>
+</html>

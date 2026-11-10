@@ -1,0 +1,102 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Pro space - MALACONDA</title>
+<meta name="robots" content="noindex, nofollow">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Chivo:wght@400;500&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<script src="theme.js"></script>
+<link rel="stylesheet" href="proto.css">
+</head>
+<body>
+<div id="site-nav"></div>
+<main id="app"></main>
+<script src="engine.js"></script>
+<script src="store.js"></script>
+<script src="common.js"></script>
+<script src="auth.js"></script>
+<script>
+/* Pro space: prices, order tracking, recommendations, account.
+   Pros do not order here. Their prices show on the website while they are logged in,
+   and "Request this order" there sends the request to the founders. */
+Auth.gate("pro","Pro space","Your prices, your orders and your recommendations.",function(user){
+  const {esc,chf,pct,date,$,$$}=Common, F=Store.FLAVORS;
+  let tab=(["prices","orders","recommend","account"].indexOf((location.hash||"").slice(1))>-1)?location.hash.slice(1):"prices";
+  const TABS=[["prices","My prices"],["orders","My orders"],["recommend","Recommend a pro"],["account","Account"]];
+
+  function shell(inner){
+    const c=Store.conditionsOf(user.id);
+    document.getElementById("app").innerHTML=`<div class="block app"><nav class="side" role="tablist">${TABS.map(([k,l])=>`<button role="tab" data-tab="${k}" aria-selected="${k===tab}">${l}${k==="recommend"&&c.credit.available?`<span class="count">${c.credit.available}%</span>`:""}</button>`).join("")}</nav><div id="panel" class="stack">${inner}</div></div>`;
+    $$("[data-tab]").forEach(b=>b.addEventListener("click",()=>{tab=b.dataset.tab;render();}));
+  }
+
+  /* ---- prices: what applies to me, from the same engine as the site and the admin ---- */
+  function pricesTab(){
+    const c=Store.conditionsOf(user.id), S=Store.get().settings;
+    const next=c.next
+      ? (c.next.kind==="welcome" ? `Your first confirmed order is <span class="paper">−${pct(c.next.pct)}</span> (welcome offer).` : `<span class="paper">−${pct(c.next.pct)}</span> on your next order from your referral credit (${pct(c.credit.available)} available, ${pct(S.referral.maxPerOrder)} maximum per order).`)
+      : (c.flags.extras ? "No welcome offer or credit is pending." : "Your negotiated prices replace the welcome offer and the referral credit.");
+    shell(`<div><h1 class="display h2">${esc(user.name)}</h1></div>
+      <div class="alert alert--ok">These prices also show on the website while you are logged in, with a live total for any quantity.</div>
+      <div class="grid grid-2">${c.sheet.flavors.map(f=>`<div class="card stack" data-flavor="${f.flavor}" style="border-top:3px solid var(--accent)">
+        <h2 class="flavor-name flavor-name--sm">${F[f.flavor].name}</h2>
+        <p class="price">${chf(f.unit)}<small>per bottle</small></p>
+        <p class="paper">${chf(f.boxPrice)} <span class="muted">per box of 12 · excl. VAT</span></p>
+        ${f.negotiated?'<span class="badge badge--warn">Negotiated price</span>':""}</div>`).join("")}</div>
+      ${c.flags.tiers?`<div><p class="label">Volume pricing, per order (all flavours together)</p></div>
+      <div class="tablewrap"><table class="tbl"><thead><tr><th>Boxes in the order</th><th class="num">Discount</th>${c.sheet.flavors.map(f=>`<th class="num">${F[f.flavor].name} per box</th>`).join("")}</tr></thead><tbody>
+        ${c.sheet.tiers.map(t=>`<tr><td>${t.from}${t.to?"-"+t.to:"+"} boxes</td><td class="num">${t.pct?"−"+pct(t.pct):"-"}</td>${t.boxes.map(b=>`<td class="num">${chf(b.boxPrice)}</td>`).join("")}</tr>`).join("")}
+      </tbody></table></div>`:'<div class="card">Volume tiers do not apply to your account.</div>'}
+      <div class="card stack"><p class="label">On your next order</p><p>${next}</p></div>
+      <div class="row"><a class="btn" href="index.html#flavors">See my prices on the site →</a></div>`);
+  }
+
+  /* ---- orders: tracking, plus requests waiting for the founders ---- */
+  const parcel=(o)=>{ const sh=o.shipping||{}; if(!sh.tracking&&!sh.carrier) return '<span class="muted">Not shipped yet</span>'; const url=Store.trackingUrl(sh.carrier,sh.tracking); return esc(sh.carrier||"")+(sh.tracking?'<br><span class="small">'+(url?'<a class="link-quiet" href="'+esc(url)+'" target="_blank" rel="noopener">'+esc(sh.tracking)+'</a>':esc(sh.tracking))+'</span>':'<br><span class="small muted">Tracking number to come</span>'); };
+  const pay=(o)=>esc((o.payment||{}).method||"")+'<br><span class="small muted">'+(o.paidAt?"paid "+date(o.paidAt):"waiting for payment")+'</span>';
+  function ordersTab(){
+    const orders=Store.ordersOfPro(user.id).slice().sort((a,b)=>b.createdAt.localeCompare(a.createdAt));
+    const reqs=Store.get().requests.filter(r=>r.kind==="order"&&r.proId===user.id&&r.status==="open");
+    const flow=Store.STATUS_FLOW;
+    shell(`<div><h1 class="display h2">My orders</h1></div>
+      ${reqs.length?`<div class="card stack"><p class="label">Requested, waiting for confirmation</p>${reqs.map(r=>`<p>${date(r.createdAt)} · ${r.lines.map(l=>`${l.boxes} ${F[l.flavor].name}`).join(", ")} · quoted <span class="paper">${chf(r.quote.net)}</span> excl. VAT</p>`).join("")}</div>`:""}
+      ${orders.length?`<div class="tablewrap"><table class="tbl"><thead><tr><th>Order</th><th>Date</th><th>Items</th><th class="num">Total excl. VAT</th><th>Payment</th><th>Parcel</th><th>Status</th></tr></thead><tbody>
+      ${orders.map(o=>`<tr><td>${esc(o.id)}${o.invoiceNo?`<br><span class="small muted">${esc(o.invoiceNo)}</span>`:""}</td><td>${date(o.createdAt)}<br><span class="small muted">${esc(o.via||"")}</span></td><td>${o.lines.map(l=>`${l.boxes} ${F[l.flavor].name}`).join(", ")}</td><td class="num">${chf(o.net)}</td>
+        <td>${pay(o)}</td><td>${parcel(o)}</td>
+        <td><span class="badge ${o.status==="cancelled"?"badge--bad":o.status==="delivered"||o.status==="paid"?"badge--ok":""}">${Store.STATUS_LABEL[o.status]}</span><br><span class="small" style="white-space:nowrap">${o.status==="cancelled"?"":flow.map((s,i)=>`<span style="color:${i<=flow.indexOf(o.status)?"var(--paper)":"var(--graphite)"}">${i<=flow.indexOf(o.status)?"●":"○"}</span>`).join(" ")}</span></td></tr>`).join("")}
+      </tbody></table></div>`:(reqs.length?"":`<div class="card stack"><p>No orders yet.</p><div><a class="btn btn--sm" href="index.html#flavors">See my prices →</a></div></div>`)}`);
+  }
+
+  /* ---- recommend: code, link and credit ledger ---- */
+  function recommendTab(){
+    const S=Store.get().settings, c=Store.creditOf(user.id);
+    const link=new URL(`for-pros.html?ref=${encodeURIComponent(user.code)}`,location.href).href;
+    const badge=(s)=>s==="qualified"?'<span class="badge badge--ok">Credit earned</span>':s==="below"?`<span class="badge badge--warn">Below the ${S.referral.minBoxes}-box threshold</span>`:'<span class="badge">Waiting for first order</span>';
+    shell(`<div><h1 class="display h2">Recommend a pro</h1></div>
+      <div class="card stack"><p>Recommend another bar, restaurant, club, hotel or shop. They get −${pct(S.proWelcomePct)} on their first order. You get −${pct(S.referral.pctPer)} on a next order once their first order reaches ${S.referral.minBoxes} boxes. Credits add up, up to −${pct(S.referral.maxPerOrder)} per order.</p>
+        <p class="label">Your code</p><div class="credbox">${esc(user.code)}</div><p class="label">Your link</p><div class="credbox">${esc(link)}</div>
+        <div><button class="btn btn--sm btn--ghost" id="copy" type="button">Copy link</button></div></div>
+      <div class="kpis"><div class="kpi"><span class="label">Earned</span><b>${pct(c.earned)}</b></div><div class="kpi"><span class="label">Used</span><b>${pct(c.used)}</b></div><div class="kpi"><span class="label">Available</span><b>${pct(c.available)}</b></div></div>
+      ${c.refs.length?`<div class="tablewrap"><table class="tbl"><thead><tr><th>Recommended</th><th>City</th><th>Status</th></tr></thead><tbody>${c.refs.map(r=>`<tr><td>${esc(r.pro.name)}</td><td>${esc(r.pro.city)}</td><td>${badge(r.status)}</td></tr>`).join("")}</tbody></table></div>`:`<div class="card">No recommendations yet.</div>`}`);
+    $("#copy").addEventListener("click",()=>{ (navigator.clipboard?navigator.clipboard.writeText(link):Promise.reject()).then(()=>Common.toast("Link copied."),()=>Common.toast("Copy the link above.")); });
+  }
+
+  const PFIELDS=[{name:"contact",label:"Contact name"},{name:"phone",label:"Phone",type:"tel"},{name:"address",label:"Delivery street and number",full:true},{name:"zip",label:"Postcode"},{name:"city",label:"City"},{name:"billingAddress",label:"Billing address (if different)",full:true},{name:"vat",label:"VAT number",full:true}];
+  function accountTab(){
+    const u=Store.currentUser("pro");
+    shell(`<div><h1 class="display h2">Account</h1></div>
+      <div class="card"><div class="row" style="justify-content:space-between"><div><p class="label">Venue</p><p class="paper">${esc(u.name)} · ${esc(u.type)}</p></div><div><p class="label">Login</p><p class="paper">${esc(u.email)}</p></div></div></div>
+      ${Auth.profileForm(u,PFIELDS,"Company details")}${Auth.passwordForm()}`);
+    Auth.bindPanels("pro",u,PFIELDS);
+  }
+
+  function render(){ ({prices:pricesTab,orders:ordersTab,recommend:recommendTab,account:accountTab})[tab](); }
+  document.addEventListener("proto:changed",()=>{ if(tab!=="account") render(); });
+  render();
+});
+</script>
+</body>
+</html>

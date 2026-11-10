@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Ambassador space — MALACONDA</title>
+<meta name="robots" content="noindex, nofollow">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Chivo:wght@400;500&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<script src="theme.js"></script>
+<link rel="stylesheet" href="proto.css">
+</head>
+<body>
+<div id="site-nav"></div>
+<main id="app"></main>
+<script src="engine.js"></script>
+<script src="store.js"></script>
+<script src="common.js"></script>
+<script src="auth.js"></script>
+<script>
+Auth.gate("ambassador","Ambassador space","Your code, your venues and your statements.",function(user){
+  const {esc,chf,pct,date,monthHtml,$,$$}=Common;
+  let tab="venues";
+  const TABS=[["venues","Venues"],["statements","Statements"],["share","Code and link"],["account","Account"]];
+  function shell(inner){
+    document.getElementById("app").innerHTML=`<div class="block app"><nav class="side" role="tablist">${TABS.map(([k,l])=>`<button role="tab" data-tab="${k}" aria-selected="${k===tab}">${l}</button>`).join("")}</nav><div class="stack">${inner}</div></div>`;
+    $$("[data-tab]").forEach(b=>b.addEventListener("click",()=>{tab=b.dataset.tab;render();}));
+  }
+  function kpis(v){ return `<div class="kpis"><div class="kpi"><span class="label">Venues</span><b>${v.venues.length}</b></div><div class="kpi"><span class="label">Commission earned</span><b>${chf(v.totalEarned)}</b></div><div class="kpi"><span class="label">Paid out</span><b>${chf(v.totalPaid)}</b></div><div class="kpi"><span class="label">To be paid</span><b>${chf(v.totalEarned-v.totalPaid)}</b></div></div>`; }
+  function venuesTab(){
+    const v=Store.ambassadorView(user.id);
+    shell(`<div><p class="label">Venues</p><h1 class="display h2">${esc(user.name)}</h1></div>${kpis(v)}
+      ${v.venues.length?`<div class="tablewrap"><table class="tbl"><thead><tr><th>Venue</th><th>City</th><th>Status</th><th>Commission until</th><th class="num">Commissionable revenue</th><th class="num">Commission</th></tr></thead><tbody>
+      ${v.venues.map(x=>`<tr><td>${esc(x.name)}<br><span class="small muted">${esc(x.type)}</span></td><td>${esc(x.city)}</td><td><span class="badge ${x.status==="Active"?"badge--ok":""}">${esc(x.status)}</span></td><td>${x.endsAt?date(x.endsAt):"—"}</td><td class="num">${chf(x.revenue)}</td><td class="num">${chf(x.commission)}</td></tr>`).join("")}
+      </tbody></table></div>`:`<div class="card">No venues yet.</div>`}
+      <p class="hint">Commission: ${pct(v.pct)} of net invoiced revenue excl. VAT, for ${v.months} months from each venue's first paid order.</p>`);
+  }
+  function statementsTab(){
+    const v=Store.ambassadorView(user.id);
+    shell(`<div><p class="label">Statements</p><h1 class="display h2">By month</h1></div>
+      ${v.statements.length?v.statements.map(s=>`<div class="card stack"><div class="row" style="justify-content:space-between"><h2 class="card__title">${monthHtml(s.month)}</h2><span class="badge ${s.paidOut?"badge--ok":"badge--warn"}">${s.paidOut?"Paid out":"To be paid"}</span></div>
+        <table class="tbl" style="min-width:0"><thead><tr><th>Venue</th><th class="num">Commissionable revenue</th><th class="num">Commission</th></tr></thead><tbody>
+        ${s.venues.map(x=>`<tr><td>${esc(x.name)}</td><td class="num">${chf(x.base)}</td><td class="num">${chf(x.amount)}</td></tr>`).join("")}
+        <tr class="sub"><td>Total</td><td class="num">${chf(s.base)}</td><td class="num">${chf(s.total)}</td></tr></tbody></table>
+        <div class="row"><a class="btn btn--sm" href="statement.html?amb=${user.id}&month=${s.month}&print=1" >Download statement (PDF)</a><a class="btn btn--sm btn--ghost" href="statement.html?amb=${user.id}&month=${s.month}">Open</a></div></div>`).join(""):`<div class="card">No commission yet.</div>`}`);
+  }
+  function shareTab(){
+    const link=new URL(`for-pros.html?ref=${encodeURIComponent(user.code)}`,location.href).href;
+    shell(`<div><p class="label">Code and link</p><h1 class="display h2">Introduce a venue</h1></div>
+      <div class="card stack"><p>When a venue asks for pro access, it enters your code or uses your link. Your name can also be given by the venue or by the founders.</p>
+      <p class="label">Your code</p><div class="credbox">${esc(user.code)}</div><p class="label">Your link</p><div class="credbox">${esc(link)}</div>
+      <div><button class="btn btn--sm btn--ghost" id="copy" type="button">Copy link</button></div></div>`);
+    $("#copy").addEventListener("click",()=>{ (navigator.clipboard?navigator.clipboard.writeText(link):Promise.reject()).then(()=>Common.toast("Link copied."),()=>Common.toast("Copy the link above.")); });
+  }
+
+  const AFIELDS=[{name:"name",label:"Name"},{name:"phone",label:"Phone",type:"tel"},{name:"iban",label:"IBAN for payouts",full:true}];
+  function accountTab(){
+    const u=Store.currentUser("ambassador");
+    shell(`<div><h1 class="display h2">Account</h1></div>
+      <div class="card"><div class="row" style="justify-content:space-between"><div><p class="label">Login</p><p class="paper">${esc(u.email)}</p></div><div><p class="label">Code</p><p class="paper">${esc(u.code)}</p></div></div></div>
+      ${Auth.profileForm(u,AFIELDS,"Details")}${Auth.passwordForm()}`);
+    Auth.bindPanels("ambassador",u,AFIELDS);
+  }
+  function render(){ ({venues:venuesTab,statements:statementsTab,share:shareTab,account:accountTab})[tab](); }
+  document.addEventListener("proto:changed",render);
+  render();
+});
+</script>
+</body>
+</html>

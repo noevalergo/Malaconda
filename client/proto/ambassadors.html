@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="robots" content="noindex, nofollow">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Ambassadors - MALACONDA</title>
+<meta name="description" content="Introduce Malaconda to the venues that should pour it and earn when they order.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Chivo:wght@400;500&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<script src="theme.js"></script>
+<link rel="stylesheet" href="proto.css">
+</head>
+<body>
+<div id="site-nav"></div>
+<main>
+  <!-- 1. The promise and the one action -->
+  <section class="pagehero force-dark">
+    <img src="../images/insta-1.jpg" alt="Malaconda coasters in yellow, coral and black" width="1440" height="1920" fetchpriority="high" style="object-position:50% 35%">
+    <div class="block">
+      <div class="pagehero__copy">
+        <h1 class="display h1">Not everyone gets bitten</h1>
+        <p class="lead" style="color:#E9E9E1">Know the venues that should pour Malaconda? Introduce them and earn when they order.</p>
+        <div class="row"><a class="btn" href="#apply">Become an ambassador ↓</a><a class="link-quiet" href="ambassador-space.html" style="color:#E9E9E1">Already one? Log in</a></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 2. What an ambassador gets -->
+  <section class="block">
+    <div class="benefits">
+      <article class="benefit" data-flavor="guava"><h2 class="display h2">Your own code</h2><p class="lead">Share your link or code. Venues that name you are yours.</p></article>
+      <article class="benefit" data-flavor="lulo"><h2 class="display h2">Paid on every order</h2><p class="lead">You earn on what the venues you introduce buy.</p></article>
+      <article class="benefit" data-flavor="guava"><h2 class="display h2">Monthly statements</h2><p class="lead">See each venue and each payout in your own space.</p></article>
+    </div>
+  </section>
+
+  <!-- 3. The ask -->
+  <section class="block" id="apply" style="padding-top:0">
+    <div class="access">
+      <div class="stack">
+        <h2 class="display h2">Know the right venues?</h2>
+        <p class="lead">Tell us who you are and which venues you know.</p>
+      </div>
+      <form class="lineform stack" id="aform" data-flavor="guava">
+        <div class="form-grid">
+          <div class="field"><label class="label" for="a-name">Name</label><input class="input" id="a-name" required></div>
+          <div class="field"><label class="label" for="a-email">Email</label><input class="input" id="a-email" type="email" required></div>
+          <div class="field full"><label class="label" for="a-handle">Instagram / TikTok</label><input class="input" id="a-handle" placeholder="@"></div>
+          <div class="field full"><label class="label" for="a-network">Your network</label><textarea class="input" id="a-network" rows="3" required placeholder="Venues you know, your role in the scene"></textarea></div>
+        </div>
+        <div class="row"><button class="btn" type="submit">Apply →</button></div>
+        <div id="adone"></div>
+      </form>
+    </div>
+  </section>
+</main>
+<div id="site-footer"></div>
+<script src="engine.js"></script>
+<script src="store.js"></script>
+<script src="common.js"></script>
+<script>
+Common.mount({active:"ambassadors.html"});
+document.getElementById("aform").addEventListener("submit",e=>{
+  e.preventDefault(); const $=Common.$;
+  Store.submitAmbassadorApplication({name:$("#a-name").value.trim(),email:$("#a-email").value.trim(),handle:$("#a-handle").value.trim(),network:$("#a-network").value.trim()});
+  $("#adone").innerHTML='<div class="alert alert--ok">Application sent.</div>'; e.target.reset();
+});
+</script>
+</body>
+</html>
