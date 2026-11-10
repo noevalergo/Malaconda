@@ -394,7 +394,7 @@ html { scroll-padding-top:var(--nav-h); }
 .theme-btn svg { width:18px; height:18px; display:block; }
 .footer__links .theme-btn { width:34px; height:34px; }
 /* coloured display words keep their exact night colours in day mode: black outline keeps them readable on paper */
-:root[data-theme="light"] .sticker { color:var(--accent); -webkit-text-stroke:.045em #131313; paint-order:stroke fill; }
+:root[data-theme="light"] .sticker { color:var(--accent); }
 :root[data-theme="light"] .picker .flavor-name.sticker { color:var(--accent); }
 
 
@@ -809,3 +809,12 @@ dialog form > .label:first-of-type { margin-top:var(--s2); }
 /* hero title: no forced line breaks, the text wraps to the screen width; on phones the size follows the width so it settles on three lines */
 .hero h1.h1 { text-wrap:balance; }
 @media (max-width:720px) { .hero h1.h1 { font-size:clamp(36px, 12.5vw, 64px); } }
+
+/* day / night as a switch inside the mobile menu: no words, a sun and a moon with a sliding knob */
+.menu-theme { justify-content:flex-start !important; padding:18px 0 !important; border:0 !important; }
+.sw { position:relative; display:inline-grid; grid-template-columns:1fr 1fr; align-items:center; width:72px; height:36px; border:1px solid var(--graphite); border-radius:999px; background:var(--surface); }
+.sw svg { width:16px; height:16px; justify-self:center; position:relative; z-index:2; transition:color .3s var(--ease); color:var(--stone); }
+.sw__knob { position:absolute; top:3px; left:3px; width:28px; height:28px; border-radius:50%; background:var(--paper); transition:transform .35s cubic-bezier(.22,1,.36,1); z-index:1; }
+.menu-theme[aria-checked="true"] .sw__knob { transform:translateX(36px); }          /* night: knob on the moon */
+.menu-theme[aria-checked="true"] .sw svg:last-of-type { color:var(--ink); }
+.menu-theme[aria-checked="false"] .sw svg:first-of-type { color:var(--ink); }       /* day: knob on the sun */

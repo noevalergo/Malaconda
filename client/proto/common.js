@@ -36,7 +36,7 @@
   function paintTheme() {
     const dark = window.Theme.get() === "dark";
     $$("[data-theme-toggle]").forEach((b) => { b.className = "theme-btn"; b.innerHTML = dark ? SUN : MOON; b.setAttribute("aria-label", dark ? "Switch to day mode" : "Switch to night mode"); });
-    $$("[data-theme-menu]").forEach((b) => { b.innerHTML = `<span>${dark ? "Day mode" : "Night mode"}</span>${dark ? SUN : MOON}`; b.setAttribute("aria-label", dark ? "Switch to day mode" : "Switch to night mode"); });
+    $$("[data-theme-menu]").forEach((b) => { b.innerHTML = `<span class="sw" aria-hidden="true">${SUN}${MOON}<i class="sw__knob"></i></span>`; b.setAttribute("role", "switch"); b.setAttribute("aria-checked", dark ? "true" : "false"); b.setAttribute("aria-label", "Night mode"); });
   }
   document.addEventListener("theme:changed", paintTheme);
 
