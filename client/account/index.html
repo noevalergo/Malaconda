@@ -1,0 +1,254 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+  <!-- =========================================================
+       MALACONDA — Sitio web oficial (una página con scroll)
+       · Textos en inglés: este archivo (busca "EDITAR")
+       · Textos en alemán: js/i18n.js (misma clave data-i18n)
+       · Colores, tipografía, espaciado: css/styles.css (sección 1)
+       · Moneda, checkout, códigos promo, pre-order: js/main.js (CONFIG)
+       ========================================================= -->
+
+  <title>Account — MALACONDA</title>
+  <meta name="description" content="Customer and partner accounts at MALACONDA.">
+  <link rel="icon" href="../images/favicon.png">
+
+  <!-- Chivo (texto) y DM Mono (etiquetas). Andreas (titulares) se carga desde /fonts — ver css/styles.css -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Chivo:wght@400;500&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+
+  <link rel="preload" href="../fonts/Andreas-Regular.woff2" as="font" type="font/woff2" crossorigin>
+  <link rel="stylesheet" href="../css/styles.css">
+</head>
+<body>
+  <!-- =====================================================
+       ANUNCIO EN MOVIMIENTO (ticker). EDITAR el texto en la clave "announce".
+       El texto se repite para que el movimiento sea continuo.
+       ===================================================== -->
+  <div class="ticker" data-announce>
+    <a href="../index.html#ambassadors" class="ticker__link">
+      <span class="sr-only" data-i18n="announce">Give 20% off. Earn CHF 5 per new customer as an Ambassador.</span>
+      <span class="ticker__track" aria-hidden="true">
+        <span class="ticker__group"><span class="ticker__item"><span data-i18n="announce">Give 20% off. Earn CHF 5 per new customer as an Ambassador.</span><span class="ticker__sep" aria-hidden="true">✦</span></span><span class="ticker__item"><span data-i18n="announce">Give 20% off. Earn CHF 5 per new customer as an Ambassador.</span><span class="ticker__sep" aria-hidden="true">✦</span></span><span class="ticker__item"><span data-i18n="announce">Give 20% off. Earn CHF 5 per new customer as an Ambassador.</span><span class="ticker__sep" aria-hidden="true">✦</span></span><span class="ticker__item"><span data-i18n="announce">Give 20% off. Earn CHF 5 per new customer as an Ambassador.</span><span class="ticker__sep" aria-hidden="true">✦</span></span></span>
+        <span class="ticker__group"><span class="ticker__item"><span data-i18n="announce">Give 20% off. Earn CHF 5 per new customer as an Ambassador.</span><span class="ticker__sep" aria-hidden="true">✦</span></span><span class="ticker__item"><span data-i18n="announce">Give 20% off. Earn CHF 5 per new customer as an Ambassador.</span><span class="ticker__sep" aria-hidden="true">✦</span></span><span class="ticker__item"><span data-i18n="announce">Give 20% off. Earn CHF 5 per new customer as an Ambassador.</span><span class="ticker__sep" aria-hidden="true">✦</span></span><span class="ticker__item"><span data-i18n="announce">Give 20% off. Earn CHF 5 per new customer as an Ambassador.</span><span class="ticker__sep" aria-hidden="true">✦</span></span></span>
+      </span>
+    </a>
+    <button type="button" class="ticker__close" data-announce-close aria-label="Close announcement">✕</button>
+  </div>
+
+  <!-- =====================================================
+       NAVEGACIÓN (igual en las 4 páginas: si cambias un enlace, cámbialo en todas)
+       ===================================================== -->
+  <header class="nav" id="top" data-nav>
+    <div class="container nav__inner">
+      <a href="../index.html" class="nav__logo" aria-label="Malaconda, home">
+        <img src="../images/logo-wordmark.svg" alt="MALACONDA" class="logo-img" width="580" height="118" data-fallback="text">
+        <span class="logo-text">MALACONDA<sup>®</sup></span>
+      </a>
+
+      <nav class="nav__links" aria-label="Main">
+        <a href="../index.html#malaconda" data-i18n="nav-malaconda">Malaconda</a>
+        <a href="../index.html#flavors" data-i18n="nav-flavors">Flavors</a>
+        <a href="../partners/index.html" data-i18n="nav-partners">Partners</a>
+        <a href="../index.html#reviews" data-i18n="nav-reviews">Reviews</a>
+        <a href="../index.html#contact" data-i18n="nav-contact">Contact</a>
+      </nav>
+
+      <div class="nav__actions">
+        <div class="lang" role="group" aria-label="Language">
+          <button type="button" class="lang__btn" data-lang="en" aria-pressed="true">EN</button>
+          <button type="button" class="lang__btn" data-lang="de" aria-pressed="false">DE</button>
+        </div>
+        <a href="../partners/index.html" class="nav__partner" data-i18n="become-partner">Become a partner</a>
+        <a href="../account/index.html" class="nav__icon" aria-label="Account" title="Account" aria-current="page"><svg class="icon" viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="4"/><path d="M4 21c1.6-4 4.5-6 8-6s6.4 2 8 6"/></svg></a>
+        <button class="cart-toggle" type="button" aria-label="Open cart" data-cart-open>
+          <span class="cart-toggle__word" data-i18n="cart">Cart</span>
+          <span class="cart-count" data-cart-count>0</span>
+        </button>
+        <a href="../index.html#choose" class="btn btn--primary btn--sm nav__cta" data-i18n="nav-shop">Shop <span class="btn__arrow" aria-hidden="true">→</span></a>
+        <button type="button" class="burger" data-menu-open aria-label="Open menu" aria-expanded="false" aria-controls="mobile-menu">
+          <span></span><span></span>
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <!-- Menú móvil (pantalla completa) -->
+  <div class="menu" id="mobile-menu" data-menu hidden>
+    <nav class="menu__links" aria-label="Mobile">
+      <a href="../index.html#malaconda" data-menu-link><span class="label">01</span><span data-i18n="nav-malaconda">Malaconda</span></a>
+      <a href="../index.html#flavors" data-menu-link><span class="label">02</span><span data-i18n="nav-flavors">Flavors</span></a>
+      <a href="../partners/index.html" data-menu-link><span class="label">03</span><span data-i18n="nav-partners">Partners</span></a>
+      <a href="../index.html#reviews" data-menu-link><span class="label">04</span><span data-i18n="nav-reviews">Reviews</span></a>
+      <a href="../index.html#contact" data-menu-link><span class="label">05</span><span data-i18n="nav-contact">Contact</span></a>
+    </nav>
+    <div class="menu__extra">
+      <a href="../partners/index.html" class="btn btn--secondary" data-i18n="become-partner">Become a partner</a>
+      <a href="../account/index.html" class="btn btn--secondary" data-i18n="account">Account</a>
+    </div>
+    <div class="menu__foot">
+      <div class="lang" role="group" aria-label="Language">
+        <button type="button" class="lang__btn" data-lang="en" aria-pressed="true">EN</button>
+        <button type="button" class="lang__btn" data-lang="de" aria-pressed="false">DE</button>
+      </div>
+      <a href="https://www.instagram.com/drinkmalaconda/" class="text-link" target="_blank" rel="noopener">@drinkmalaconda</a>
+    </div>
+  </div>
+
+  <main class="page">
+    <!-- =====================================================
+         CUENTAS (/account/) — dos recorridos separados:
+         clientes (compras) y partners (negocios registrados).
+         ===================================================== -->
+    <section class="section page-hero page-hero--tight" aria-labelledby="account-title">
+      <div class="container">
+        <p class="label eyebrow" data-i18n="account">Account</p>
+        <h1 class="display page-title" id="account-title" data-i18n="account-title">Your account</h1>
+        <p class="page-lead" data-i18n="account-intro">Choose the account that fits you. Customers and partners have separate accounts.</p>
+      </div>
+    </section>
+
+    <section class="section accounts">
+      <div class="container accounts__grid">
+        <article class="account-card" aria-labelledby="customer-title">
+          <p class="label eyebrow" data-i18n="customers">Customers</p>
+          <h2 class="display account-card__title" id="customer-title" data-i18n="customer-account">Customer account</h2>
+          <p data-i18n="customer-text">Access your account, manage your orders and view your purchase history.</p>
+          <div class="account-card__soon" data-auth-soon>
+            <p class="label" data-i18n="signin-soon">Sign-in opens soon</p>
+            <p class="label label--muted" data-i18n="guest-note">Until then, order as a guest — no account needed.</p>
+            <a href="../index.html#choose" class="btn btn--secondary" data-i18n="shop-guest">Shop as guest <span class="btn__arrow" aria-hidden="true">→</span></a>
+          </div>
+          <!-- LOGIN (customer): oculto hasta que exista el backend (CONFIG.auth en js/main.js) -->
+          <form class="form auth-form" method="post" data-auth-form="customer" hidden>
+            <div class="field">
+              <label class="label" for="customer-email">Email</label>
+              <input class="input" id="customer-email" name="email" type="email" autocomplete="email" required>
+            </div>
+            <div class="field">
+              <label class="label" for="customer-password" data-i18n="f-password">Password</label>
+              <input class="input" id="customer-password" name="password" type="password" autocomplete="current-password" required>
+            </div>
+            <button type="submit" class="btn btn--primary" data-i18n="sign-in">Sign in</button>
+          </form>
+        </article>
+
+        <article class="account-card" aria-labelledby="partner-title">
+          <p class="label eyebrow" data-i18n="partners-word">Partners</p>
+          <h2 class="display account-card__title" id="partner-title" data-i18n="partner-account">Partner account</h2>
+          <p data-i18n="partner-text">For registered bars, hotels and business partners.</p>
+          <div class="account-card__soon" data-auth-soon>
+            <p class="label" data-i18n="signin-soon">Sign-in opens soon</p>
+            <p class="label label--muted" data-i18n="partner-note">Not a partner yet? Register your business for the 2027 pre-order.</p>
+            <div class="btn-row">
+              <a href="../partners/register/index.html" class="btn btn--primary" data-i18n="become-partner-arrow">Become a partner <span class="btn__arrow" aria-hidden="true">→</span></a>
+              <a href="../partners/index.html" class="btn btn--secondary" data-i18n="programme-link">The programme</a>
+            </div>
+          </div>
+          <!-- LOGIN (partner): oculto hasta que exista el backend (CONFIG.auth en js/main.js) -->
+          <form class="form auth-form" method="post" data-auth-form="partner" hidden>
+            <div class="field">
+              <label class="label" for="partner-email">Email</label>
+              <input class="input" id="partner-email" name="email" type="email" autocomplete="email" required>
+            </div>
+            <div class="field">
+              <label class="label" for="partner-password" data-i18n="f-password">Password</label>
+              <input class="input" id="partner-password" name="password" type="password" autocomplete="current-password" required>
+            </div>
+            <button type="submit" class="btn btn--primary" data-i18n="sign-in">Sign in</button>
+          </form>
+        </article>
+      </div>
+    </section>
+  </main>
+
+  <!-- =====================================================
+       FOOTER
+       ===================================================== -->
+  <footer class="footer">
+    <div class="container">
+      <div class="footer__top">
+        <a href="../index.html" class="footer__logo" aria-label="Malaconda">
+          <img src="../images/logo-wordmark.svg" alt="MALACONDA" class="logo-img" width="580" height="118" data-fallback="text">
+          <span class="logo-text">MALACONDA<sup>®</sup></span>
+        </a>
+        <form class="newsletter" data-newsletter>
+          <label class="label" for="nl-email">Newsletter</label>
+          <div class="newsletter__row">
+            <input class="input" id="nl-email" type="email" placeholder="email@" required>
+            <button class="btn btn--secondary btn--sm" type="submit" data-i18n="nl-join">Join</button>
+          </div>
+        </form>
+      </div>
+      <div class="footer__bottom">
+        <nav class="footer__links" aria-label="Footer">
+          <a href="../index.html#choose" data-i18n="nav-shop">Shop</a>
+          <a href="../index.html#flavors" data-i18n="nav-flavors">Flavors</a>
+          <a href="../partners/index.html" data-i18n="nav-partners">Partners</a>
+          <a href="../index.html#ambassadors" data-i18n="nav-ambassadors">Ambassadors</a>
+          <a href="../account/index.html" data-i18n="account">Account</a>
+          <a href="../index.html#contact" data-i18n="nav-contact">Contact</a>
+          <a href="https://www.instagram.com/drinkmalaconda/" target="_blank" rel="noopener">Instagram ↗</a>
+        </nav>
+        <p class="label label--muted">© <span data-year>2026</span> Malaconda. <span data-i18n="rights">All rights reserved.</span></p>
+      </div>
+    </div>
+  </footer>
+
+  <!-- =====================================================
+       CARRITO (compras de clientes). En /partners/register también
+       muestra la revisión del pre-order, que es un pedido aparte.
+       ===================================================== -->
+  <div class="cart-overlay" data-cart-overlay hidden></div>
+  <aside class="cart" data-cart aria-label="Cart" aria-hidden="true">
+    <div class="cart__head">
+      <p class="label" data-cart-title data-i18n="cart-title">Your cart</p>
+      <button type="button" class="cart__close" data-cart-close aria-label="Close cart">✕</button>
+    </div>
+    <!-- REVISIÓN DEL PRE-ORDER (B2B): se muestra al enviar el formulario de Partners.
+         No se mezcla con el carrito de la tienda. -->
+    <div class="pre-review" data-pre-review hidden>
+      <p class="display pre-review__title" data-i18n="review-title">Your pre-order</p>
+      <dl class="pre-review__list" data-pre-review-list></dl>
+      <dl class="cart__lines pre-review__amounts" data-pre-review-amounts></dl>
+      <p class="label label--muted pre-review__terms" data-i18n="review-terms">20% downpayment now · 80% on delivery</p>
+      <button type="button" class="btn btn--primary btn--block" data-pre-confirm></button>
+      <button type="button" class="pre-review__edit label" data-pre-edit data-i18n="review-edit">Edit details</button>
+      <p class="label label--muted pre-review__note" data-pre-review-note></p>
+    </div>
+    <ul class="cart__items" data-cart-items></ul>
+    <p class="cart__empty" data-cart-empty data-i18n="cart-empty">Your cart is empty. Pick your poison.</p>
+    <div class="cart__foot">
+      <div class="promo" data-promo>
+        <button type="button" class="promo__toggle" data-promo-toggle aria-expanded="false" data-i18n="promo-toggle">Promo code +</button>
+        <form class="promo__form" data-promo-form hidden>
+          <label class="sr-only" for="promo-input">Promo code</label>
+          <input class="input promo__input" id="promo-input" type="text" autocomplete="off" autocapitalize="characters" spellcheck="false" placeholder="CODE" data-promo-input>
+          <button type="submit" class="btn btn--secondary btn--sm" data-i18n="promo-apply">Apply</button>
+        </form>
+        <p class="promo__applied" data-promo-applied hidden>
+          <span class="label" data-promo-code></span>
+          <button type="button" class="promo__remove" data-promo-remove data-i18n="promo-remove">Remove</button>
+        </p>
+        <p class="promo__msg label label--muted" data-promo-msg role="status"></p>
+      </div>
+
+      <dl class="cart__lines">
+        <div><dt class="label label--muted" data-i18n="cart-subtotal">Subtotal</dt><dd data-cart-subtotal>0.00</dd></div>
+        <div data-promo-line hidden><dt class="label label--muted" data-promo-line-label>Discount</dt><dd data-promo-discount>0.00</dd></div>
+        <div><dt class="label label--muted" data-i18n="cart-shipping">Shipping</dt><dd class="label label--muted" data-i18n="cart-shipping-value">Calculated at checkout</dd></div>
+        <div class="cart__total"><dt class="label" data-i18n="cart-total">Total</dt><dd data-cart-total>0.00</dd></div>
+      </dl>
+      <button type="button" class="btn btn--primary btn--block" data-checkout data-i18n="checkout">Checkout <span class="btn__arrow" aria-hidden="true">→</span></button>
+      <p class="label label--muted cart__note" data-checkout-note></p>
+    </div>
+  </aside>
+
+  <script src="../js/i18n.js"></script>
+  <script src="../js/main.js"></script>
+</body>
+</html>

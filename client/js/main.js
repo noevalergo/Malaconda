@@ -14,6 +14,9 @@
 /* =============================================================
    1. CONFIG
    ============================================================= */
+// Raíz del sitio (funciona igual en /, /account/ y /partners/register/)
+const ROOT = new URL("..", document.currentScript ? document.currentScript.src : location.href).href;
+
 const CONFIG = {
   currency: "CHF",
   orderEmail: "hello@malaconda.com",   // CONFIRMAR: email que recibe pedidos y formularios
@@ -37,6 +40,15 @@ const CONFIG = {
   //   null        → neutral: "to be announced" (usar hasta que exista un dato real)
   //   "available" → verde · "limited" → naranja · "waitlist" → rojo
   // Más adelante el backend puede definirlo con: window.MALACONDA_AVAILABILITY = "limited"
+  // Cuentas (página /account). Mientras no haya backend de login, enabled: false
+  // muestra "Sign-in opens soon" y NO enseña ningún formulario de acceso.
+  // Cuando exista: enabled: true y las URLs que reciben el login (POST email + password).
+  auth: {
+    enabled: false,
+    customerLoginEndpoint: "",
+    partnerLoginEndpoint: "",
+  },
+
   availability: null,
 
   // PRE-ORDER B2B (sección Partners)
@@ -152,8 +164,14 @@ if ("IntersectionObserver" in window) {
       navLinks.forEach((a) => a.classList.toggle("is-active", a.getAttribute("href") === "#" + e.target.id));
     });
   }, { rootMargin: "-45% 0px -50% 0px" });
-  ["shop", "partners", "ambassadors", "reviews", "contact"].forEach((id) => { const s = document.getElementById(id); if (s) io.observe(s); });
+  ["malaconda", "flavors", "reviews", "contact"].forEach((id) => { const s = document.getElementById(id); if (s) io.observe(s); });
 }
+
+// En las páginas interiores, marca el enlace de su sección (p. ej. Partners)
+navLinks.forEach((a) => {
+  const href = a.getAttribute("href") || "";
+  if (href.includes("partners/") && location.pathname.includes("/partners/")) a.setAttribute("aria-current", "page");
+});
 
 // Menú móvil
 const menu = document.querySelector("[data-menu]");
@@ -236,9 +254,9 @@ document.querySelectorAll(".product").forEach((p) => {
 
 let cart = [];
 try { cart = JSON.parse(localStorage.getItem("malaconda-cart")) || []; } catch (e) {}
-// Solo productos que siguen existiendo en la página
+// Solo productos que siguen existiendo en la tienda (en las páginas sin productos, el carrito se conserva)
 const productIds = new Set([...document.querySelectorAll(".product")].map((p) => p.dataset.id));
-cart = cart.filter((i) => productIds.has(i.id));
+if (productIds.size) cart = cart.filter((i) => productIds.has(i.id));
 
 const $ = (s) => document.querySelector(s);
 const $cart = $("[data-cart]"), $overlay = $("[data-cart-overlay]"), $items = $("[data-cart-items]");
@@ -449,6 +467,7 @@ wireForm($("[data-apply-form]"), "apply-ok");
 
 // "Apply now" abre el formulario de ambassadors
 const applyPanel = $("[data-apply]"), applyBtn = $("[data-apply-open]");
+if (applyPanel && applyBtn) {
 applyBtn.addEventListener("click", () => {
   applyPanel.hidden = false;
   applyBtn.setAttribute("aria-expanded", "true");
@@ -459,6 +478,7 @@ applyPanel.querySelector("[data-apply-close]").addEventListener("click", () => {
   applyPanel.hidden = true;
   applyBtn.setAttribute("aria-expanded", "false");
 });
+}
 
 // Pre-order B2B
 const preForm = $("[data-preorder-form]");
@@ -582,7 +602,7 @@ if (newsletter) {
     fd.append("topic", "Newsletter");
     fd.append("message", "Newsletter signup (" + LANG + ")");
     try {
-      const res = await fetch("contact.php", { method: "POST", body: fd });
+      const res = await fetch(ROOT + "contact.php", { method: "POST", body: fd });
       const data = await res.json();
       if (!data.ok) throw new Error();
       btn.textContent = t("newsletter-ok");
@@ -608,4 +628,28 @@ renderCart();
   const lang = saved || ((navigator.language || "").toLowerCase().startsWith("de") ? "de" : "en");
   if (lang === "de") setLang("de");
   else document.querySelectorAll("[data-field-lang]").forEach((i) => (i.value = "en"));
+})();
+
+// =============================================================
+// CUENTAS (/account): muestra el login solo si CONFIG.auth.enabled
+// =============================================================
+document.querySelectorAll("[data-auth-form]").forEach((form) => {
+  const type = form.dataset.authForm;                       // "customer" | "partner"
+  const endpoint = CONFIG.auth[type + "LoginEndpoint"];
+  const on = CONFIG.auth.enabled && !!endpoint;
+  form.hidden = !on;
+  const soon = form.parentElement.querySelector("[data-auth-soon]");
+  if (soon) soon.hidden = on;
+  if (on) form.action = endpoint;
+});
+
+// Enlaces antiguos de la home que ahora viven en otras páginas
+(function () {
+  const moved = { preorder: "partners/register/index.html", "pay-deposit": "partners/register/index.html#pay-deposit", apply: "#ambassadors" };
+  const id = location.hash.slice(1);
+  if (id && moved[id] && !document.getElementById(id)) {
+    const to = moved[id];
+    if (to.startsWith("#")) { const el = document.querySelector(to); if (el) el.scrollIntoView(); }
+    else location.replace(ROOT + to);
+  }
 })();
