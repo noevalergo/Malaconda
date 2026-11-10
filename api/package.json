@@ -1,0 +1,19 @@
+{
+  "name": "malaconda-api",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Malaconda API: accounts, orders, Stripe Checkout (test mode first), Brevo emails, MySQL.",
+  "main": "server.js",
+  "engines": { "node": ">=22" },
+  "scripts": {
+    "start": "node server.js",
+    "dev": "node --watch server.js",
+    "migrate": "node migrate.js",
+    "test": "node --test --test-concurrency=1 test/*.test.js"
+  },
+  "dependencies": {
+    "express": "5.1.0",
+    "mysql2": "3.14.1",
+    "stripe": "18.2.1"
+  }
+}
