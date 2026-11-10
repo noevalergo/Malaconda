@@ -19,6 +19,7 @@ root = {"name": "malaconda-staging", "version": pkg["version"], "private": True,
 json.dump(root, open(f"{t}/package.json", "w"), indent=2)
 PY
 cp api/package-lock.json "$T/package-lock.json"
+printf 'require("./api/server.js");\n' > "$T/server.js"   # Passenger starts server.js at the root
 # safety checks
 if grep -rIEl "sk_(test|live)_[0-9A-Za-z]{10,}|whsec_[0-9A-Za-z]{10,}|xkeysib-[0-9a-f]{20,}|-----BEGIN [A-Z ]*PRIVATE KEY-----|ghp_[0-9A-Za-z]{20,}" "$T"; then echo "FAILED: a secret pattern is in the archive"; exit 1; fi
 if find "$T" -name ".env*" ! -name ".env.example" -o -name "node_modules" -o -name "*.pem" -o -name "*.key" | grep -q .; then echo "FAILED: forbidden file in the archive"; exit 1; fi
