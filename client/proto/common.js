@@ -36,6 +36,7 @@
   function paintTheme() {
     const dark = window.Theme.get() === "dark";
     $$("[data-theme-toggle]").forEach((b) => { b.className = "theme-btn"; b.innerHTML = dark ? SUN : MOON; b.setAttribute("aria-label", dark ? "Switch to day mode" : "Switch to night mode"); });
+    $$("[data-theme-menu]").forEach((b) => { b.innerHTML = `<span>${dark ? "Day mode" : "Night mode"}</span>${dark ? SUN : MOON}`; b.setAttribute("aria-label", dark ? "Switch to day mode" : "Switch to night mode"); });
   }
   document.addEventListener("theme:changed", paintTheme);
 
@@ -163,7 +164,7 @@
     const active = opts.active || "";
     document.body.classList.toggle("is-home", active === "index.html");
     const [accLabel, accHref] = accountLink();
-    const links = PUBLIC_LINKS.map(([l, h]) => `<a href="${h}" ${h === active ? 'aria-current="page"' : ""}>${l}</a>`).join("") + `<a class="only-sm" href="${accHref}">${accLabel}</a>`;
+    const links = PUBLIC_LINKS.map(([l, h]) => `<a href="${h}" ${h === active ? 'aria-current="page"' : ""}>${l}</a>`).join("") + `<a class="only-sm" href="${accHref}">${accLabel}</a><button class="only-sm menu-theme" type="button" data-theme-menu></button>`;
     const nav = `<header class="nav"><div class="nav__in">
       <a class="nav__logo" href="index.html" aria-label="Malaconda home">${LOGO}</a>
       <nav class="nav__links" id="navlinks" aria-label="Main">${links}</nav>
@@ -184,7 +185,16 @@
       </div></div></footer>`;
     const n = document.getElementById("site-nav"); if (n) n.innerHTML = nav;
     const f = document.getElementById("site-footer"); if (f) f.innerHTML = footer;
-    const b = $(".burger"); if (b) b.addEventListener("click", () => { const o = $("#navlinks").classList.toggle("is-open"); b.setAttribute("aria-expanded", o); });
+    const b = $(".burger");
+    if (b) {
+      const veil = document.createElement("div"); veil.className = "nav-veil"; document.body.appendChild(veil);
+      const setMenu = (o) => { $("#navlinks").classList.toggle("is-open", o); veil.classList.toggle("is-on", o); b.setAttribute("aria-expanded", o); document.documentElement.classList.toggle("is-locked", o); };
+      b.addEventListener("click", () => setMenu(!$("#navlinks").classList.contains("is-open")));
+      veil.addEventListener("click", () => setMenu(false));
+      $("#navlinks").addEventListener("click", (e) => { if (e.target.closest("a")) setMenu(false); });
+      document.addEventListener("keydown", (e) => { if (e.key === "Escape") setMenu(false); });
+      addEventListener("resize", () => { if (innerWidth > 1000) setMenu(false); });
+    }
     wire(); mountCartDrawer(); reveal(); parallax();
     const nl = $("[data-newsletter]"); if (nl) nl.addEventListener("submit", (e) => { e.preventDefault(); nl.reset(); toast("You're on the list."); });
   }
@@ -200,7 +210,7 @@
 
   function wire() {
     mountViewSwitch();
-    $$("[data-theme-toggle]").forEach((b) => b.addEventListener("click", () => window.Theme.toggle()));
+    $$("[data-theme-toggle], [data-theme-menu]").forEach((b) => b.addEventListener("click", () => window.Theme.toggle()));
     paintTheme(); paintCart();
   }
 
