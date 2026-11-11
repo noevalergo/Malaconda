@@ -168,7 +168,7 @@
     const nav = `<header class="nav"><div class="nav__in">
       <a class="nav__logo" href="index.html" aria-label="Malaconda home">${LOGO}</a>
       <nav class="nav__links" id="navlinks" aria-label="Main">${links}</nav>
-      <div class="nav__cta"><button class="theme-btn" type="button" data-theme-toggle aria-label="Switch day or night mode"></button>
+      <div class="nav__cta">${window.I18n ? I18n.selectHtml() : ""}<button class="theme-btn" type="button" data-theme-toggle aria-label="Switch day or night mode"></button>
         ${(() => { const [al, ah] = accountLink(); return `<a class="link-quiet nav__account hide-sm" href="${ah}">${al}</a>`; })()}
         ${Store.currentUser("pro") ? "" : '<button class="link-quiet nav__cart" type="button" data-cart-open aria-haspopup="dialog">Cart <span data-cart-count>0</span></button>'}
         <a class="btn btn--sm hide-sm nav__shop" href="index.html#flavors">Shop now</a>
@@ -181,7 +181,7 @@
       </div>
       <div class="footer__bottom">
         <nav class="footer__links" aria-label="Footer"><a href="index.html#flavors">Shop</a><a href="for-pros.html">Pros</a><a href="ambassadors.html">Ambassadors</a><a href="index.html#contact">Contact</a><a href="https://www.instagram.com/drinkmalaconda/" target="_blank" rel="noopener">Instagram ↗</a></nav>
-        <div class="footer__legal"><p class="label muted">© 2026 Malaconda. All rights reserved.</p><button type="button" data-theme-toggle></button></div>
+        <div class="footer__legal">${window.I18n ? I18n.buttonsHtml() : ""}<p class="label muted">© 2026 Malaconda. All rights reserved.</p><button type="button" data-theme-toggle></button></div>
       </div></div></footer>`;
     const n = document.getElementById("site-nav"); if (n) n.innerHTML = nav;
     const f = document.getElementById("site-footer"); if (f) f.innerHTML = footer;
@@ -203,7 +203,7 @@
   function appHeader(title, userLabel, onLogout) {
     const el = document.getElementById("site-nav");
     el.innerHTML = `<header class="nav"><div class="nav__in" style="grid-template-columns:1fr auto"><a class="nav__logo" href="index.html">${LOGO}</a>
-      <div class="nav__cta"><span class="label hide-sm">${esc(title)}${userLabel ? " · " + esc(userLabel) : ""}</span><button class="theme-btn" type="button" data-theme-toggle aria-label="Switch day or night mode"></button>${onLogout && !Store.DEMO_MODE ? '<button class="btn btn--sm btn--ghost" id="logout" type="button">Log out</button>' : ""}</div></div></header>`;
+      <div class="nav__cta"><span class="label hide-sm">${esc(title)}${userLabel ? " · " + esc(userLabel) : ""}</span>${window.I18n ? I18n.selectHtml() : ""}<button class="theme-btn" type="button" data-theme-toggle aria-label="Switch day or night mode"></button>${onLogout && !Store.DEMO_MODE ? '<button class="btn btn--sm btn--ghost" id="logout" type="button">Log out</button>' : ""}</div></div></header>`;
     if (onLogout && $("#logout")) $("#logout").addEventListener("click", onLogout);
     wire();
   }

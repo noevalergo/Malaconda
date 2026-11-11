@@ -1,6 +1,6 @@
 /* Emails through Brevo's transactional API. Without a key and a validated sender address nothing is sent: the message is logged instead. */
 const config = require("./config");
-const { esc, chf, FLAVOR_NAMES } = require("./lib");
+const { esc } = require("./lib");
 
 async function send({ to, subject, html }) {
   const b = config.brevo;
@@ -14,17 +14,14 @@ async function send({ to, subject, html }) {
   return { sent: true };
 }
 
-const shell = (title, body) => `<div style="font-family:Arial,sans-serif;max-width:520px;margin:auto;color:#131313"><h1 style="font-size:22px;text-transform:uppercase">${esc(title)}</h1>${body}<p style="color:#888;font-size:12px">MALACONDA</p></div>`;
+const { T } = require("./emails");
 
-function orderConfirmation(order, lines) {
-  const rows = lines.map((l) => `<tr><td>${l.boxes} × ${esc(FLAVOR_NAMES[l.flavor] || l.flavor)}</td><td style="text-align:right">${chf(l.boxes * l.unit_cents)}</td></tr>`).join("");
-  return send({
-    to: order.email, subject: `Your Malaconda order ${order.ref}`,
-    html: shell("Thank you", `<p>Order <b>${esc(order.ref)}</b> is paid. Delivery within 4 weeks.</p><table style="width:100%">${rows}${order.discount_cents ? `<tr><td>First order −${order.welcome_pct}%</td><td style="text-align:right">−${chf(order.discount_cents)}</td></tr>` : ""}<tr><td><b>Total (VAT incl.)</b></td><td style="text-align:right"><b>${chf(order.net_cents)}</b></td></tr></table><p>Delivery to ${esc(order.ship_address)}, ${esc(order.ship_zip)} ${esc(order.ship_city)}.</p>`),
-  });
-}
+const orderConfirmation = (order, lines, name) => { const m = T.orderConfirmation({ order, lines, name: name || order.name }); return send({ to: order.email, subject: m.subject, html: m.html }); };
+const welcome = (to, name) => { const m = T.welcome({ name }); return send({ to, subject: m.subject, html: m.html }); };
+/* Other templates (shipped, proAccount, ambassadorAccount, passwordReset, ...) are in emails.js: mailer.sendTemplate("shipped", to, data). */
+const sendTemplate = (key, to, data) => { const m = T[key](data); return send({ to, subject: m.subject, html: m.html }); };
 const contactToTeam = (r) => config.brevo.teamEmail
-  ? send({ to: config.brevo.teamEmail, subject: `Contact (${r.topic}): ${r.name}`, html: shell("New message", `<p><b>${esc(r.name)}</b> &lt;${esc(r.email)}&gt;<br>Topic: ${esc(r.topic)}</p><p>${esc(r.message).replace(/\n/g, "<br>")}</p>`) })
+  ? send({ to: config.brevo.teamEmail, subject: `Contact (${r.topic}): ${r.name}`, html: `<p><b>${esc(r.name)}</b> &lt;${esc(r.email)}&gt;<br>Topic: ${esc(r.topic)}</p><p>${esc(r.message).replace(/\n/g, "<br>")}</p>` })
   : (console.log("[mail skipped: TEAM_EMAIL not set] contact request stored in the database"), Promise.resolve({ skipped: true }));
 
-module.exports = { send, orderConfirmation, contactToTeam };
+module.exports = { send, orderConfirmation, welcome, sendTemplate, contactToTeam };

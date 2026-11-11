@@ -47,6 +47,7 @@ function createApp({ stripe } = {}) {
     const r = await db.query("INSERT INTO users (email, name, password_hash) VALUES (?,?,?)", [email, name, L.hashPassword(pw)]);
     await db.query("UPDATE orders SET user_id = ? WHERE email = ? AND user_id IS NULL", [r.insertId, email]);   // earlier guest orders join the account
     await startSession(res, r.insertId);
+    mailer.welcome(email, name).catch((e) => console.error("welcome mail:", e.message));
     res.status(201).json({ user: publicUser(await db.one("SELECT * FROM users WHERE id = ?", [r.insertId])) });
   }));
   app.post("/api/auth/login", limit(20), wrap(async (req, res) => {
