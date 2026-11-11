@@ -55,7 +55,7 @@ const reduceMotion = window.matchMedia("(prefers-reduced-motion: reduce)").match
 
 
 /* =============================================================
-   2. IDIOMA (EN / DE) — inglés en index.html, alemán en js/i18n.js
+   2. IDIOMA (EN / DE / FR / IT / ES) — inglés en index.html, resto en js/i18n.js
    ============================================================= */
 let LANG = "en";
 const t = (key) => {
@@ -63,26 +63,28 @@ const t = (key) => {
   return m ? (m[LANG] || m.en) : key;
 };
 
+const LANGS = ["en", "de", "fr", "it", "es"];
+
 function setLang(lang) {
   if (typeof I18N === "undefined") return;
-  LANG = lang === "de" ? "de" : "en";
-  const dict = I18N.de;
+  LANG = LANGS.includes(lang) ? lang : "en";
+  const dict = I18N[LANG] || null; // null = anglais (texte d'origine dans index.html)
   const root = document.documentElement;
   root.lang = LANG;
 
   document.querySelectorAll("[data-i18n]").forEach((el) => {
     if (el.dataset.en === undefined) el.dataset.en = el.innerHTML;
-    const de = dict.text[el.dataset.i18n];
-    el.innerHTML = LANG === "de" && de ? de : el.dataset.en;
+    const tr = dict && dict.text[el.dataset.i18n];
+    el.innerHTML = tr ? tr : el.dataset.en;
   });
 
   if (!root.dataset.enTitle) {
     root.dataset.enTitle = document.title;
     root.dataset.enDesc = document.querySelector('meta[name="description"]')?.content || "";
   }
-  document.title = LANG === "de" ? dict.meta.title : root.dataset.enTitle;
+  document.title = dict ? dict.meta.title : root.dataset.enTitle;
   const meta = document.querySelector('meta[name="description"]');
-  if (meta) meta.content = LANG === "de" ? dict.meta.description : root.dataset.enDesc;
+  if (meta) meta.content = dict ? dict.meta.description : root.dataset.enDesc;
 
   document.querySelectorAll("[data-lang]").forEach((b) => b.setAttribute("aria-pressed", String(b.dataset.lang === LANG)));
   document.querySelectorAll("[data-field-lang]").forEach((i) => (i.value = LANG));
@@ -605,7 +607,8 @@ renderCart();
 (() => {
   let saved = null;
   try { saved = localStorage.getItem("malaconda-lang"); } catch (e) {}
-  const lang = saved || ((navigator.language || "").toLowerCase().startsWith("de") ? "de" : "en");
-  if (lang === "de") setLang("de");
+  const browser = (navigator.language || "").toLowerCase().slice(0, 2);
+  const lang = LANGS.includes(saved) ? saved : (LANGS.includes(browser) ? browser : "en");
+  if (lang !== "en") setLang(lang);
   else document.querySelectorAll("[data-field-lang]").forEach((i) => (i.value = "en"));
 })();
