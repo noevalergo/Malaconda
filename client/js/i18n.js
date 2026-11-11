@@ -6,7 +6,7 @@
    Texte nouveau : ajoute data-i18n="ma-clé" dans index.html, puis
    ajoute "ma-clé": "…" dans chaque langue ci-dessous.
    Si une clé manque dans une langue, le site affiche l'anglais.
-   Les noms de marque (Malaconda, Sweet Guava, Pink Guava, Swiss
+   Les noms de marque (Malaconda, Sweet Guava, Biting Lulo, Swiss
    Bartender of the Year) ne sont jamais traduits.
    La déclaration de la serpiente (section histoire) reste en espagnol.
    ============================================================= */
@@ -18,7 +18,7 @@ const I18N = {
   de: {
     meta: {
       title: "MALACONDA — Sparkling Soda aus dem Amazonas",
-      description: "Eine Sparkling Soda mit Aromen vom Swiss Bartender of the Year. Sweet Guava und Pink Guava, 12 x 200 ml.",
+      description: "Eine Sparkling Soda mit Aromen vom Swiss Bartender of the Year. Sweet Guava und Biting Lulo, 12 x 200 ml.",
     },
     text: {
       "preorder-deadline": "Vorbestellen bis 31. Januar <span class='btn__arrow' aria-hidden='true'>→</span>",
@@ -79,9 +79,9 @@ const I18N = {
       "f-10boxes": "10 Kartons",
       "f-120": "120 Flaschen · 200 ml",
       "f-mix": "Sorten",
-      "f-mix-half": "Halb Sweet Guava / halb Pink Guava",
+      "f-mix-half": "Halb Sweet Guava / halb Biting Lulo",
       "f-mix-lulo": "Nur Sweet Guava",
-      "f-mix-guava": "Nur Pink Guava",
+      "f-mix-guava": "Nur Biting Lulo",
       "f-mix-custom": "Individuell — bitte in den Notizen angeben",
       "f-business": "Firmenname",
       "f-type": "Art des Betriebs",
@@ -181,7 +181,7 @@ const I18N = {
   fr: {
     meta: {
       title: "MALACONDA — Soda pétillant de l’Amazonie",
-      description: "Un soda pétillant aux arômes développés par le Swiss Bartender of the Year. Sweet Guava et Pink Guava, 12 x 200 ml.",
+      description: "Un soda pétillant aux arômes développés par le Swiss Bartender of the Year. Sweet Guava et Biting Lulo, 12 x 200 ml.",
     },
     text: {
       "preorder-deadline": "Précommande jusqu’au 31 janvier <span class='btn__arrow' aria-hidden='true'>→</span>",
@@ -242,9 +242,9 @@ const I18N = {
       "f-10boxes": "10 cartons",
       "f-120": "120 bouteilles · 200 ml",
       "f-mix": "Saveurs",
-      "f-mix-half": "Moitié Sweet Guava / moitié Pink Guava",
+      "f-mix-half": "Moitié Sweet Guava / moitié Biting Lulo",
       "f-mix-lulo": "Sweet Guava uniquement",
-      "f-mix-guava": "Pink Guava uniquement",
+      "f-mix-guava": "Biting Lulo uniquement",
       "f-mix-custom": "Sur mesure — à préciser dans les notes",
       "f-business": "Nom de l’entreprise",
       "f-type": "Type d’établissement",
@@ -344,7 +344,7 @@ const I18N = {
   it: {
     meta: {
       title: "MALACONDA — Soda frizzante dall’Amazzonia",
-      description: "Una soda frizzante con aromi sviluppati dal Swiss Bartender of the Year. Sweet Guava e Pink Guava, 12 x 200 ml.",
+      description: "Una soda frizzante con aromi sviluppati dal Swiss Bartender of the Year. Sweet Guava e Biting Lulo, 12 x 200 ml.",
     },
     text: {
       "preorder-deadline": "Preordini fino al 31 gennaio <span class='btn__arrow' aria-hidden='true'>→</span>",
@@ -405,9 +405,9 @@ const I18N = {
       "f-10boxes": "10 cartoni",
       "f-120": "120 bottiglie · 200 ml",
       "f-mix": "Gusti",
-      "f-mix-half": "Metà Sweet Guava / metà Pink Guava",
+      "f-mix-half": "Metà Sweet Guava / metà Biting Lulo",
       "f-mix-lulo": "Solo Sweet Guava",
-      "f-mix-guava": "Solo Pink Guava",
+      "f-mix-guava": "Solo Biting Lulo",
       "f-mix-custom": "Personalizzato — da indicare nelle note",
       "f-business": "Nome dell’azienda",
       "f-type": "Tipo di attività",
@@ -507,7 +507,7 @@ const I18N = {
   es: {
     meta: {
       title: "MALACONDA — Soda espumosa del Amazonas",
-      description: "Una soda espumosa con sabores desarrollados por el Swiss Bartender of the Year. Sweet Guava y Pink Guava, 12 x 200 ml.",
+      description: "Una soda espumosa con sabores desarrollados por el Swiss Bartender of the Year. Sweet Guava y Biting Lulo, 12 x 200 ml.",
     },
     text: {
       "preorder-deadline": "Reserva hasta el 31 de enero <span class='btn__arrow' aria-hidden='true'>→</span>",
@@ -568,9 +568,9 @@ const I18N = {
       "f-10boxes": "10 cajas",
       "f-120": "120 botellas · 200 ml",
       "f-mix": "Sabores",
-      "f-mix-half": "Mitad Sweet Guava / mitad Pink Guava",
+      "f-mix-half": "Mitad Sweet Guava / mitad Biting Lulo",
       "f-mix-lulo": "Solo Sweet Guava",
-      "f-mix-guava": "Solo Pink Guava",
+      "f-mix-guava": "Solo Biting Lulo",
       "f-mix-custom": "A medida — indícalo en las notas",
       "f-business": "Nombre de la empresa",
       "f-type": "Tipo de negocio",
