@@ -52,7 +52,7 @@ a{color:${C.paper}}
   <tr><td class="px" bgcolor="${C.surface}" style="background:${C.surface};padding:40px 32px 24px;border-radius:0 0 12px 12px">${body}</td></tr>
   <tr><td class="px" style="padding:24px 32px 8px;font:400 12px/1.6 ${BODY};color:${C.stone}">
     ${footerNote ? `<p style="margin:0 0 12px">${footerNote}</p>` : ""}
-    <p style="margin:0 0 4px;font:500 12px/1.6 ${MONO};letter-spacing:.08em;text-transform:uppercase">Malaconda &middot; Boisson gazeuse colombienne &middot; Suisse</p>
+    <p style="margin:0 0 4px;font:500 12px/1.6 ${MONO};letter-spacing:.08em;text-transform:uppercase">Malaconda &middot; Boisson gazeuse &middot; Fabriquée en Suisse</p>
     <p style="margin:0">Une question&nbsp;? Écrivez-nous à <a href="mailto:hello@malaconda.com" style="color:${C.paper}">hello@malaconda.com</a> &middot; <a href="${esc(base())}" style="color:${C.paper}">malaconda.com</a></p>
   </td></tr>
 </table>
@@ -61,7 +61,8 @@ a{color:${C.paper}}
 }
 
 const flavorLabel = (f) => esc(FLAVOR_NAMES[f] || f);
-const boxWord = (n) => `${n}&nbsp;caisse${n > 1 ? "s" : ""} de 12`;
+const PRO_PER = SETTINGS.proBottlesPerBox;   // bottles in a pro box (24); a shop box has 12
+const boxWord = (n, per = 12) => `${n}&nbsp;caisse${n > 1 ? "s" : ""} de ${per}`;
 const first = (name) => esc(String(name || "").trim().split(/\s+/)[0] || "");
 const firstRaw = (name) => String(name || "").trim().split(/\s+/)[0] || "";
 const helloText = (name) => `Bonjour${firstRaw(name) ? " " + firstRaw(name) : ""},`;
@@ -89,22 +90,26 @@ const T = {
   orderConfirmation({ order, lines, name }) {
     const rows = lines.map((l) => [`${flavorLabel(l.flavor)}<br><span style="color:${C.stone};font-size:13px">${boxWord(l.boxes)} bouteilles</span>`, chf(l.boxes * l.unit_cents)]);
     if (order.discount_cents) rows.push([`Première commande −${esc(order.welcome_pct)} %`, "−" + chf(order.discount_cents), true]);
+    const pickup = order.delivery_method === "pickup", fee = order.shipping_cents || 0, total = order.net_cents + fee;
+    rows.push([pickup ? "Retrait" : "Livraison", pickup || !fee ? "Gratuit" : chf(fee), true]);
     return {
       subject: `Votre commande Malaconda ${order.ref} est confirmée`,
-      html: layout({ preheader: `Merci ! Commande ${order.ref} payée. Livraison sous 4 semaines.`, body:
+      html: layout({ preheader: `Merci ! Commande ${order.ref} payée. ${pickup ? "Retrait gratuit." : "Livraison sous 5 jours ouvrés."}`, body:
         label(`Commande ${order.ref}`) + h1("Merci pour votre commande") + p(hello(name)) +
         p(`Votre paiement est bien reçu. Voici le récapitulatif de la commande ${strong(order.ref)}.`) +
-        table(rows, { total: ["Total TVA incluse", chf(order.net_cents)] }) +
-        box(label("Livraison") + p(`${addr(order)}`, "margin:0 0 8px;color:" + C.paper) + p("Livraison en Suisse sous 4 semaines. Nous vous écrirons dès l’expédition de votre colis.", "margin:0;font-size:14px")) +
+        table(rows, { total: ["Total TVA incluse", chf(total)] }) +
+        box(pickup
+          ? label("Retrait") + p("Retrait gratuit. Nous vous écrivons très vite pour organiser le retrait de votre commande.", "margin:0;font-size:14px")
+          : label("Livraison") + p(`${addr(order)}`, "margin:0 0 8px;color:" + C.paper) + p("Livraison en Suisse sous 5 jours ouvrés. Nous vous écrirons dès l’expédition de votre colis.", "margin:0;font-size:14px")) +
         button("Voir mes commandes", url("/account.html")) +
         p("À très vite, et merci de soutenir une petite bande d’amis.", "margin-bottom:0") }),
-      text: `Commande ${order.ref} confirmée\n\n${helloText(name)}\n${lines.map((l) => `- ${FLAVOR_NAMES[l.flavor] || l.flavor}: ${l.boxes} caisse(s) de 12 — ${chf(l.boxes * l.unit_cents)}`).join("\n")}\n${order.discount_cents ? `Première commande -${order.welcome_pct} % : -${chf(order.discount_cents)}\n` : ""}Total TVA incluse: ${chf(order.net_cents)}\nLivraison: ${order.ship_address}, ${order.ship_zip} ${order.ship_city}, Suisse, sous 4 semaines.`,
+      text: `Commande ${order.ref} confirmée\n\n${helloText(name)}\n${lines.map((l) => `- ${FLAVOR_NAMES[l.flavor] || l.flavor}: ${l.boxes} caisse(s) de 12 — ${chf(l.boxes * l.unit_cents)}`).join("\n")}\n${order.discount_cents ? `Première commande -${order.welcome_pct} % : -${chf(order.discount_cents)}\n` : ""}${pickup ? "Retrait gratuit" : "Livraison: " + chf(fee)}\nTotal TVA incluse: ${chf(total)}\n${pickup ? "Nous vous écrivons très vite pour organiser le retrait." : `Livraison: ${order.ship_address}, ${order.ship_zip} ${order.ship_city}, Suisse, sous 5 jours ouvrés.`}`,
     };
   },
 
   /* 2b. Pro order paid online (prices excl. VAT, VAT added at the end) */
   proOrderConfirmation({ order, lines, name }) {
-    const rows = lines.map((l) => [`${flavorLabel(l.flavor)}<br><span style="color:${C.stone};font-size:13px">${boxWord(l.boxes)} bouteilles</span>`, chf(l.boxes * Math.round(l.unit_milli * 12 / 10))]);
+    const rows = lines.map((l) => [`${flavorLabel(l.flavor)}<br><span style="color:${C.stone};font-size:13px">${boxWord(l.boxes, PRO_PER)} bouteilles</span>`, chf(l.boxes * Math.round(l.unit_milli * PRO_PER / 10))]);
     if (order.tier_cents) rows.push([`Remise de volume −${esc(order.tier_pct)} %`, "−" + chf(order.tier_cents), true]);
     if (order.extra_cents) rows.push([order.welcome_pct ? `Première commande −${esc(order.welcome_pct)} %` : `Crédit de recommandation −${esc(order.credit_pct)} %`, "−" + chf(order.extra_cents), true]);
     rows.push(["Total hors TVA", chf(order.net_cents), true], [`TVA ${esc(String(SETTINGS.vatPct).replace(".", ","))} %`, chf(order.vat_cents), true]);
@@ -117,7 +122,7 @@ const T = {
         box(label("Livraison") + p(`${addr(order)}`, "margin:0 0 8px;color:" + C.paper) + p("Livraison en Suisse sous 4 semaines. Nous vous écrirons dès l’expédition.", "margin:0;font-size:14px")) +
         button("Mon espace pro", url("/pro-space.html")) +
         p("À très vite.", "margin-bottom:0") }),
-      text: `Commande pro ${order.ref} confirmée\n\n${helloText(name)}\n${lines.map((l) => `- ${FLAVOR_NAMES[l.flavor] || l.flavor}: ${l.boxes} caisse(s) de 12`).join("\n")}\nTotal hors TVA: ${chf(order.net_cents)}\nTVA: ${chf(order.vat_cents)}\nTotal TVA incluse: ${chf(order.total_cents)}\nLivraison: ${order.ship_address}, ${order.ship_zip} ${order.ship_city}, Suisse, sous 4 semaines.`,
+      text: `Commande pro ${order.ref} confirmée\n\n${helloText(name)}\n${lines.map((l) => `- ${FLAVOR_NAMES[l.flavor] || l.flavor}: ${l.boxes} caisse(s) de ${PRO_PER}`).join("\n")}\nTotal hors TVA: ${chf(order.net_cents)}\nTVA: ${chf(order.vat_cents)}\nTotal TVA incluse: ${chf(order.total_cents)}\nLivraison: ${order.ship_address}, ${order.ship_zip} ${order.ship_city}, Suisse, sous 4 semaines.`,
     };
   },
 
@@ -158,7 +163,7 @@ const T = {
         p(`Le compte de ${strong(company || "votre établissement")} est prêt. Une fois connecté, vous voyez vos prix professionnels (hors TVA) directement sur le site.`) +
         box(label("Vos accès") + p("Email&nbsp;: " + strong(email), "margin:0 0 10px") + p("Mot de passe temporaire&nbsp;: " + code(tempPassword), "margin:0 0 10px") + p("Vous devrez le changer à la première connexion.", "margin:0;font-size:14px")) +
         box(label("Offre de bienvenue pro") + `<p style="margin:0 0 6px;font:400 44px/1 ${DISPLAY};color:${C.lulo}">−${WELCOME_PCT} %</p><p style="margin:0;font:400 15px/1.5 ${BODY};color:${C.stone}">sur votre première commande. Elle s’applique automatiquement.</p>`) +
-        p("Nous vendons par caisses de 12 bouteilles (Sweet Guava et Biting Lulo) et livrons en Suisse uniquement.") +
+        p(`Nous vendons par caisses de ${PRO_PER} bouteilles (Sweet Guava et Biting Lulo), à partir de ${SETTINGS.proMinBoxes} caisses, et livrons en Suisse uniquement, sous 4 semaines.`) +
         button("Me connecter", url("/pro-space.html")) +
         p("Bienvenue dans la famille Malaconda.", "margin-bottom:0") }),
       text: `Votre compte pro Malaconda est ouvert.\n\n${helloText(name)}\nEmail: ${email}\nMot de passe temporaire: ${tempPassword} (à changer à la première connexion)\n${WELCOME_PCT} % de réduction sur votre première commande.\n${url("/pro-space.html")}`,
@@ -177,7 +182,7 @@ const T = {
         p("Nous vous envoyons la facture par email. La commande part dès réception du paiement par virement. Livraison en Suisse sous 4 semaines.") +
         button("Voir mes commandes", url("/pro-space.html")) +
         p("Merci pour votre confiance.", "margin-bottom:0") }),
-      text: `Commande ${ref} reçue.\n${lines.map((l) => `- ${FLAVOR_NAMES[l.flavor] || l.flavor}: ${l.boxes} caisse(s) de 12`).join("\n")}\nFacture à suivre par email; livraison en Suisse sous 4 semaines.`,
+      text: `Commande ${ref} reçue.\n${lines.map((l) => `- ${FLAVOR_NAMES[l.flavor] || l.flavor}: ${l.boxes} caisse(s) de ${PRO_PER}`).join("\n")}\nFacture à suivre par email; livraison en Suisse sous 4 semaines.`,
     };
   },
 

@@ -4,7 +4,7 @@
    ============================================================= */
 (function () {
   const E = window.Engine;
-  const KEY = "malaconda_proto_v1";
+  const KEY = "malaconda_proto_v2";   // v2: pro box of 24, minimum order, delivery or pickup. Older demo data is dropped.
   const FLAVORS = {
     lulo: { name: "Biting Lulo", no: "02", color: "var(--lulo)" },
     guava: { name: "Sweet Guava", no: "03", color: "var(--guava)" },
@@ -12,7 +12,7 @@
   const PRO_TYPES = ["Bar", "Restaurant", "Club", "Hotel", "Shop", "Distributor"];
   const STATUS_FLOW = ["placed", "invoiced", "paid", "shipped", "delivered"];
   const PAYMENT_METHODS = ["Bank transfer", "Cash", "Card in person", "Card (online)", "Other"];
-  const VIA_OPTIONS = ["In person visit", "Email", "Phone", "Website", "Website request", "Other"];
+  const VIA_OPTIONS = ["In person visit", "Email", "Phone", "Website", "Other"];
   const CARRIERS = ["Swiss Post", "DHL", "UPS", "DPD", "Own delivery", "Other"];
   /* One public tracker for every carrier: the customer lands on the page of their parcel, in their language. */
   function trackingUrl(carrier, number, lang) {
@@ -61,6 +61,7 @@
     state.consumers = state.consumers || [];
     state.consumerOrders = state.consumerOrders || [];
     state.consumerOrders.forEach((o) => {
+      o.delivery = o.delivery || "ship"; o.shippingFee = o.shippingFee || 0;
       o.status = o.status || "placed"; o.history = o.history || [{ status: o.status, at: o.createdAt }];
       ["paid", "shipped", "delivered"].forEach((st) => { const f = DATE_FIELD[st]; if (o[f] === undefined) o[f] = histAt(o, st); });
       o.payment = o.payment || { method: "Card (online)", reference: "" }; o.shipping = o.shipping || { carrier: "", tracking: "" }; o.note = o.note || ""; o.editLog = o.editLog || [];
@@ -255,7 +256,7 @@
       .map((p) => p.name);
   }
 
-  function placeProOrder({ proId, lines, channel, now, requestId, meta }) {
+  function placeProOrder({ proId, lines, channel, now, meta }) {
     const s = get(); const pro = proById(proId); if (!pro) throw new Error("Unknown pro");
     const clean = cleanLines(lines);
     const boxes = clean.reduce((n, l) => n + l.boxes, 0);
@@ -267,8 +268,8 @@
       unitPrices: unitPricesOf(proId), flags: flagsOf(pro),
       gross: price.gross, tierPct: price.tierPct, welcomePct: price.welcomePct, creditPct: price.creditPct,
       net: price.net, status: "placed", history: [{ status: "placed", at: created }],
-      invoicedAt: null, paidAt: null, shippedAt: null, deliveredAt: null, cancelledAt: null, requestId: requestId || null,
-      via: channel === "request" ? "Website request" : "Other", reference: "", invoiceNo: "", note: "", editLog: [],
+      invoicedAt: null, paidAt: null, shippedAt: null, deliveredAt: null, cancelledAt: null,
+      via: "Other", reference: "", invoiceNo: "", note: "", editLog: [],
       payment: { method: "Bank transfer", reference: "" },
       shipping: { carrier: "", tracking: "", address: pro.address || "", zip: pro.zip || "", city: pro.city || "" },
       ambassadorId: pro.referredBy && pro.referredBy.kind === "ambassador" ? pro.referredBy.id : null,
@@ -284,6 +285,7 @@
   /* A pro pays online by card: the order is created already paid, with the card payment reference, and the referral credit is recorded
      exactly as for any paid order. (Prototype: no real charge; the real site hands this to Stripe Checkout.) */
   function payProOrder({ proId, lines, shipping, paymentRef, now }) {
+    const moq = E.proMoqMessage(cleanLines(lines).reduce((n, l) => n + l.boxes, 0), get().settings); if (moq) throw new Error(moq);
     const created = now || nowIso();
     const o = placeProOrder({ proId, lines, channel: "site", now: created,
       meta: { via: "Website", payment: { method: "Card (online)", reference: paymentRef || "" }, shipping: shipping || {} } });
@@ -341,27 +343,6 @@
     if (!o.paidAt || o.cancelledAt) s.ledger.forEach((e) => { if (e.orderId === o.id && !e.revokedAt) e.revokedAt = nowIso(); });
     if (log.length) o.editLog.push({ at: nowIso(), by: by || "admin", changes: log });
     save(); return o;
-  }
-
-  /* Order requests: a logged-in pro asks, founders create the order. The request keeps the quote. */
-  function submitOrderRequest({ proId, lines, now }) {
-    const s = get(), clean = cleanLines(lines);
-    if (!clean.length) throw new Error("Add at least one box.");
-    const q = previewProOrder(proId, clean);
-    s.requests.push({ id: rid("r"), kind: "order", status: "open", createdAt: now || nowIso(), proId, lines: clean,
-      quote: { unitPrices: unitPricesOf(proId), boxes: q.boxes, net: q.net, tierPct: q.tierPct, welcomePct: q.welcomePct, creditPct: q.creditPct } });
-    save();
-  }
-  // difference between what the pro was quoted and what the same order would cost now
-  function requestDiff(reqId) {
-    const r = get().requests.find((x) => x.id === reqId); if (!r) return null;
-    const now = previewProOrder(r.proId, r.lines);
-    return { quote: r.quote, now: { net: now.net, tierPct: now.tierPct, welcomePct: now.welcomePct, creditPct: now.creditPct, unitPrices: unitPricesOf(r.proId) }, changed: Math.abs(now.net - r.quote.net) > 0.004 };
-  }
-  function createOrderFromRequest(reqId, now) {
-    const r = get().requests.find((x) => x.id === reqId); if (!r || r.status !== "open") throw new Error("Request already handled.");
-    const order = placeProOrder({ proId: r.proId, lines: r.lines, channel: "request", now, requestId: r.id });
-    r.status = "approved"; r.orderId = order.id; save(); return order;
   }
 
   /* Referral ledger: the credit is recorded, with its percentage, when the referred pro's first paid order qualifies. */
@@ -457,7 +438,7 @@
       o.shipping = { ...(o.shipping || {}), carrier: sh.carrier, tracking: sh.tracking, noTracking: sh.noTracking };
       log.push(`Shipped on ${day} with ${sh.carrier}${sh.tracking ? " " + sh.tracking : " (no tracking number)"}${d.email ? "; shipping email to " + d.email : ""}`);
     } else if (step === "delivered") {
-      checkDay(day, dayOf(o.shippedAt), "delivery", "the shipping date");
+      checkDay(day, dayOf(o.shippedAt || o.paidAt), o.shippedAt ? "delivery" : "pickup", o.shippedAt ? "the shipping date" : "the payment date");
       log.push(`Delivered on ${day}`);
     } else throw new Error("Unknown step.");
     o[DATE_FIELD[step]] = isoDate(day);
@@ -494,7 +475,7 @@
   function consumerPreview(email, boxes, accountId) {
     return E.priceConsumerOrder({ boxes, settings: get().settings, isFirst: !!accountId && consumerIsFirst(email, accountId) });
   }
-  function consumerCheckout({ email, name, lines, accountId, address, zip, city, phone, now, paid, paymentRef }) {
+  function consumerCheckout({ email, name, lines, accountId, address, zip, city, phone, now, paid, paymentRef, delivery }) {
     const s = get();
     const clean = lines.map((l) => ({ flavor: l.flavor, boxes: Math.max(0, Math.floor(Number(l.boxes) || 0)) })).filter((l) => l.boxes > 0);
     const boxes = clean.reduce((n, l) => n + l.boxes, 0);
@@ -502,13 +483,16 @@
     const e = String(email).trim().toLowerCase();
     const p = consumerPreview(e, boxes, accountId);
     const at = now || nowIso();
-    const o = { id: rid("c"), email: e, name, accountId: accountId || null, lines: clean, boxes, gross: p.gross, welcomePct: p.welcomePct, net: p.net,
+    const method = delivery === "pickup" && s.settings.pickupEnabled ? "pickup" : "ship";
+    const o = { id: rid("c"), email: e, name, accountId: accountId || null, lines: clean, boxes, gross: p.gross, welcomePct: p.welcomePct, net: p.net, delivery: method, shippingFee: E.shippingCharge(s.settings, method),
       shipTo: { address: address || "", zip: zip || "", city: city || "", phone: phone || "" }, status: paid ? "paid" : "placed", history: paid ? [{ status: "placed", at }, { status: "paid", at }] : [{ status: "placed", at }], createdAt: at,
       paidAt: paid ? at : null, shippedAt: null, deliveredAt: null, cancelledAt: null, payment: { method: "Card (online)", reference: paymentRef || "" }, shipping: { carrier: "", tracking: "" }, note: "", editLog: [] };
     s.consumerOrders.push(o); save(); return o;
   }
   const consumerOrdersOf = (accountId) => get().consumerOrders.filter((o) => o.accountId === accountId);
-  function nextConsumerStatus(o) { if (o.status === "cancelled") return null; return CONSUMER_FLOW[CONSUMER_FLOW.indexOf(o.status) + 1] || null; }
+  // a pickup is never shipped: after payment it is collected
+  function nextConsumerStatus(o) { if (o.status === "cancelled") return null; if (o.delivery === "pickup" && o.status === "paid") return "delivered"; return CONSUMER_FLOW[CONSUMER_FLOW.indexOf(o.status) + 1] || null; }
+  const consumerTotal = (o) => E.round2(o.net + (o.shippingFee || 0));
   function advanceConsumerOrder(id, now) {
     const o = get().consumerOrders.find((x) => x.id === id); if (!o) return;
     const next = nextConsumerStatus(o); if (!next) return;
@@ -630,24 +614,26 @@
     const lulo = mk({ name: "Cafe Lulo", type: "Restaurant", city: "Lausanne", contact: "Eric Blanc", email: "cafe@lulo.demo", referredBy: { kind: "pro", id: cobra.id }, now: iso("2026-10-12") });
     const terraza = mk({ name: "Terraza 7", type: "Bar", city: "Bern", contact: "Sofia Lenz", email: "terraza@seven.demo", referredBy: { kind: "ambassador", id: luca.id }, now: iso("2026-11-08") });
     [cobra, selva, anaconda, norte, vinyl, lulo, terraza].forEach((p) => { p.password = "demo"; p.mustChange = false; });
-    // Hotel Selva: negotiated price (2.10 per bottle instead of 2.20), tiers apply, welcome and credit do not
+    // Hotel Selva: negotiated price (2.10 per bottle instead of 2.45), tiers apply, welcome and credit do not
     setProPrices(selva.id, { lulo: 2.1, guava: 2.1, tiers: true, extras: false, note: "Negotiated at the Geneva tasting" }, "Founders", iso("2026-08-28"));
 
     const order = (pro, d, boxesL, boxesG, steps) => {
-      const o = placeProOrder({ proId: pro.id, lines: [{ flavor: "lulo", boxes: boxesL }, { flavor: "guava", boxes: boxesG }], channel: steps.channel || "request", now: iso(d) });
+      const o = placeProOrder({ proId: pro.id, lines: [{ flavor: "lulo", boxes: boxesL }, { flavor: "guava", boxes: boxesG }], channel: steps.channel || "manual", now: iso(d) });
       steps.dates.forEach((dd) => advanceOrder(o.id, iso(dd)));
+      if (steps.visit) o.visit = true;   // seed only: ordered in person, paid in cash
       return o;
     };
     // chronological, so every order is priced with the conditions that applied at the time
     order(cobra, "2026-08-05", 6, 6, { dates: ["2026-08-06", "2026-08-12", "2026-08-14", "2026-08-20"] });          // first order: welcome 10%
     order(selva, "2026-09-02", 15, 15, { dates: ["2026-09-03", "2026-09-10", "2026-09-12"] });                       // negotiated, no welcome
-    order(cobra, "2026-09-18", 12, 12, { channel: "manual", dates: ["2026-09-19", "2026-09-25", "2026-09-27"] });   // no credit yet
+    order(cobra, "2026-09-18", 12, 12, { channel: "manual", visit: true, dates: ["2026-09-19", "2026-09-25", "2026-09-27"] });   // no credit yet
     order(anaconda, "2026-10-03", 5, 5, { dates: ["2026-10-04", "2026-10-10", "2026-10-12"] });                      // qualifies Bar Cobra
     order(norte, "2026-10-06", 5, 5, { dates: ["2026-10-07", "2026-10-15", "2026-10-17"] });                         // qualifies Bar Cobra
-    order(lulo, "2026-10-14", 2, 2, { dates: ["2026-10-15", "2026-10-20", "2026-10-22"] });                          // 4 boxes: below the threshold
+    order(lulo, "2026-10-14", 3, 2, { dates: ["2026-10-15", "2026-10-20", "2026-10-22"] });                          // 5 boxes (the minimum): below the referral threshold
     order(selva, "2026-10-28", 8, 7, { channel: "manual", dates: ["2026-10-29", "2026-11-04"] });
-    order(vinyl, "2026-11-03", 6, 6, { dates: ["2026-11-04", "2026-11-07"] });                                       // qualifies Bar Cobra
-    submitOrderRequest({ proId: anaconda.id, lines: [{ flavor: "lulo", boxes: 6 }, { flavor: "guava", boxes: 6 }], now: iso("2026-11-09") });
+    // Vinyl Room paid by card on the site (pro payment page): created paid, locked, shipped a few days later. Qualifies Bar Cobra
+    const web = payProOrder({ proId: vinyl.id, lines: [{ flavor: "lulo", boxes: 6 }, { flavor: "guava", boxes: 6 }], paymentRef: "pi_demo_vinyl", now: iso("2026-11-03") });
+    advanceOrder(web.id, iso("2026-11-07"));
 
     // order details: how it came in, payment, invoice numbers, parcels (Selva's second order came by email, Cobra's second at a visit, paid in cash)
     const addr = { [cobra.id]: ["Langstrasse 41", "8004"], [selva.id]: ["Quai du Mont-Blanc 3", "1201"], [anaconda.id]: ["Steinenvorstadt 12", "4051"], [norte.id]: ["Pilatusstrasse 8", "6003"], [vinyl.id]: ["Langstrasse 120", "8004"], [lulo.id]: ["Rue de Bourg 5", "1003"], [terraza.id]: ["Aarbergergasse 21", "3011"] };
@@ -656,8 +642,8 @@
     state.orders.slice().sort((a, b) => a.createdAt.localeCompare(b.createdAt)).forEach((o) => {
       const pro = state.pros.find((x) => x.id === o.proId);
       if (o.invoicedAt) o.invoiceNo = `INV-${o.invoicedAt.slice(0, 4)}-${String(++inv).padStart(4, "0")}`;
-      if (o.channel === "manual") { o.via = pro.name === "Bar Cobra" ? "In person visit" : "Email"; o.payment.method = pro.name === "Bar Cobra" ? "Cash" : "Bank transfer"; if (pro.name === "Bar Cobra") o.note = "Ordered at the bar after a tasting, paid in cash on delivery."; }
-      else { o.via = "Website request"; o.payment.method = "Bank transfer"; }
+      if (o.channel === "manual") { o.via = o.visit ? "In person visit" : "Email"; o.payment.method = o.visit ? "Cash" : "Bank transfer"; if (o.visit) o.note = "Ordered at the bar after a tasting, paid in cash on delivery."; delete o.visit; }
+      else { o.via = "Website"; }
       o.shipping = { carrier: "Swiss Post", tracking: "", address: pro.address, zip: pro.zip, city: pro.city };
       if (o.shippedAt) o.shipping.tracking = `99.60.${String(310000 + ++parcel * 137).padStart(6, "0")}.${String(40210000 + parcel * 911)}`;
       else o.shipping.carrier = "";
@@ -674,6 +660,7 @@
     co("2026-10-09", [1, 1], ["2026-10-09", "2026-10-12", "2026-10-16"], base);
     co("2026-11-05", [2, 0], ["2026-11-05"], base);
     co("2026-10-21", [0, 3], ["2026-10-22", "2026-10-26"], { email: "guest@customer.demo", name: "Marco Bernasconi", address: "Via Nassa 5", zip: "6900", city: "Lugano" });
+    co("2026-11-10", [1, 1], ["2026-11-10"], { email: "elena@customer.demo", name: "Elena Rossi", delivery: "pickup" });   // free pickup, paid, waiting to be collected
     let cp = 0; state.consumerOrders.forEach((o) => { if (o.shippedAt) o.shipping = { carrier: "Swiss Post", tracking: `98.12.${String(550000 + ++cp * 211)}.${String(10770000 + cp * 523)}` }; });
 
     s_addRequest({ kind: "pro", business: "Rooftop 54", type: "Bar", city: "Zurich", contact: "Dana Roth", email: "dana@rooftop54.demo", phone: "+41 44 000 00 00", recommendedBy: "AMB-LUCA", notes: "Opening a second venue in spring.", createdAt: iso("2026-11-07") });
@@ -724,8 +711,8 @@
     FLAVORS, PRO_TYPES, STATUS_FLOW, STATUS_LABEL,
     load, get, save, reset, session, login, logout, currentUser, changePassword, resetPassword,
     resolveRef, refLabel, setAttribution, createPro, createAmbassador, submitProRequest, submitAmbassadorApplication, closeRequest,
-    FLAVORS_ALL: FLAVORS, unitPricesOf, priceSheetOf, conditionsOf, setProPrices, priceConflicts, submitOrderRequest, requestDiff, createOrderFromRequest,
-    PAYMENT_METHODS, VIA_OPTIONS, CARRIERS, trackingUrl, checkShipping, isWebOrder, progress, createManualOrder, updateOrder, updateConsumerOrder,
+    FLAVORS_ALL: FLAVORS, unitPricesOf, priceSheetOf, conditionsOf, setProPrices, priceConflicts,
+    PAYMENT_METHODS, VIA_OPTIONS, CARRIERS, trackingUrl, checkShipping, isWebOrder, progress, consumerTotal, createManualOrder, updateOrder, updateConsumerOrder,
     ordersOfPro, creditOf, previewProOrder, placeProOrder, payProOrder, nextStatus, advanceOrder, cancelOrder,
     CONSUMER_FLOW, CONSUMER_LABEL, registerConsumer, updateProfile, consumerIsFirst, consumerOrdersOf, nextConsumerStatus, advanceConsumerOrder, cancelConsumerOrder, stats,
     consumerPreview, consumerCheckout, ledger, ambassadorView, isPaidOut, markPaidOut, unmarkPaidOut, updateSettings,

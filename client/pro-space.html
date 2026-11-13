@@ -45,7 +45,7 @@ Auth.gate("pro","Pro space","Your prices, your orders and your recommendations."
       <div class="grid grid-2">${c.sheet.flavors.map(f=>`<div class="card stack" data-flavor="${f.flavor}" style="border-top:3px solid var(--accent)">
         <h2 class="flavor-name flavor-name--sm">${F[f.flavor].name}</h2>
         <p class="price">${chf(f.unit)}<small>per bottle</small></p>
-        <p class="paper">${chf(f.boxPrice)} <span class="muted">per box of 12 · excl. VAT</span></p>
+        <p class="paper">${chf(f.boxPrice)} <span class="muted">per box of ${S.proBottlesPerBox} · excl. VAT</span></p>
         ${f.negotiated?'<span class="badge badge--warn">Negotiated price</span>':""}</div>`).join("")}</div>
       ${c.flags.tiers?`<div><p class="label">Volume pricing, per order (all flavours together)</p></div>
       <div class="tablewrap"><table class="tbl"><thead><tr><th>Boxes in the order</th><th class="num">Discount</th>${c.sheet.flavors.map(f=>`<th class="num">${F[f.flavor].name} per box</th>`).join("")}</tr></thead><tbody>
@@ -55,20 +55,18 @@ Auth.gate("pro","Pro space","Your prices, your orders and your recommendations."
       <div class="row"><a class="btn" href="index.html#flavors">See my prices on the site →</a></div>`);
   }
 
-  /* ---- orders: tracking, plus requests waiting for the founders ---- */
+  /* ---- orders: status and tracking ---- */
   const parcel=(o)=>{ const sh=o.shipping||{}; if(!sh.tracking&&!sh.carrier) return '<span class="muted">Not shipped yet</span>'; const url=Store.trackingUrl(sh.carrier,sh.tracking,window.I18n?I18n.get():"en"); return esc(sh.carrier||"")+(sh.tracking?'<br><span class="small">'+esc(sh.tracking)+'</span><br><a class="link-quiet small" data-track="'+esc(sh.tracking)+'" href="'+esc(url)+'" target="_blank" rel="noopener">Track parcel</a>':(sh.noTracking?'<br><span class="small muted">No tracking number</span>':'<br><span class="small muted">Tracking number to come</span>')); };
   const pay=(o)=>esc((o.payment||{}).method||"")+'<br><span class="small muted">'+(o.paidAt?"paid "+date(o.paidAt):"waiting for payment")+'</span>';
   function ordersTab(){
     const orders=Store.ordersOfPro(user.id).slice().sort((a,b)=>b.createdAt.localeCompare(a.createdAt));
-    const reqs=Store.get().requests.filter(r=>r.kind==="order"&&r.proId===user.id&&r.status==="open");
     const flow=Store.STATUS_FLOW;
     shell(`<div><h1 class="display h2">My orders</h1></div>
-      ${reqs.length?`<div class="card stack"><p class="label">Requested, waiting for confirmation</p>${reqs.map(r=>`<p>${date(r.createdAt)} · ${r.lines.map(l=>`${l.boxes} ${F[l.flavor].name}`).join(", ")} · quoted <span class="paper">${chf(r.quote.net)}</span> excl. VAT</p>`).join("")}</div>`:""}
       ${orders.length?`<div class="tablewrap"><table class="tbl"><thead><tr><th>Order</th><th>Date</th><th>Items</th><th class="num">Total excl. VAT</th><th>Payment</th><th>Parcel</th><th>Status</th></tr></thead><tbody>
       ${orders.map(o=>`<tr><td>${esc(o.id)}${o.invoiceNo?`<br><span class="small muted">${esc(o.invoiceNo)}</span>`:""}</td><td>${date(o.createdAt)}<br><span class="small muted">${esc(o.via||"")}</span></td><td>${o.lines.map(l=>`${l.boxes} ${F[l.flavor].name}`).join(", ")}</td><td class="num">${chf(o.net)}</td>
         <td>${pay(o)}</td><td>${parcel(o)}</td>
         <td><span class="badge ${o.status==="cancelled"?"badge--bad":o.status==="delivered"||o.status==="paid"?"badge--ok":""}">${Store.STATUS_LABEL[o.status]}</span><br><span class="small" style="white-space:nowrap">${o.status==="cancelled"?"":flow.map((s,i)=>`<span style="color:${i<=flow.indexOf(o.status)?"var(--paper)":"var(--graphite)"}">${i<=flow.indexOf(o.status)?"●":"○"}</span>`).join(" ")}</span></td></tr>`).join("")}
-      </tbody></table></div>`:(reqs.length?"":`<div class="card stack"><p>No orders yet.</p><div><a class="btn btn--sm" href="index.html#flavors">See my prices →</a></div></div>`)}`);
+      </tbody></table></div>`:`<div class="card stack"><p>No orders yet.</p><div><a class="btn btn--sm" href="index.html#flavors">See my prices →</a></div></div>`}`);
   }
 
   /* ---- recommend: code, link and credit ledger ---- */

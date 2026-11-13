@@ -40,7 +40,7 @@ function createApp({ stripe } = {}) {
   app.get("/api/config", (req, res) => res.json({ stripePublishableKey: config.stripe.publishableKey, staging: !!(process.env.STAGING_USER && process.env.STAGING_PASSWORD) }));
 
   /* ---- price quote for the cart (what the cart drawer shows) ---- */
-  app.post("/api/quote", wrap(async (req, res) => res.json(L.quote(req.body && req.body.cart, await offerState(req.user)))));
+  app.post("/api/quote", wrap(async (req, res) => res.json(L.quote(req.body && req.body.cart, await offerState(req.user), req.body && req.body.delivery))));
 
   /* ---- accounts ---- */
   app.post("/api/auth/register", limit(10), wrap(async (req, res) => {
@@ -67,7 +67,7 @@ function createApp({ stripe } = {}) {
   app.get("/api/me", wrap(async (req, res) => res.json({ user: req.user ? publicUser(req.user) : null })));
   app.get("/api/me/orders", wrap(async (req, res) => {
     if (!req.user) throw httpError(401, "Log in first.");
-    const orders = await db.query("SELECT ref, status, boxes, net_cents, discount_cents, welcome_pct, carrier, tracking, paid_at, created_at FROM orders WHERE user_id = ? ORDER BY id DESC", [req.user.id]);
+    const orders = await db.query("SELECT ref, status, boxes, net_cents, shipping_cents, delivery_method, discount_cents, welcome_pct, carrier, tracking, paid_at, created_at FROM orders WHERE user_id = ? ORDER BY id DESC", [req.user.id]);
     res.json({ orders });
   }));
 
@@ -78,13 +78,15 @@ function createApp({ stripe } = {}) {
     const email = u ? u.email : L.clean(b.email, 190).toLowerCase(), name = L.clean(b.name, 120);
     const ship = { address: L.clean(b.address, 190), zip: L.clean(b.zip, 20), city: L.clean(b.city, 90), phone: L.clean(b.phone, 40) };
     if (!L.isEmail(email)) throw httpError(400, "Enter a valid email.");
-    if (!name || !ship.address || !ship.zip || !ship.city) throw httpError(400, "Fill in your name and delivery address.");
-    const q = L.quote(b.cart, await offerState(u));
+    const q = L.quote(b.cart, await offerState(u), b.delivery);
+    if (!name) throw httpError(400, "Enter your name.");
+    if (q.delivery === "ship" && (!ship.address || !ship.zip || !ship.city)) throw httpError(400, "Fill in your delivery address.");
+    if (q.delivery === "pickup") { ship.address = ""; ship.zip = ""; ship.city = ""; }
     if (!q.boxes) throw httpError(400, "Your cart is empty.");
 
     const orderId = await db.tx(async (sql) => {
-      const r = await sql("INSERT INTO orders (ref, user_id, email, name, ship_address, ship_zip, ship_city, ship_phone, boxes, gross_cents, discount_cents, net_cents, welcome_pct) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)",
-        [L.orderRef(), u ? u.id : null, email, name, ship.address, ship.zip, ship.city, ship.phone, q.boxes, q.grossCents, q.discountCents, q.netCents, q.welcomePct]);
+      const r = await sql("INSERT INTO orders (ref, user_id, email, name, ship_address, ship_zip, ship_city, ship_phone, boxes, gross_cents, discount_cents, net_cents, welcome_pct, delivery_method, shipping_cents) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)",
+        [L.orderRef(), u ? u.id : null, email, name, ship.address, ship.zip, ship.city, ship.phone, q.boxes, q.grossCents, q.discountCents, q.netCents, q.welcomePct, q.delivery, q.shippingCents]);
       for (const l of q.lines) await sql("INSERT INTO order_lines (order_id, flavor, boxes, unit_cents) VALUES (?,?,?,?)", [r.insertId, l.flavor, l.boxes, l.unitCents]);
       return r.insertId;
     });
@@ -93,8 +95,8 @@ function createApp({ stripe } = {}) {
     let intent;
     try {
       intent = await stripeClient().paymentIntents.create({
-        amount: q.netCents, currency: "chf", automatic_payment_methods: { enabled: true }, receipt_email: email,
-        description: `Malaconda ${order.ref}: ${q.lines.map((l) => `${l.boxes} × ${L.FLAVOR_NAMES[l.flavor]}`).join(", ")}`,
+        amount: q.totalCents, currency: "chf", automatic_payment_methods: { enabled: true }, receipt_email: email,
+        description: `Malaconda ${order.ref}: ${q.lines.map((l) => `${l.boxes} × ${L.FLAVOR_NAMES[l.flavor]}`).join(", ")} (${q.delivery === "pickup" ? "pickup" : "delivery"})`,
         metadata: { orderId: String(order.id), ref: order.ref },
       });
     } catch (e) {
@@ -121,10 +123,10 @@ function createApp({ stripe } = {}) {
       const lines = await db.query("SELECT flavor, boxes, unit_milli AS unitMilli FROM pro_order_lines WHERE order_id = ? ORDER BY flavor DESC", [po.id]);
       return res.json({ kind: "pro", lines, ref: po.ref, status: po.status, paymentStatus: pi.status, email: po.email, name: po.name, boxes: po.boxes, grossCents: po.gross_cents, tierPct: po.tier_pct, tierCents: po.tier_cents, welcomePct: po.welcome_pct, creditPct: po.credit_pct, extraCents: po.extra_cents, netCents: po.net_cents, vatCents: po.vat_cents, totalCents: po.total_cents });
     }
-    const o = await db.one("SELECT ref, status, email, boxes, gross_cents, discount_cents, net_cents, welcome_pct, user_id FROM orders WHERE stripe_payment_id = ?", [pi.id]);
+    const o = await db.one("SELECT ref, status, email, boxes, gross_cents, discount_cents, net_cents, shipping_cents, delivery_method, welcome_pct, user_id FROM orders WHERE stripe_payment_id = ?", [pi.id]);
     if (!o) throw httpError(404, "Unknown payment.");
     const lines = await db.query("SELECT l.flavor, l.boxes, l.unit_cents AS unitCents FROM order_lines l JOIN orders o ON o.id = l.order_id WHERE o.stripe_payment_id = ? ORDER BY l.flavor DESC", [pi.id]);
-    res.json({ lines, ref: o.ref, status: o.status, paymentStatus: pi.status, email: o.email, boxes: o.boxes, grossCents: o.gross_cents, discountCents: o.discount_cents, netCents: o.net_cents, welcomePct: o.welcome_pct, hasAccount: !!o.user_id });
+    res.json({ lines, ref: o.ref, status: o.status, paymentStatus: pi.status, email: o.email, boxes: o.boxes, grossCents: o.gross_cents, discountCents: o.discount_cents, netCents: o.net_cents, shippingCents: o.shipping_cents, delivery: o.delivery_method, totalCents: o.net_cents + o.shipping_cents, welcomePct: o.welcome_pct, hasAccount: !!o.user_id });
   }));
 
   /* ---- pro accounts: the venue logs in, sees its own prices, pays by card at those prices (excl. VAT, VAT added at the end) ---- */
@@ -150,6 +152,7 @@ function createApp({ stripe } = {}) {
     if (!name || !ship.address || !ship.zip || !ship.city) throw httpError(400, "Fill in the delivery address.");
     const q = L.proQuote(b.lines, pro, await proOfferState(pro));
     if (!q.boxes) throw httpError(400, "Choose at least one box.");
+    if (q.belowMoq) throw httpError(400, L.Engine.proMoqMessage(q.boxes, L.SETTINGS));
 
     const orderId = await db.tx(async (sql) => {
       const r = await sql("INSERT INTO pro_orders (ref, pro_id, email, name, ship_address, ship_zip, ship_city, ship_phone, boxes, gross_cents, tier_pct, tier_cents, welcome_pct, credit_pct, extra_cents, net_cents, vat_cents, total_cents) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)",

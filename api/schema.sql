@@ -34,8 +34,10 @@ CREATE TABLE IF NOT EXISTS orders (
   boxes             INT UNSIGNED NOT NULL,
   gross_cents       INT UNSIGNED NOT NULL,
   discount_cents    INT UNSIGNED NOT NULL DEFAULT 0,
-  net_cents         INT UNSIGNED NOT NULL,               -- what is charged, VAT included
+  net_cents         INT UNSIGNED NOT NULL,               -- the boxes after discount, VAT included
   welcome_pct       TINYINT UNSIGNED NOT NULL DEFAULT 0, -- first-order offer applied (accounts only)
+  delivery_method   VARCHAR(8)   NOT NULL DEFAULT 'ship', -- 'ship' or 'pickup'
+  shipping_cents    INT UNSIGNED NOT NULL DEFAULT 0,     -- delivery fee, VAT included (0 for a pickup). Charged = net_cents + shipping_cents
   status            ENUM('pending','paid','shipped','delivered','cancelled') NOT NULL DEFAULT 'pending',
   stripe_session_id VARCHAR(120) NULL UNIQUE,
   stripe_payment_id VARCHAR(120) NULL,

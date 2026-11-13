@@ -34,14 +34,19 @@ Common.mount({active:"checkout.html"});
   let pay=null;              // the mounted Payment Element
   let intent=null;           // the order + payment already created for the current form and cart (reused after a declined card)
   let busy=false;
+  let delivery="ship";       // ship | pickup
 
   /* ---------- prices: the server's quote, the same engine as the cart ---------- */
   async function refreshQuote(){
     const c=Cart.get();
-    try{ q=await Pay.api("/quote",{cart:c}); }
+    try{ q=await Pay.api("/quote",{cart:c,delivery}); }
     catch(e){
       const sum=Common.cartSummary(), p=sum.price, cents=n=>Math.round(n*100);   // server away: show the local figure, payment stays closed
       q={boxes:sum.boxes,lines:sum.lines.map(l=>({flavor:l.flavor,boxes:l.boxes,unitCents:cents(sum.unit)})),grossCents:cents(p.gross),discountCents:cents(p.discount),netCents:cents(p.net),vatCents:cents(Engine.vatIncluded(p.net,Store.get().settings)),welcomePct:p.welcomePct,offline:true};
+    }
+    if(q.totalCents==null){   // offline fallback: same arithmetic as the server
+      const st=Store.get().settings, fee=Math.round(Engine.shippingCharge(st,delivery)*100);
+      q.delivery=delivery; q.shippingCents=fee; q.totalCents=q.netCents+fee; q.vatCents=Math.round(Engine.vatIncluded(q.totalCents/100,st)*100);
     }
   }
   const welcomePct=()=>Store.get().settings.consumerWelcomePct;
@@ -51,11 +56,11 @@ Common.mount({active:"checkout.html"});
     return `<p class="label">Your order</p>${lines}
       <table class="breakdown"><tr><td>${o.boxes} box${o.boxes>1?"es":""}</td><td>${eur(o.grossCents)}</td></tr>
       ${o.welcomePct?`<tr class="neg"><td>First order −${pct(o.welcomePct)}</td><td>−${eur(o.discountCents)}</td></tr>`:""}
-      <tr><td>Delivery</td><td>Free</td></tr>
-      <tr class="total"><td>Total</td><td>${eur(o.netCents)}</td></tr>
+      <tr><td>${o.delivery==="pickup"?"Pickup":"Delivery"}</td><td>${o.delivery==="pickup"||!o.shippingCents?"Free":eur(o.shippingCents)}</td></tr>
+      <tr class="total"><td>Total</td><td>${eur(o.totalCents)}</td></tr>
       <tr class="vat"><td>VAT ${pct(Store.get().settings.vatPct)} included</td><td>${eur(o.vatCents)}</td></tr></table>`;
   }
-  function renderSummary(){ $("#co-summary").innerHTML=summary(q)+'<a class="link-quiet" href="shop.html">Edit cart</a>'; const b=$("#pay-label"); if(b) b.textContent=`Pay ${eur(q.netCents)}`; }
+  function renderSummary(){ $("#co-summary").innerHTML=summary(q)+'<a class="link-quiet" href="shop.html">Edit cart</a>'; const b=$("#pay-label"); if(b) b.textContent=`Pay ${eur(q.totalCents)}`; }
 
   /* ---------- block 1: who is paying ---------- */
   function contactBlock(){
@@ -77,6 +82,16 @@ Common.mount({active:"checkout.html"});
   }
   function renderContact(){ $("#co-contact").innerHTML=contactBlock(); }
 
+  /* ---------- delivery or pickup ---------- */
+  function renderMethod(){
+    const st=Store.get().settings, fee=eur(Math.round(st.shippingFee*100)), ship=delivery==="ship";
+    $$("#c-method [data-method]").forEach(b=>{ b.setAttribute("aria-selected",b.dataset.method===delivery); b.firstChild.nodeValue=b.dataset.method==="ship"?`Delivery · ${fee}`:"Free pickup"; });
+    const pk=$("#c-method [data-method=pickup]"); if(pk) pk.hidden=!st.pickupEnabled;
+    $$("[data-ship]").forEach(n=>{ n.hidden=!ship; });
+    const so=$("[data-ship-only]"); if(so) so.hidden=!ship;
+    const h=$("#c-method-hint"); if(h) h.textContent=ship?"Delivered in Switzerland within 5 working days.":"No delivery fee. We email you to arrange the pickup.";
+  }
+
   /* ---------- the page ---------- */
   function empty(){
     $("#co-root").innerHTML=`${STEPS()}<div class="stack narrow"><h1 class="display h2">Your cart is empty</h1><p>Add a box before paying.</p><div><a class="btn" href="index.html#flavors">Pick a flavour</a></div></div>`;
@@ -89,21 +104,23 @@ Common.mount({active:"checkout.html"});
         <div class="co-block" id="co-contact"></div>
         <form class="stack" id="co" novalidate>
           <div class="co-block"><h2 class="co-title"><span>2</span>Delivery</h2>
+            <div class="choice" role="tablist" id="c-method">${[["ship","Delivery"],["pickup","Free pickup"]].map(([k,l])=>`<button type="button" role="tab" data-method="${k}" aria-selected="${delivery===k}">${l}</button>`).join("")}</div>
+            <p class="hint" id="c-method-hint"></p>
             <div class="form-grid">
               <div class="field full"><label class="label" for="c-name">Full name</label><input class="input" id="c-name" autocomplete="name" value="${esc(u.name||"")}" required></div>
-              <div class="field full"><label class="label" for="c-address">Address</label><input class="input" id="c-address" autocomplete="street-address" value="${esc(u.address||"")}" required></div>
-              <div class="field"><label class="label" for="c-zip">Postcode</label><input class="input" id="c-zip" autocomplete="postal-code" value="${esc(u.zip||"")}" required></div>
-              <div class="field"><label class="label" for="c-city">City</label><input class="input" id="c-city" autocomplete="address-level2" value="${esc(u.city||"")}" required></div>
-              <div class="field full"><label class="label" for="c-phone">Phone (for the carrier)</label><input class="input" id="c-phone" type="tel" autocomplete="tel" value="${esc(u.phone||"")}"></div></div></div>
+              <div class="field full" data-ship><label class="label" for="c-address">Address</label><input class="input" id="c-address" autocomplete="street-address" value="${esc(u.address||"")}"></div>
+              <div class="field" data-ship><label class="label" for="c-zip">Postcode</label><input class="input" id="c-zip" autocomplete="postal-code" value="${esc(u.zip||"")}"></div>
+              <div class="field" data-ship><label class="label" for="c-city">City</label><input class="input" id="c-city" autocomplete="address-level2" value="${esc(u.city||"")}"></div>
+              <div class="field full"><label class="label" for="c-phone">Phone <span data-ship-only>(for the carrier)</span></label><input class="input" id="c-phone" type="tel" autocomplete="tel" value="${esc(u.phone||"")}"></div></div></div>
           <div class="co-block"><h2 class="co-title"><span>3</span>Payment</h2>
             <div id="payment-element" class="payment-element"><p class="small muted" id="pay-wait">Loading the secure payment form…</p></div>
             <p class="hint" id="pay-hint">Card, Apple Pay, Google Pay or TWINT. Payments are handled by Stripe: your card details never touch our server. <span class="badge">Test mode</span></p></div>
           <button class="btn btn--block" id="pay" type="submit" disabled><span id="pay-label">Pay ${eur(q.netCents)}</span></button><div id="co-err" aria-live="polite"></div>
         </form></div>
         <aside class="card stack" id="co-summary"></aside></div>`;
-    renderContact(); renderSummary();
+    renderContact(); renderSummary(); renderMethod();
     try{
-      pay=await Pay.mount($("#payment-element"),q.netCents);
+      pay=await Pay.mount($("#payment-element"),q.totalCents);
       pay.onReady(()=>{ const w=$("#pay-wait"); if(w) w.remove(); $("#pay").disabled=false; });
     }catch(e){ $("#payment-element").innerHTML=`<div class="alert alert--warn">${esc(e.message)}</div>`; }
   }
@@ -113,18 +130,18 @@ Common.mount({active:"checkout.html"});
     const first=o.lines[0]?o.lines[0].flavor:"lulo";
     $("#co-root").innerHTML=`${STEPS()}
       <div class="shopgrid" data-flavor="${first}"><div class="stack"><p class="label">Order ${esc(o.ref)}</p><h1 class="display h2 accent">Thank you.</h1>
-        <p>Your confirmation goes to <span class="paper">${esc(o.email)}</span>. Delivery within 4 weeks.</p>
+        <p>Your confirmation goes to <span class="paper">${esc(o.email)}</span>. ${o.delivery==="pickup"?"We email you to arrange the pickup.":"Delivery within 5 working days."}</p>
         ${o.hasAccount?`<div class="row"><a class="btn" href="account.html">Track my order</a><a class="link-quiet" href="index.html">Back to the site</a></div>`:
           `<div class="offer"><p><strong>Create an account to follow your order.</strong></p><a class="btn btn--sm" href="account.html?signup=1">Create an account</a></div><div><a class="link-quiet" href="index.html">Back to the site</a></div>`}</div>
-        <aside class="card stack" data-flavor="${first}"><span class="badge badge--ok">Paid</span>${summary({boxes:o.boxes,lines:o.lines,grossCents:o.grossCents,discountCents:o.discountCents,netCents:o.netCents,vatCents:Math.round(Engine.vatIncluded(o.netCents/100,Store.get().settings)*100),welcomePct:o.welcomePct})}</aside></div>`;
+        <aside class="card stack" data-flavor="${first}"><span class="badge badge--ok">Paid</span>${summary({boxes:o.boxes,lines:o.lines,grossCents:o.grossCents,discountCents:o.discountCents,netCents:o.netCents,delivery:o.delivery,shippingCents:o.shippingCents,totalCents:o.totalCents,vatCents:Math.round(Engine.vatIncluded(o.totalCents/100,Store.get().settings)*100),welcomePct:o.welcomePct})}</aside></div>`;
     scrollTo(0,0);
   }
   function mirror(o){   // the prototype's own spaces (account, admin) read the browser store: keep them in step
     try{
       const s=Store.get(); if(s.consumerOrders.some(x=>x.payment&&x.payment.reference===o.ref)) return;
       const acc=s.consumers.find(c=>c.email===o.email);
-      const c=Store.consumerCheckout({email:o.email,name:"",accountId:acc?acc.id:null,lines:o.lines.map(l=>({flavor:l.flavor,boxes:l.boxes})),paid:true,paymentRef:o.ref});
-      Object.assign(c,{gross:o.grossCents/100,net:o.netCents/100,welcomePct:o.welcomePct}); Store.save();
+      const c=Store.consumerCheckout({email:o.email,name:"",accountId:acc?acc.id:null,lines:o.lines.map(l=>({flavor:l.flavor,boxes:l.boxes})),paid:true,paymentRef:o.ref,delivery:o.delivery});
+      Object.assign(c,{gross:o.grossCents/100,net:o.netCents/100,welcomePct:o.welcomePct,delivery:o.delivery,shippingFee:(o.shippingCents||0)/100}); Store.save();
     }catch(e){}
   }
   async function settle(clientSecret){
@@ -149,14 +166,16 @@ Common.mount({active:"checkout.html"});
 
   /* ---------- events ---------- */
   function fail(t){ $("#co-err").innerHTML=`<div class="alert alert--warn">${t}</div>`; }
-  function busyState(on){ busy=on; const b=$("#pay"); if(b){ b.disabled=on; $("#pay-label").textContent=on?"Processing…":`Pay ${eur(q.netCents)}`; } }
+  function busyState(on){ busy=on; const b=$("#pay"); if(b){ b.disabled=on; $("#pay-label").textContent=on?"Processing…":`Pay ${eur(q.totalCents)}`; } }
   async function identify(u,pw){   // the account exists on the server; the prototype's spaces get the same account in the browser store
     me=u; try{ Store.registerConsumer({name:u.name,email:u.email,password:pw}); }catch(e){} try{ Store.login("customer",u.email,pw); }catch(e){}
-    await refreshQuote(); renderContact(); renderSummary(); if(pay) pay.setAmount(q.netCents);
+    await refreshQuote(); renderContact(); renderSummary(); if(pay) pay.setAmount(q.totalCents);
     const set=(id,v)=>{ const n=$("#"+id); if(n&&!n.value&&v) n.value=v; };
     set("c-name",u.name); set("c-address",u.address); set("c-zip",u.zip); set("c-city",u.city); set("c-phone",u.phone);
   }
 
+  document.addEventListener("click",async e=>{ const d=e.target.closest("[data-method]"); if(!d||busy||d.dataset.method===delivery) return;
+    delivery=d.dataset.method; intent=null; renderMethod(); await refreshQuote(); renderSummary(); if(pay) pay.setAmount(q.totalCents); });
   document.addEventListener("click",e=>{ const m=e.target.closest("[data-mode]"); if(m){ msg.email=($("#c-email")||{}).value||msg.email; mode=m.dataset.mode; msg.login=msg.signup=""; renderContact(); } });
   document.addEventListener("submit",async e=>{
     const id=e.target.id;
@@ -170,10 +189,11 @@ Common.mount({active:"checkout.html"});
       e.preventDefault(); if(busy||!pay) return;
       const v=i=>$("#"+i).value.trim(), email=me?me.email:(($("#c-email")||{}).value||"").trim();
       if(!me&&!/^\S+@\S+\.\S+$/.test(email)) return fail("Enter your email in the contact block, or log in.");
-      if(!v("c-name")||!v("c-address")||!v("c-zip")||!v("c-city")) return fail("Fill in your name and delivery address.");
+      if(!v("c-name")) return fail("Enter your name.");
+      if(delivery==="ship"&&(!v("c-address")||!v("c-zip")||!v("c-city"))) return fail("Fill in your delivery address, or choose the free pickup.");
       $("#co-err").innerHTML=""; busyState(true);
-      const body={email,name:v("c-name"),address:v("c-address"),zip:v("c-zip"),city:v("c-city"),phone:v("c-phone"),cart:Cart.get()};
-      const fp=JSON.stringify([body,q.netCents]);
+      const body={email,name:v("c-name"),delivery,address:delivery==="ship"?v("c-address"):"",zip:delivery==="ship"?v("c-zip"):"",city:delivery==="ship"?v("c-city"):"",phone:v("c-phone"),cart:Cart.get()};
+      const fp=JSON.stringify([body,q.totalCents]);
       const r=await pay.pay(async()=>{ if(!intent||intent.fp!==fp){ const c=await Pay.api("/checkout",body); intent={fp,clientSecret:c.clientSecret}; } return intent.clientSecret; },
         {name:body.name,email,returnUrl:new URL("checkout.html",location.href).href}).catch(err=>({error:{message:err.message}}));
       if(r.error){ busyState(false); if(r.error.type!=="validation_error") fail(esc(r.error.message||"The payment did not go through.")); return; }
@@ -183,7 +203,7 @@ Common.mount({active:"checkout.html"});
   });
   document.addEventListener("cart:changed",async()=>{ if(busy||!$("#co-root")||!$("#co")&&!$("#co-summary")) return;
     if(!Cart.count()){ empty(); return; }
-    await refreshQuote(); if($("#co-summary")){ renderSummary(); renderContact(); if(pay) pay.setAmount(q.netCents); } });
+    await refreshQuote(); if($("#co-summary")){ renderSummary(); renderContact(); if(pay) pay.setAmount(q.totalCents); } });
 
   (async function boot(){
     const p=new URLSearchParams(location.search), cs=p.get("payment_intent_client_secret");

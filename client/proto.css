@@ -506,13 +506,14 @@ dialog form > .label:first-of-type { margin-top:var(--s2); }
 
 /* features strip */
 .features { padding-top:clamp(40px,5vw,72px); padding-bottom:clamp(40px,5vw,72px); }
-.features__list { list-style:none; margin:0; padding:0; display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); }
+.features__list { list-style:none; margin:0; padding:0; display:grid; grid-template-columns:repeat(5,minmax(0,1fr)); }
 .features__list li { display:flex; flex-direction:column; align-items:center; justify-content:flex-start; gap:var(--s3); text-align:center; padding:var(--s2) var(--s4); border-left:1px solid var(--charcoal); font:500 12px/1.5 var(--font-mono); letter-spacing:.08em; text-transform:uppercase; color:var(--paper); }
 .features__list li:first-child { border-left:0; }
 .features__list svg { width:36px; height:36px; fill:none; stroke:currentColor; stroke-width:1.5; stroke-linecap:round; stroke-linejoin:round; }
 @media (max-width:900px) {
   .features__list { grid-template-columns:repeat(2,minmax(0,1fr)); row-gap:var(--s4); }
   .features__list li:nth-child(odd) { border-left:0; }
+  .features__list li:last-child:nth-child(odd) { grid-column:1 / -1; }
 }
 
 /* pros, ambassadors and contact share one height */

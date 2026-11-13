@@ -9,11 +9,13 @@ const cents = (chf) => Math.round(chf * 100);
 
 // Price an order from the cart. The browser is never trusted for prices: only flavours and box counts come from it.
 // The first-order offer is for accounts only, and only while the account has no paid order yet.
-function quote(cart, { hasPaidOrder, isAccount }) {
+function quote(cart, { hasPaidOrder, isAccount }, delivery) {
   const lines = Object.keys(FLAVOR_NAMES).map((k) => ({ flavor: k, boxes: Math.max(0, Math.min(500, Math.floor(Number(cart && cart[k]) || 0))) })).filter((l) => l.boxes > 0);
   const boxes = lines.reduce((n, l) => n + l.boxes, 0);
   const p = Engine.priceConsumerOrder({ boxes, settings: SETTINGS, isFirst: !!isAccount && !hasPaidOrder });
-  return { lines: lines.map((l) => ({ ...l, unitCents: cents(SETTINGS.retailPrice) })), boxes, grossCents: cents(p.gross), discountCents: cents(p.discount), netCents: cents(p.net), vatCents: cents(Engine.vatIncluded(p.net, SETTINGS)), welcomePct: p.welcomePct };
+  const method = delivery === "pickup" && SETTINGS.pickupEnabled ? "pickup" : "ship";   // pickup is free, delivery has a fee
+  const shippingCents = boxes ? cents(Engine.shippingCharge(SETTINGS, method)) : 0, totalCents = cents(p.net) + shippingCents;
+  return { delivery: method, shippingCents, totalCents, lines: lines.map((l) => ({ ...l, unitCents: cents(SETTINGS.retailPrice) })), boxes, grossCents: cents(p.gross), discountCents: cents(p.discount), netCents: cents(p.net), vatCents: cents(Engine.vatIncluded(totalCents / 100, SETTINGS)), welcomePct: p.welcomePct };
 }
 
 // Price a pro order from the pro's own conditions (negotiated prices, volume tier, one extra discount: welcome offer or referral credit). Prices are excl. VAT; VAT is added at the end.
@@ -31,7 +33,7 @@ function proQuote(lines, pro, { hasPaidOrder }) {
   return {
     lines: p.lines.map((r) => ({ flavor: r.flavor, boxes: r.boxes, unitMilli: Math.round(r.unit * 1000), boxCents: cents(r.boxPrice), amountCents: cents(r.amount) })),
     boxes: p.boxes, grossCents: cents(p.gross), tierPct: p.tierPct, tierCents: cents(p.tierAmount), welcomePct: p.welcomePct, creditPct: p.creditPct, extraCents: cents(p.extraAmount),
-    netCents: cents(net), vatCents: cents(vat), totalCents: cents(total), vatPct: SETTINGS.vatPct,
+    netCents: cents(net), vatCents: cents(vat), totalCents: cents(total), vatPct: SETTINGS.vatPct, moq: SETTINGS.proMinBoxes, belowMoq: p.boxes < SETTINGS.proMinBoxes,
   };
 }
 

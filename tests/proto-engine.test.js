@@ -14,17 +14,17 @@ test("volume tiers: 9 -> 0, 10 -> 5, 20 -> 5, 21 -> 10", () => {
 
 test("pro first order: 10% welcome after the tier, sequential", () => {
   const p = E.priceProOrder({ boxes: 25, settings: S, isFirst: true, creditAvailablePct: 0 });
-  assert.equal(p.gross, 660);
-  assert.equal(p.afterTier, 594);
+  assert.equal(p.gross, 1470);          // 25 boxes of 24 bottles at 2.45 = 58.80 a box
+  assert.equal(p.afterTier, 1323);      // 21+ boxes: -10%
   assert.equal(p.welcomePct, 10);
-  assert.equal(p.net, 534.6);
+  assert.equal(p.net, 1190.7);
 });
 
 test("pro later order uses credit capped at 15%, never welcome", () => {
   const p = E.priceProOrder({ boxes: 25, settings: S, isFirst: false, creditAvailablePct: 20 });
   assert.equal(p.creditPct, 15);
   assert.equal(p.welcomePct, 0);
-  assert.equal(p.net, E.round2(594 * 0.85));
+  assert.equal(p.net, E.round2(1323 * 0.85));
 });
 
 test("first order never combines welcome and credit", () => {
@@ -41,10 +41,11 @@ test("consumer: 10% on first order, no cap, none afterwards", () => {
   assert.equal(b.net, 78);
 });
 
-test("price invariant: list box price (ex VAT) stays below the consumer first-order price ex VAT", () => {
+test("price invariant: the pro bottle price (ex VAT) stays below the consumer first-order bottle price ex VAT", () => {
   const inv = E.checkPriceInvariant(S);
-  assert.equal(E.listBoxPrice(S), 26.4);
-  assert.equal(inv.limit, 32.47);
+  assert.equal(E.listBoxPrice(S), 58.8);   // a pro box has 24 bottles
+  assert.equal(inv.bottle, 2.45);
+  assert.equal(inv.limit, 2.706);          // 39 / 12 bottles, less VAT, less the 10% welcome offer
   assert.ok(inv.ok);
   assert.ok(!E.checkPriceInvariant({ ...S, proBottlePrice: 2.75 }).ok, "a list price of 2.75 breaks the invariant");
   assert.equal(E.priceConsumerOrder({ boxes: 1, settings: S, isFirst: true }).perBox, 35.1);
@@ -155,11 +156,11 @@ test("rounding is half-up and symmetric", () => {
 test("negotiated prices: per flavour, per bottle, to the cent", () => {
   const unit = { lulo: 2.1, guava: 2.2 };
   const p = E.priceProOrder({ lines: [{ flavor: "lulo", boxes: 6 }, { flavor: "guava", boxes: 6 }], unitPrices: unit, settings: S, isFirst: false, creditAvailablePct: 0 });
-  assert.equal(p.lines[0].boxPrice, 25.2);
-  assert.equal(p.lines[1].boxPrice, 26.4);
-  assert.equal(p.gross, 309.6); // 6 x 25.20 + 6 x 26.40
+  assert.equal(p.lines[0].boxPrice, 50.4);
+  assert.equal(p.lines[1].boxPrice, 52.8);
+  assert.equal(p.gross, 619.2); // 6 x 50.40 + 6 x 52.80
   assert.equal(p.tierPct, 5); // tier on the 12 boxes of the whole order
-  assert.equal(p.net, 294.12);
+  assert.equal(p.net, 588.24);
 });
 
 test("validateNegotiated enforces the floor, the ceiling and two decimals", () => {
@@ -167,7 +168,7 @@ test("validateNegotiated enforces the floor, the ceiling and two decimals", () =
   assert.equal(E.validateNegotiated(2.1, S), null);
   assert.equal(E.validateNegotiated(1.8, S), null);
   assert.match(E.validateNegotiated(1.79, S), /floor/);
-  assert.match(E.validateNegotiated(2.25, S), /list price/);
+  assert.match(E.validateNegotiated(2.5, S), /list price/);
   assert.match(E.validateNegotiated(2.105, S), /two decimals/);
 });
 
@@ -183,11 +184,11 @@ test("per-pro flags switch tiers and welcome/credit off", () => {
 
 test("price sheet gives each flavour's box price and the tier table", () => {
   const sheet = E.priceSheet({ unitPrices: { lulo: 2.1, guava: null }, settings: S });
-  assert.equal(sheet.flavors[0].boxPrice, 25.2);
+  assert.equal(sheet.flavors[0].boxPrice, 50.4);
   assert.equal(sheet.flavors[0].negotiated, true);
   assert.equal(sheet.flavors[1].negotiated, false);
-  assert.deepEqual(sheet.tiers.map((t) => [t.from, t.to, t.pct]), [[1, 9, 0], [10, 20, 5], [21, null, 10]]);
-  assert.equal(sheet.tiers[2].boxes[0].boxPrice, 22.68); // 25.20 less 10%
+  assert.deepEqual(sheet.tiers.map((t) => [t.from, t.to, t.pct]), [[5, 9, 0], [10, 20, 5], [21, null, 10]]);
+  assert.equal(sheet.tiers[2].boxes[0].boxPrice, 45.36); // 50.40 less 10%
 });
 
 test("best-case effective bottle price shows what the combined discounts can reach", () => {
@@ -207,4 +208,17 @@ test("credit from a ledger keeps the percentage frozen when it was earned", () =
 test("VAT contained in a VAT-inclusive amount", () => {
   assert.equal(E.vatIncluded(117, E.DEFAULT_SETTINGS), 8.77);   // 117 / 1.081 = 108.23, VAT 8.77
   assert.equal(E.vatIncluded(0, E.DEFAULT_SETTINGS), 0);
+});
+
+test("pro minimum order: 5 boxes, all flavours together; tiers start at the minimum", () => {
+  assert.equal(E.proMoqMessage(4, S), "Minimum order: 5 boxes of 24 bottles.");
+  assert.equal(E.proMoqMessage(5, S), null);
+  assert.equal(E.proMoqMessage(2 + 3, S), null, "3 of one flavour and 2 of the other make 5");
+  assert.equal(E.tierPct(5, S), 0, "5 to 9 boxes: no discount");
+});
+
+test("delivery: a fee, free for a pickup, and the pickup can be switched off", () => {
+  assert.equal(E.shippingCharge(S, "ship"), S.shippingFee);
+  assert.equal(E.shippingCharge(S, "pickup"), 0);
+  assert.equal(E.shippingCharge({ ...S, pickupEnabled: false }, "pickup"), S.shippingFee, "no pickup offered: the fee applies");
 });

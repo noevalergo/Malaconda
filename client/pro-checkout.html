@@ -30,7 +30,7 @@ Common.mount({active:"pro-checkout.html"});
 Auth.gate("pro","Pro payment","Log in to pay with your prices.",function(user){
   const {esc,chf,pct,$}=Common, F=Store.FLAVORS, VAT=Store.get().settings.vatPct;
   const KEY="mlc_pro_order", eur=c=>chf(c/100);
-  const boxCents=l=>Math.round(l.unitMilli*12/10);
+  const PER=Store.get().settings.proBottlesPerBox, boxCents=l=>Math.round(l.unitMilli*PER/10);
   let srv=null, q=null, pay=null, intent=null, busy=false;
   const lines=()=>{ try{ return (JSON.parse(sessionStorage.getItem(KEY))||[]).filter(l=>F[l.flavor]&&l.boxes>0); }catch(e){ return []; } };
   const steps=()=>`<ol class="steps"><li><a href="index.html#flavors">Prices</a></li><li aria-current="step">Payment</li></ol>`;
@@ -38,7 +38,7 @@ Auth.gate("pro","Pro payment","Log in to pay with your prices.",function(user){
 
   function summary(o){
     return `<p class="label">Your order, ${esc(user.name)}</p>
-      <table class="breakdown">${o.lines.map(l=>`<tr><td>${l.boxes} box${l.boxes>1?"es":""} of ${F[l.flavor].name}<br><span class="small muted">12 bottles of 20 cl each, ${eur(boxCents(l))} per box</span></td><td>${eur(l.boxes*boxCents(l))}</td></tr>`).join("")}
+      <table class="breakdown">${o.lines.map(l=>`<tr><td>${l.boxes} box${l.boxes>1?"es":""} of ${F[l.flavor].name}<br><span class="small muted">${PER} bottles of 20 cl each, ${eur(boxCents(l))} per box</span></td><td>${eur(l.boxes*boxCents(l))}</td></tr>`).join("")}
       ${o.tierPct?`<tr class="neg"><td>Volume −${o.tierPct}%</td><td>−${eur(o.tierCents)}</td></tr>`:""}
       ${o.welcomePct?`<tr class="neg"><td>Welcome −${o.welcomePct}%</td><td>−${eur(o.extraCents)}</td></tr>`:""}
       ${o.creditPct?`<tr class="neg"><td>Referral credit −${o.creditPct}%</td><td>−${eur(o.extraCents)}</td></tr>`:""}
@@ -61,6 +61,7 @@ Auth.gate("pro","Pro payment","Log in to pay with your prices.",function(user){
   async function build(){
     if(!lines().length) return empty();
     try{ q=await Pay.api("/pro/quote",{lines:lines()}); }catch(e){ if(/Log in/.test(e.message)){ srv=null; return loginView(); } root().innerHTML=`<section class="block">${steps()}<div class="alert alert--warn">${esc(e.message)}</div></section>`; return; }
+    if(q.belowMoq){ root().innerHTML=`<section class="block">${steps()}<div class="stack narrow"><h1 class="display h2">A little more to order</h1><p>The minimum order is <span class="paper">${q.moq} boxes</span> of ${PER} bottles, all flavours together. You have ${q.boxes}.</p><div><a class="btn" href="index.html#flavors">Change my quantities</a></div></div></section>`; return; }
     const u=srv||{};
     root().innerHTML=`<section class="block">${steps()}
       <div class="shopgrid"><div class="stack"><h1 class="display h2">Pay your order</h1>

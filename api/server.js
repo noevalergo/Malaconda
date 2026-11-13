@@ -56,4 +56,5 @@ const clientDir = [path.join(__dirname, "..", "client"), path.join(__dirname, "c
 app.get(/^\/proto(\/.*)?$/, (req, res) => res.redirect(301, req.path.replace(/^\/proto/, "") || "/"));   // links sent before the move
 app.use(express.static(clientDir, { extensions: ["html"] }));
 
-app.listen(config.port, () => console.log(`Malaconda on ${config.baseUrl} (port ${config.port})`));
+// the database is brought up to date at every start (safe to repeat), then the app listens
+require("./migrate")().catch((e) => console.error("migration:", e.message)).finally(() => app.listen(config.port, () => console.log(`Malaconda on ${config.baseUrl} (port ${config.port})`)));

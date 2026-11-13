@@ -3,14 +3,16 @@
 Reviewed by an independent agent; its findings are folded in (section 10). Every number is a starting value editable in the admin. Everything the site shows (prices, discounts, credit, commissions) is computed from this model by one engine, never typed in a screen.
 
 ## 1. Units
-- Price unit: **CHF per bottle**, stored in cents. A **box = 12 bottles of 20 cl**. Orders are in boxes.
+- Price unit: **CHF per bottle**, stored in cents. Orders are in boxes. A **shop box = 12 bottles of 20 cl**, a **pro box = 24 bottles of 20 cl**.
 - Screens show the **box price and the total as primary figures**. Per-bottle figures are shown for list and negotiated prices only (exact), and marked "about" on tier rows (a tier discount can land between two cents).
-- Retail (public): CHF 39.00 per box, VAT included. Pro prices and pro totals are **excluding VAT**. VAT rate in Settings: 8.1% (informational: used for invoices and for the price invariant). Shipping is outside the discount base.
+- Retail (public): CHF 39.00 per box of 12 (CHF 3.25 per bottle), VAT included, minimum 1 box. Pro prices and pro totals are **excluding VAT**. VAT rate in Settings: 8.1% (informational: used for invoices and for the price invariant). Shipping is outside the discount base.
 
 ## 2. Prices
 | Item | Starting value | Where it lives |
 |---|---|---|
-| Pro list price | CHF 2.20 per bottle = CHF 26.40 per box, both flavours | Settings |
+| Pro list price | CHF 2.45 per bottle = CHF 58.80 per box of 24, both flavours | Settings |
+| Pro minimum order (MOQ) | 5 boxes, all flavours together. Applies on the site (quote and payment); a founder can still record a smaller deal by hand | Settings |
+| Shop delivery | A fee (VAT included; **placeholder CHF 9.00, not confirmed yet**) or free pickup, chosen at checkout | Settings |
 | Negotiated price | Optional, per pro, per flavour, per bottle, to the cent. Replaces the list price as that pro's base | Pro account, admin |
 | Price floor | CHF 1.80 per bottle, applies to the negotiated base | Settings |
 | Ceiling | A negotiated price is never above the list price | Rule |
@@ -18,12 +20,12 @@ Reviewed by an independent agent; its findings are folded in (section 10). Every
 Rules:
 - Only founders set negotiated prices. Every change is logged (date, who, old to new, reason).
 - A pro sees only their own prices. An ambassador never sees a unit price.
-- **Price invariant** (checked when saving Settings): the list box price (ex VAT) stays below the consumer first-order price ex VAT: `retail / (1 + VAT) × (1 − 10%)` = CHF 32.47 per box. Saving a list price above the floor change, or a floor above any negotiated price, lists the affected pros and is refused until fixed.
+- **Price invariant** (checked when saving Settings): the pro list price per bottle (ex VAT) stays below the consumer first-order price per bottle ex VAT: `retail / 12 / (1 + VAT) × (1 − 10%)` = CHF 2.706 per bottle. Saving a list price above the floor change, or a floor above any negotiated price, lists the affected pros and is refused until fixed.
 - The floor is on the base price. The admin shows each pro's **best-case effective price** (base × best tier × max credit) so founders see what the combined discounts can reach.
 
 ## 3. Discounts on a pro order (sequential)
-1. `base` = Σ boxes of each flavour × 12 × that pro's price for that flavour.
-2. Volume tier on the whole order, by total boxes: 1 to 9: 0%, 10 to 20: 5%, 21 and above: 10%. (Per-pro flag "tiers apply", default yes.)
+1. `base` = Σ boxes of each flavour × 24 × that pro's price for that flavour.
+2. Volume tier on the whole order, by total boxes: 5 to 9 (the minimum order): 0%, 10 to 20: 5%, 21 and above: 10%. (Per-pro flag "tiers apply", default yes.)
 3. One extra discount, never two: the **welcome offer 10%** if it is the pro's first non-cancelled order, otherwise the **referral credit** available (max 15% per order). (Per-pro flag "welcome and credit apply", default yes.)
 - Negotiated prices combine with tiers and extras unless a flag says otherwise. Example: Hotel Selva has a negotiated price and "welcome and credit apply" switched off.
 - The order stores the unit prices and percentages it was priced with. A later price change never changes an existing order.
@@ -69,13 +71,13 @@ Rules:
 ## 9. Example profiles (the demo accounts show exactly these)
 | Profile | Prices | Source | History and conditions |
 |---|---|---|---|
-| Bar Cobra (Zurich) | List 2.20 | Camila | Orders: 12 boxes (first, welcome, paid Aug 12), 24 boxes (paid Sep 25). Referred Club Anaconda, Vinyl Room, Bodega Norte (all qualified in Oct and Nov), Cafe Lulo (below threshold). **Credit: 15% earned, 0% used, 15% available** |
-| Terraza 7 (Bern) | List 2.20 | Luca | New. No orders. Welcome 10% on its first confirmed order |
-| Hotel Selva (Geneva) | **Negotiated 2.10** both flavours (box 25.20) | Camila | Tiers apply, welcome and credit do not. Orders: 30 boxes, 15 boxes |
-| Club Anaconda (Basel) | List 2.20 | Bar Cobra | First order 10 boxes, paid Oct 10 |
-| Vinyl Room (Zurich) | List 2.20 | Bar Cobra | First order 12 boxes, paid Nov 7 |
-| Bodega Norte (Lucerne) | List 2.20 | Bar Cobra | First order 10 boxes, paid Oct 15 |
-| Cafe Lulo (Lausanne) | List 2.20 | Bar Cobra | First order 4 boxes, paid Oct 20: below the 10-box qualifying threshold |
+| Bar Cobra (Zurich) | List 2.45 | Camila | Orders: 12 boxes (first, welcome, paid Aug 12), 24 boxes (paid Sep 25). Referred Club Anaconda, Vinyl Room, Bodega Norte (all qualified in Oct and Nov), Cafe Lulo (below threshold). **Credit: 15% earned, 0% used, 15% available** |
+| Terraza 7 (Bern) | List 2.45 | Luca | New. No orders. Welcome 10% on its first confirmed order |
+| Hotel Selva (Geneva) | **Negotiated 2.10** both flavours (box of 24: 50.40) | Camila | Tiers apply, welcome and credit do not. Orders: 30 boxes, 15 boxes |
+| Club Anaconda (Basel) | List 2.45 | Bar Cobra | First order 10 boxes, paid Oct 10 |
+| Vinyl Room (Zurich) | List 2.45 | Bar Cobra | First order 12 boxes, paid by card on the site Nov 3 |
+| Bodega Norte (Lucerne) | List 2.45 | Bar Cobra | First order 10 boxes, paid Oct 15 |
+| Cafe Lulo (Lausanne) | List 2.45 | Bar Cobra | First order 5 boxes (the minimum), paid Oct 20: below the 10-box qualifying threshold |
 | Anna Keller | Retail | none | Customer. 3 orders, the first used the 15% offer |
 
 Ambassadors: Camila (Bar Cobra, Hotel Selva), Luca (Terraza 7). Both 5% for 12 months. Menu views: Unlogged visitor, Logged visitor, New pro (Terraza 7), Pro with referral credit stacked (Bar Cobra), Pro with negotiated prices (Hotel Selva), Ambassador (Camila), Admin.

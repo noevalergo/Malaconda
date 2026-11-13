@@ -32,7 +32,7 @@ Auth.gate("admin", "Founders admin", "", function (admin) {
   const parseRef = (v) => { if (!v) return null; const [kind, id] = v.split(":"); return { kind, id, text: "" }; };
 
   function shell(inner) {
-    const open = s().requests.filter((r) => r.status === "open" && r.kind !== "order").length;
+    const open = s().requests.filter((r) => r.status === "open").length;
     document.getElementById("app").innerHTML = `<div class="block app"><nav class="side" role="tablist">${TABS.map(([k, l]) => `<button role="tab" data-tab="${k}" aria-selected="${k === tab}">${l}${k === "requests" && open ? `<span class="count">${open}</span>` : ""}</button>`).join("")}</nav><div class="stack" id="panel">${inner}</div></div>`;
     $$("[data-tab]").forEach((b) => b.addEventListener("click", () => { tab = b.dataset.tab; proId = null; custId = null; render(); }));
   }
@@ -40,19 +40,11 @@ Auth.gate("admin", "Founders admin", "", function (admin) {
   /* ---------- requests ---------- */
   function requestsTab() {
     const FILTERS = [["all", "All"], ["pro", "Pro access"], ["ambassador", "Ambassadors"], ["message", "Messages"]];
-    const inFilter = (r) => r.kind !== "order" && (reqFilter === "all" || r.kind === reqFilter);
+    const inFilter = (r) => reqFilter === "all" || r.kind === reqFilter;
     const open = s().requests.filter((r) => r.status === "open" && inFilter(r));
     const done = s().requests.filter((r) => r.status !== "open" && inFilter(r));
-    const countOf = (k) => s().requests.filter((r) => r.status === "open" && r.kind !== "order" && (k === "all" || r.kind === k)).length;
+    const countOf = (k) => s().requests.filter((r) => r.status === "open" && (k === "all" || r.kind === k)).length;
     const card = (r) => {
-      if (r.kind === "order") {
-        const diff = Store.requestDiff(r.id), q = r.quote;
-        return `<div class="card stack"><div class="row" style="justify-content:space-between"><h2 class="card__title">${esc(proName(r.proId))}</h2><span class="badge">Order request</span></div>
-          <p>${r.lines.map((l) => `${l.boxes} ${F[l.flavor].name}`).join(", ")} · ${q.boxes} boxes · date ${date(r.createdAt)}</p>
-          <p>Quoted to the pro: <span class="paper">${chf(q.net)}</span> excl. VAT (volume −${q.tierPct}%${q.welcomePct ? `, welcome −${q.welcomePct}%` : ""}${q.creditPct ? `, credit −${q.creditPct}%` : ""})</p>
-          ${diff.changed ? `<div class="alert alert--warn">Prices changed since the quote: the same order now costs ${chf(diff.now.net)}. Creating it uses today's prices.</div>` : `<p class="small muted">Same price today as quoted.</p>`}
-          <div class="row"><button class="btn btn--sm" data-create-order="${r.id}">Create order${diff.changed ? " at today's price" : ""}</button><button class="btn btn--sm btn--danger" data-reject="${r.id}">Reject</button></div></div>`;
-      }
       if (r.kind === "message") {
         return `<div class="card stack"><div class="row" style="justify-content:space-between"><h2 class="card__title">${esc(r.name)}</h2><span class="badge">Message · ${esc(r.topic)}</span></div>
           <p><a class="link-quiet" href="mailto:${esc(r.email)}">${esc(r.email)}</a> · ${date(r.createdAt)}</p><p>${esc(r.message)}</p>
@@ -74,7 +66,6 @@ Auth.gate("admin", "Founders admin", "", function (admin) {
       <div class="row">${FILTERS.map(([k, l]) => `<button class="btn btn--sm ${reqFilter === k ? "" : "btn--ghost"}" data-filter="${k}" type="button">${l}${countOf(k) ? " · " + countOf(k) : ""}</button>`).join("")}</div>${open.length ? open.map(card).join("") : '<div class="card">Nothing to review.</div>'}
       ${done.length ? `<p class="label">Closed</p>${rowsBox(done.map((r) => orow({ main: `<span class="orow__id"><b>${esc(r.business || r.name || proName(r.proId))}</b><span class="badge ${r.status === "approved" || r.status === "handled" ? "badge--ok" : "badge--bad"}">${r.status}</span></span>`, sub: r.kind === "pro" ? "Pro access" : r.kind === "ambassador" ? "Ambassador application" : "Message" })))}` : ""}`);
     $$("[data-filter]").forEach((b) => b.addEventListener("click", () => { reqFilter = b.dataset.filter; render(); }));
-    $$("[data-create-order]").forEach((b) => b.addEventListener("click", () => { try { const o = Store.createOrderFromRequest(b.dataset.createOrder); Common.toast(`Order ${o.id} created.`); } catch (err) { Common.toast(err.message); } render(); }));
     $$("[data-handled]").forEach((b) => b.addEventListener("click", () => { Store.closeRequest(b.dataset.handled, "handled"); render(); }));
     $$("[data-reject]").forEach((b) => b.addEventListener("click", () => { Store.closeRequest(b.dataset.reject, "rejected"); render(); }));
     $$("[data-approve-pro]").forEach((b) => b.addEventListener("click", () => proDialog(s().requests.find((r) => r.id === b.dataset.approvePro))));
@@ -163,7 +154,7 @@ Auth.gate("admin", "Founders admin", "", function (admin) {
     shell(`<div><button class="link-quiet" id="back" type="button">← All pros</button><h1 class="display h2" style="margin-top:12px">${esc(p.name)}</h1><p>${esc(p.type)} · ${esc(p.city)} · ${esc(p.contact)} · ${esc(p.email)} · code <span class="paper">${esc(p.code)}</span></p></div>
       <div class="card stack"><p class="label">What this pro gets</p><table class="breakdown">
         <tr><td>Prices</td><td>${cond.negotiated ? "Negotiated" : "List"}: Lulo ${bottle(cond.unit.lulo)}, Guava ${bottle(cond.unit.guava)} per bottle</td></tr>
-        <tr><td>Box of 12</td><td>${cond.sheet.flavors.map((f) => `${F[f.flavor].name} ${chf(f.boxPrice)}`).join(" · ")}</td></tr>
+        <tr><td>Box of ${S.proBottlesPerBox}</td><td>${cond.sheet.flavors.map((f) => `${F[f.flavor].name} ${chf(f.boxPrice)}`).join(" · ")}</td></tr>
         <tr><td>Volume tiers</td><td>${cond.flags.tiers ? cond.sheet.tiers.map((t) => `${t.from}${t.to ? "-" + t.to : "+"} boxes: ${t.pct ? "−" + t.pct + "%" : "full price"}`).join(" · ") : "Do not apply"}</td></tr>
         <tr><td>Next order</td><td>${esc(nextTxt)}</td></tr>
         <tr><td>Referral credit</td><td>Earned ${pct(cond.credit.earned)} · used ${pct(cond.credit.used)} · available ${pct(cond.credit.available)} (max ${pct(S.referral.maxPerOrder)} per order)</td></tr>
@@ -194,7 +185,7 @@ Auth.gate("admin", "Founders admin", "", function (admin) {
     const drawBox = () => {
       const val = (id) => { const v = $("#" + id).value.trim(); return v === "" ? S.proBottlePrice : Number(v); };
       const l = val("pp-lulo"), g = val("pp-guava");
-      $("#pp-box").textContent = `Box of 12: ${F.lulo.name} ${chf(l * S.bottlesPerBox)} · ${F.guava.name} ${chf(g * S.bottlesPerBox)}` + (l < S.proBottlePrice || g < S.proBottlePrice ? ` · saving ${(100 * (1 - Math.min(l, g) / S.proBottlePrice)).toFixed(1)}% on the list price` : "");
+      $("#pp-box").textContent = `Box of ${S.proBottlesPerBox}: ${F.lulo.name} ${chf(l * S.proBottlesPerBox)} · ${F.guava.name} ${chf(g * S.proBottlesPerBox)}` + (l < S.proBottlePrice || g < S.proBottlePrice ? ` · saving ${(100 * (1 - Math.min(l, g) / S.proBottlePrice)).toFixed(1)}% on the list price` : "");
     };
     $$("#pp-lulo,#pp-guava").forEach((i) => i.addEventListener("input", drawBox)); drawBox();
     $("#priceform").addEventListener("submit", (e) => {
@@ -228,7 +219,7 @@ Auth.gate("admin", "Founders admin", "", function (admin) {
   const payTxt = (o) => `${esc((o.payment || {}).method || "Payment")} · ${o.paidAt ? "paid " + date(o.paidAt) : "not paid yet"}`;
   const STEP = { invoiced: "Mark invoice sent", paid: "Mark as paid", shipped: "Mark as shipped", delivered: "Mark as delivered" };
   // a website order is marked paid by the card payment itself: no hand button, only a note
-  const stepBtn = (kind, o, nx, attr) => (!nx ? "" : nx === "paid" && Store.isWebOrder(kind, o) ? '<span class="small muted">Waiting for the card payment</span>' : `<button class="btn btn--sm" ${attr}="${o.id}">${STEP[nx]}</button>`);
+  const stepBtn = (kind, o, nx, attr) => (!nx ? "" : nx === "paid" && Store.isWebOrder(kind, o) ? '<span class="small muted">Waiting for the card payment</span>' : `<button class="btn btn--sm" ${attr}="${o.id}">${kind === "shop" && o.delivery === "pickup" && nx === "delivered" ? "Mark as collected" : STEP[nx]}</button>`);
   const proLink = (id) => `<button class="link-quiet" data-gopro="${id}" type="button">${esc(proName(id))}</button>`;
   function orderTable(list, withPro) {
     return rowsBox(list.map((o) => { const nx = Store.nextStatus(o);
@@ -290,6 +281,11 @@ Auth.gate("admin", "Founders admin", "", function (admin) {
         $("#stgo", d).addEventListener("click", () => { try { Store.progress(kind, id, "shipped", { ...x, email }, admin.name); done(`${o.id} marked as shipped.`); } catch (e) { fail(e); } });
       };
       form({ carrier: (o.shipping || {}).carrier || "", tracking: (o.shipping || {}).tracking || "", noTracking: !!(o.shipping || {}).noTracking, at: todayDay() });
+    } else if (kind === "shop" && o.delivery === "pickup") {
+      box.innerHTML = head("Mark as collected", "Confirm only when the customer has collected the order. This closes the order.") +
+        `<table class="breakdown review"><tr><td>Paid on</td><td>${esc(dayVal(o.paidAt))}</td></tr><tr><td>Contents</td><td>${esc(contents)}</td></tr></table>
+         <div class="form-grid">${dateField("st-at", "Collected on")}</div><p class="hint">Free pickup: nothing is shipped and no email is sent for this step.</p>` + buttons("stgo", "Confirm collected");
+      cancel(); $("#stgo", d).addEventListener("click", () => { try { Store.progress(kind, id, "delivered", { at: v("st-at") }, admin.name); done(`${o.id} marked as collected.`); } catch (e) { fail(e); } });
     } else {
       const sh = o.shipping || {}, url = Store.trackingUrl(sh.carrier, sh.tracking, "en");
       box.innerHTML = head("Mark as delivered", "Confirm only when the customer has the parcel. This closes the order.") +
@@ -307,8 +303,8 @@ Auth.gate("admin", "Founders admin", "", function (admin) {
   function shopOrderTable(list, hideWho) {
     return rowsBox(list.map((o) => { const nx = Store.nextConsumerStatus(o); const st = o.shipTo || {};
       return orow({ main: `<span class="orow__id"><b>${esc(o.id)}</b>${statusBadge(o)}</span>${hideWho ? "" : `<span>${o.accountId ? `<button class="link-quiet" data-gocust="${o.accountId}" type="button">${esc(o.name)}</button>` : esc(o.name)}</span>`}`, sub: hideWho ? date(o.createdAt) : dot(date(o.createdAt), esc(o.email), o.accountId ? "" : "guest"),
-        meta: `<b>${chf(o.net)}</b> incl. VAT`, metaSub: dot(`${o.boxes} boxes`, o.welcomePct ? `first order −${o.welcomePct}%` : ""),
-        more: dot(payTxt(o), trackTxt(o), "deliver to " + esc(dot(st.address, ((st.zip || "") + " " + (st.city || "")).trim()))),
+        meta: `<b>${chf(Store.consumerTotal(o))}</b> incl. VAT`, metaSub: dot(`${o.boxes} boxes`, o.welcomePct ? `first order −${o.welcomePct}%` : "", o.delivery === "pickup" ? "free pickup" : o.shippingFee ? `delivery ${chf(o.shippingFee)}` : ""),
+        more: dot(payTxt(o), o.delivery === "pickup" ? "Pickup: to be collected" : trackTxt(o), o.delivery === "pickup" ? "" : "deliver to " + esc(dot(st.address, ((st.zip || "") + " " + (st.city || "")).trim()))),
         act: `${stepBtn("shop", o, nx, "data-cadv")}<button class="btn btn--sm btn--ghost" data-cedit="${o.id}">Details</button>` }); }));
   }
   function bindShopButtons() {
@@ -342,9 +338,9 @@ Auth.gate("admin", "Founders admin", "", function (admin) {
     const a = document.createElement("a"); a.href = url; a.download = name; a.click(); URL.revokeObjectURL(url);
   }
   function exportOrders() {
-    const rows = [["type", "order", "invoice", "date", "customer", "received_via", "boxes", "net_chf", "payment_method", "paid_on", "carrier", "tracking", "shipped_on", "delivered_on", "status", "ambassador"]];
-    s().orders.forEach((o) => rows.push(["pro", o.id, o.invoiceNo, o.createdAt.slice(0, 10), proName(o.proId), o.via, o.boxes, o.net.toFixed(2), (o.payment || {}).method, (o.paidAt || "").slice(0, 10), (o.shipping || {}).carrier, (o.shipping || {}).tracking, (o.shippedAt || "").slice(0, 10), (o.deliveredAt || "").slice(0, 10), o.status, ambName(o.ambassadorId)]));
-    s().consumerOrders.forEach((o) => rows.push(["shop", o.id, "", o.createdAt.slice(0, 10), o.email, "Website", o.boxes, o.net.toFixed(2), (o.payment || {}).method, (o.paidAt || "").slice(0, 10), (o.shipping || {}).carrier, (o.shipping || {}).tracking, (o.shippedAt || "").slice(0, 10), (o.deliveredAt || "").slice(0, 10), o.status, ""]));
+    const rows = [["type", "order", "invoice", "date", "customer", "received_via", "boxes", "net_chf", "payment_method", "paid_on", "carrier", "tracking", "shipped_on", "delivered_on", "status", "ambassador", "delivery", "delivery_fee_chf"]];
+    s().orders.forEach((o) => rows.push(["pro", o.id, o.invoiceNo, o.createdAt.slice(0, 10), proName(o.proId), o.via, o.boxes, o.net.toFixed(2), (o.payment || {}).method, (o.paidAt || "").slice(0, 10), (o.shipping || {}).carrier, (o.shipping || {}).tracking, (o.shippedAt || "").slice(0, 10), (o.deliveredAt || "").slice(0, 10), o.status, ambName(o.ambassadorId), "ship", "0.00"]));
+    s().consumerOrders.forEach((o) => rows.push(["shop", o.id, "", o.createdAt.slice(0, 10), o.email, "Website", o.boxes, o.net.toFixed(2), (o.payment || {}).method, (o.paidAt || "").slice(0, 10), (o.shipping || {}).carrier, (o.shipping || {}).tracking, (o.shippedAt || "").slice(0, 10), (o.deliveredAt || "").slice(0, 10), o.status, "", o.delivery || "ship", (o.shippingFee || 0).toFixed(2)]));
     download("orders.csv", rows);
   }
 
@@ -356,11 +352,13 @@ Auth.gate("admin", "Founders admin", "", function (admin) {
       ...s().consumerOrders.map((o) => ({ id: o.id, at: o.createdAt, who: o.name, kind: "Shop", boxes: o.boxes, net: o.net, status: Store.CONSUMER_LABEL[o.status] })),
     ].sort((a, b) => b.at.localeCompare(a.at)).slice(0, 8);
     const todo = [
-      [s().requests.filter((r) => r.status === "open" && r.kind !== "order").length, "applications and messages in the inbox", "requests"],
+      [s().requests.filter((r) => r.status === "open").length, "applications and messages in the inbox", "requests"],
       [s().orders.filter((o) => o.status === "placed").length, "pro orders waiting for an invoice", "orders"],
       [s().orders.filter((o) => o.status === "invoiced").length, "invoices waiting for payment", "orders"],
       [s().consumerOrders.filter((o) => o.status === "placed").length, "shop orders waiting for payment", "orders"],
-      [s().consumerOrders.filter((o) => o.status === "paid").length, "shop orders to ship", "orders"],
+      [s().orders.filter((o) => o.status === "paid").length, "pro orders to ship", "orders"],
+      [s().consumerOrders.filter((o) => o.status === "paid" && o.delivery !== "pickup").length, "shop orders to ship", "orders"],
+      [s().consumerOrders.filter((o) => o.status === "paid" && o.delivery === "pickup").length, "shop pickups waiting to be collected", "orders"],
     ].filter((t) => t[0] > 0);
     shell(`<div><h1 class="display h2">Overview</h1></div>
       <div class="kpis"><div class="kpi"><span class="label">Pro revenue paid</span><b>${chf(st.proRevenue)}</b></div><div class="kpi"><span class="label">Shop revenue paid</span><b>${chf(st.shopRevenue)}</b></div>
@@ -453,7 +451,8 @@ Auth.gate("admin", "Founders admin", "", function (admin) {
         (p.welcomePct ? `<tr class="neg"><td>Welcome −${pct(p.welcomePct)}</td><td>−${chf(p.extraAmount)}</td></tr>` : "") +
         (p.creditPct ? `<tr class="neg"><td>Referral credit −${pct(p.creditPct)}</td><td>−${chf(p.extraAmount)}</td></tr>` : "") +
         `<tr class="total"><td>Net excl. VAT</td><td>${chf(p.net)}</td></tr><tr><td class="small">Source</td><td class="small">${esc(Store.refLabel(pro.referredBy))}</td></tr>` : '<tr><td class="muted">Enter boxes</td><td></td></tr>';
-      $("#o-status", d).textContent = "Status will be: " + statusOf({ invoiced: val("o-invd"), paid: val("o-paid"), shipped: val("o-ship"), delivered: val("o-deliv") }) + (val("o-paid") ? ". The commission month follows the paid date." : ".");
+      const moq = p.boxes ? window.Engine.proMoqMessage(p.boxes, s().settings) : null;
+      $("#o-status", d).textContent = (moq ? moq + " Allowed here, for a deal agreed directly. " : "") + "Status will be: " + statusOf({ invoiced: val("o-invd"), paid: val("o-paid"), shipped: val("o-ship"), delivered: val("o-deliv") }) + (val("o-paid") ? ". The commission month follows the paid date." : ".");
     };
     $$("input,select,textarea", d).forEach((i) => i.addEventListener("input", draw)); draw();
     if (!ex) $("#o-pro", d).addEventListener("change", () => { const pr = s().pros.find((x) => x.id === val("o-pro")); $("#o-addr", d).value = pr.address || ""; $("#o-zip", d).value = pr.zip || ""; $("#o-city", d).value = pr.city || ""; });
@@ -487,12 +486,13 @@ Auth.gate("admin", "Founders admin", "", function (admin) {
       <p class="small">${esc(who)} · ${esc(email)}</p>
       <table class="breakdown review"><tr><td>Status</td><td>${statusBadge(o)}</td></tr><tr><td>Placed on</td><td>${date(o.createdAt)}, on the website</td></tr>
         <tr><td>Items</td><td>${esc(o.lines.map((l) => `${l.boxes} × ${F[l.flavor].name}`).join(", "))}</td></tr>
-        <tr><td>Amount</td><td>${chf(o.net)} ${pro ? "excl. VAT" : "incl. VAT"}${o.welcomePct ? ` (welcome −${o.welcomePct}%)` : ""}${o.tierPct ? ` (volume −${o.tierPct}%)` : ""}</td></tr>
+        <tr><td>Amount</td><td>${chf(pro ? o.net : Store.consumerTotal(o))} ${pro ? "excl. VAT" : "incl. VAT"}${o.welcomePct ? ` (welcome −${o.welcomePct}%)` : ""}${o.tierPct ? ` (volume −${o.tierPct}%)` : ""}</td></tr>
+        ${pro ? "" : `<tr><td>Delivery</td><td>${o.delivery === "pickup" ? "Free pickup" : o.shippingFee ? "Delivery, " + chf(o.shippingFee) : "Delivery, free"}</td></tr>`}
         <tr><td>Payment</td><td>${esc(pay.method || "")}${pay.reference ? " · " + esc(pay.reference) : ""} · ${o.paidAt ? "paid " + date(o.paidAt) : "not paid yet"}</td></tr></table>
       <p class="hint">Items, amounts and payment cannot be changed: this is exactly what the customer paid.</p>
-      <p class="label">Delivery address</p>
+      ${!pro && o.delivery === "pickup" ? '<p class="hint">Free pickup: there is no delivery address.</p>' : `<p class="label">Delivery address</p>
       <div class="form-grid">${addrF("w-addr", "Street and number", a.address, true)}${addrF("w-zip", "Postcode", a.zip)}${addrF("w-city", "City", a.city)}</div>
-      <p class="hint">${shipped ? "Already shipped: the address is locked." : "Correct a typo or a change the customer asked for. It is logged."}</p>
+      <p class="hint">${shipped ? "Already shipped: the address is locked." : "Correct a typo or a change the customer asked for. It is logged."}</p>`}
       ${shipped ? `<p class="label">Parcel</p><div class="form-grid"><div class="field"><label class="label" for="w-car">Carrier</label>${carrierInput("w-car", sh.carrier)}</div>
         <div class="field"><label class="label" for="w-trk">Tracking number</label><input class="input" id="w-trk" value="${esc(sh.tracking || "")}" autocomplete="off"></div>
         <div class="field full">${noTrkBox("w-no", sh.noTracking)}</div>${dateF("w-ship", "Shipped on", o.shippedAt)}${o.deliveredAt ? dateF("w-deliv", "Delivered on", o.deliveredAt) : ""}</div>
@@ -508,7 +508,7 @@ Auth.gate("admin", "Founders admin", "", function (admin) {
       e.preventDefault();
       try {
         const patch = { note: $("#w-note", d).value };
-        if (!shipped) { patch[grp + ".address"] = val("w-addr"); patch[grp + ".zip"] = val("w-zip"); patch[grp + ".city"] = val("w-city"); }
+        if (!shipped && $("#w-addr", d)) { patch[grp + ".address"] = val("w-addr"); patch[grp + ".zip"] = val("w-zip"); patch[grp + ".city"] = val("w-city"); }
         else {
           if (!val("w-ship")) throw new Error("Enter the shipping date.");
           if (val("w-ship") > todayDay() || (o.deliveredAt && val("w-deliv") > todayDay())) throw new Error("A date cannot be in the future.");
@@ -571,7 +571,8 @@ Auth.gate("admin", "Founders admin", "", function (admin) {
   function settingsTab() {
     const S = s().settings, n = (id, label, v, step) => `<div class="field"><label class="label" for="${id}">${label}</label><input class="input" id="${id}" type="number" step="${step || 1}" min="0" value="${v}"></div>`;
     shell(`<div><p class="label">Settings</p><h1 class="display h2">Numbers</h1></div>
-      <form class="stack" id="sform"><div class="card stack"><p class="label">Prices</p><div class="form-grid">${n("s-retail", "Retail price per box (VAT incl.)", S.retailPrice, 0.05)}${n("s-pro", "Pro list price per bottle (excl. VAT)", S.proBottlePrice.toFixed(2), 0.01)}${n("s-floor", "Price floor per bottle (negotiated base)", S.minBottlePrice.toFixed(2), 0.01)}${n("s-vat", "VAT %", S.vatPct, 0.1)}</div><p class="hint">Pro list price per box: ${chf(S.proBottlePrice * S.bottlesPerBox)} (12 bottles).</p></div>
+      <form class="stack" id="sform"><div class="card stack"><p class="label">Prices</p><div class="form-grid">${n("s-retail", "Retail price per box (VAT incl.)", S.retailPrice, 0.05)}${n("s-pro", "Pro list price per bottle (excl. VAT)", S.proBottlePrice.toFixed(2), 0.01)}${n("s-floor", "Price floor per bottle (negotiated base)", S.minBottlePrice.toFixed(2), 0.01)}${n("s-vat", "VAT %", S.vatPct, 0.1)}${n("s-pbox", "Bottles in a pro box", S.proBottlesPerBox)}${n("s-moq", "Pro minimum order (boxes)", S.proMinBoxes)}</div><p class="hint">Shop box: ${S.bottlesPerBox} bottles, ${chf(S.retailPrice / S.bottlesPerBox)} per bottle. Pro list price per box: ${chf(S.proBottlePrice * S.proBottlesPerBox)} (${S.proBottlesPerBox} bottles).</p></div>
+      <div class="card stack"><p class="label">Shop delivery</p><div class="form-grid">${n("s-ship", "Delivery fee (VAT incl.)", S.shippingFee.toFixed(2), 0.05)}</div><label class="row small"><input type="checkbox" id="s-pickup" ${S.pickupEnabled ? "checked" : ""}> Offer free pickup at checkout</label><p class="hint">The founders have not confirmed the delivery fee yet: change it here once it is set.</p></div>
       <div class="card stack"><p class="label">Welcome offers (first order)</p><div class="form-grid">${n("s-cw", "Consumer %", S.consumerWelcomePct)}${n("s-pw", "Pro %", S.proWelcomePct)}</div></div>
       <div class="card stack"><p class="label">Pro volume tiers (per order, whole order)</p><div class="form-grid">${n("s-t1m", "Tier 1 from (boxes)", S.tiers[0].min)}${n("s-t1p", "Tier 1 discount %", S.tiers[0].pct)}${n("s-t2m", "Tier 2 from (boxes)", S.tiers[1].min)}${n("s-t2p", "Tier 2 discount %", S.tiers[1].pct)}</div></div>
       <div class="card stack"><p class="label">Pro referral</p><div class="form-grid">${n("s-rp", "Credit per referral %", S.referral.pctPer)}${n("s-rm", "Max used per order %", S.referral.maxPerOrder)}${n("s-rb", "Min boxes on referred pro's first order", S.referral.minBoxes)}</div></div>
@@ -579,13 +580,14 @@ Auth.gate("admin", "Founders admin", "", function (admin) {
       <div class="row"><button class="btn" type="submit">Save settings</button></div><div id="serr"></div></form>`);
     $("#sform").addEventListener("submit", (e) => {
       e.preventDefault(); const v = (id) => Number($("#" + id).value);
+      if (v("s-t1m") <= v("s-moq")) { $("#serr").innerHTML = '<div class="alert alert--bad">Tier 1 must start above the pro minimum order.</div>'; return; }
       if (v("s-t2m") <= v("s-t1m")) { $("#serr").innerHTML = '<div class="alert alert--bad">Tier 2 must start above tier 1.</div>'; return; }
-      const next = { ...S, retailPrice: v("s-retail"), proBottlePrice: v("s-pro"), minBottlePrice: v("s-floor"), vatPct: v("s-vat"), consumerWelcomePct: v("s-cw"), proWelcomePct: v("s-pw"),
+      const next = { ...S, retailPrice: v("s-retail"), proBottlePrice: v("s-pro"), minBottlePrice: v("s-floor"), vatPct: v("s-vat"), proBottlesPerBox: v("s-pbox"), proMinBoxes: v("s-moq"), shippingFee: v("s-ship"), pickupEnabled: $("#s-pickup").checked, consumerWelcomePct: v("s-cw"), proWelcomePct: v("s-pw"),
         tiers: [{ min: v("s-t1m"), pct: v("s-t1p") }, { min: v("s-t2m"), pct: v("s-t2p") }],
         referral: { pctPer: v("s-rp"), maxPerOrder: v("s-rm"), minBoxes: v("s-rb") }, commission: { pct: v("s-cp"), months: v("s-cm") } };
       if (next.minBottlePrice > next.proBottlePrice) { $("#serr").innerHTML = '<div class="alert alert--bad">The floor cannot be above the list price.</div>'; return; }
       const inv = window.Engine.checkPriceInvariant(next);
-      if (!inv.ok) { $("#serr").innerHTML = `<div class="alert alert--bad">The pro list box price (${chf(inv.box)}) must stay below the consumer first-order price excl. VAT (${chf(inv.limit)}).</div>`; return; }
+      if (!inv.ok) { $("#serr").innerHTML = `<div class="alert alert--bad">The pro list price per bottle (CHF ${inv.bottle.toFixed(2)}) must stay below the consumer first-order price per bottle excl. VAT (CHF ${inv.limit.toFixed(2)}).</div>`; return; }
       const conflicts = Store.priceConflicts(next);
       if (conflicts.length) { $("#serr").innerHTML = `<div class="alert alert--bad">These pros have a negotiated price outside the new floor or list price: ${esc(conflicts.join(", "))}. Fix their prices first.</div>`; return; }
       Store.updateSettings(next);

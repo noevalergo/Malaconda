@@ -32,19 +32,19 @@ Auth.gate("customer", "My account", "Your orders and delivery details.", functio
     document.getElementById("app").innerHTML = `<div class="block app"><nav class="side" role="tablist">${TABS.map(([k, l]) => `<button role="tab" data-tab="${k}" aria-selected="${k === tab}">${l}</button>`).join("")}</nav><div class="stack">${inner}</div></div>`;
     $$("[data-tab]").forEach((b) => b.addEventListener("click", () => { tab = b.dataset.tab; render(); }));
   }
-  const parcel=(o)=>{ const sh=o.shipping||{}; if(!sh.tracking&&!sh.carrier) return '<span class="muted">Not shipped yet</span>'; const url=Store.trackingUrl(sh.carrier,sh.tracking,window.I18n?I18n.get():"en"); return esc(sh.carrier||"")+(sh.tracking?'<br><span class="small">'+esc(sh.tracking)+'</span><br><a class="link-quiet small" data-track="'+esc(sh.tracking)+'" href="'+esc(url)+'" target="_blank" rel="noopener">Track parcel</a>':(sh.noTracking?'<br><span class="small muted">No tracking number</span>':'<br><span class="small muted">Tracking number to come</span>')); };
+  const parcel=(o)=>{ if(o.delivery==="pickup") return '<span class="muted">Free pickup</span>'; const sh=o.shipping||{}; if(!sh.tracking&&!sh.carrier) return '<span class="muted">Not shipped yet</span>'; const url=Store.trackingUrl(sh.carrier,sh.tracking,window.I18n?I18n.get():"en"); return esc(sh.carrier||"")+(sh.tracking?'<br><span class="small">'+esc(sh.tracking)+'</span><br><a class="link-quiet small" data-track="'+esc(sh.tracking)+'" href="'+esc(url)+'" target="_blank" rel="noopener">Track parcel</a>':(sh.noTracking?'<br><span class="small muted">No tracking number</span>':'<br><span class="small muted">Tracking number to come</span>')); };
   const pay=(o)=>esc((o.payment||{}).method||"")+'<br><span class="small muted">'+(o.paidAt?"paid "+date(o.paidAt):"waiting for payment")+'</span>';
   function ordersTab() {
     const orders = Store.consumerOrdersOf(user.id).slice().sort((a, b) => b.createdAt.localeCompare(a.createdAt));
     const first = Store.consumerIsFirst(user.email, user.id), S = Store.get().settings;
-    const flow = Store.CONSUMER_FLOW;
+    const flow = Store.CONSUMER_FLOW, flowOf = (o) => (o.delivery === "pickup" ? flow.filter((x) => x !== "shipped") : flow);   // a pickup is never shipped
     shell(`<div><h1 class="display h2">Hello ${esc(user.name.split(" ")[0])}.</h1></div>
       ${first ? `<div class="alert alert--ok">Your first order is ${pct(S.consumerWelcomePct)} off.</div>` : ""}
       ${orders.length ? `<div class="tablewrap"><table class="tbl"><thead><tr><th>Order</th><th>Date</th><th>Items</th><th class="num">Total incl. VAT</th><th>Payment</th><th>Parcel</th><th>Status</th></tr></thead><tbody>
         ${orders.map((o) => `<tr><td>${esc(o.id)}</td><td>${date(o.createdAt)}</td><td>${o.lines.map((l) => `${l.boxes} ${F[l.flavor].name}`).join(", ")}</td>
-          <td class="num">${chf(o.net)}${o.welcomePct ? `<br><span class="small muted">first order −${o.welcomePct}%</span>` : ""}</td>
+          <td class="num">${chf(Store.consumerTotal(o))}${o.welcomePct ? `<br><span class="small muted">first order −${o.welcomePct}%</span>` : ""}${o.delivery === "pickup" ? `<br><span class="small muted">free pickup</span>` : o.shippingFee ? `<br><span class="small muted">incl. delivery ${chf(o.shippingFee)}</span>` : ""}</td>
           <td>${pay(o)}</td><td>${parcel(o)}</td>
-          <td><span class="badge ${o.status === "cancelled" ? "badge--bad" : o.status === "delivered" || o.status === "paid" ? "badge--ok" : ""}">${Store.CONSUMER_LABEL[o.status]}</span><br><span class="small" style="white-space:nowrap">${o.status === "cancelled" ? "" : flow.map((s, i) => `<span style="color:${i <= flow.indexOf(o.status) ? "var(--paper)" : "var(--graphite)"}">${i <= flow.indexOf(o.status) ? "●" : "○"}</span>`).join(" ")}</span></td></tr>`).join("")}
+          <td><span class="badge ${o.status === "cancelled" ? "badge--bad" : o.status === "delivered" || o.status === "paid" ? "badge--ok" : ""}">${o.delivery === "pickup" && o.status === "delivered" ? "Collected" : Store.CONSUMER_LABEL[o.status]}</span><br><span class="small" style="white-space:nowrap">${o.status === "cancelled" ? "" : flowOf(o).map((s, i) => `<span style="color:${i <= flowOf(o).indexOf(o.status) ? "var(--paper)" : "var(--graphite)"}">${i <= flowOf(o).indexOf(o.status) ? "●" : "○"}</span>`).join(" ")}</span></td></tr>`).join("")}
         </tbody></table></div>` : `<div class="card stack"><p>No orders yet.</p><div><a class="btn btn--sm" href="index.html#flavors">Shop now →</a></div></div>`}
       <div><a class="btn btn--ghost btn--sm" href="index.html#flavors">Order again →</a></div>`);
   }

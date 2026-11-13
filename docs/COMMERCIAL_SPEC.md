@@ -29,26 +29,28 @@ Public site never shows pro prices, discount rules or commission rates.
 
 ## 3. Prices and discounts
 
-Prices are stored **per bottle** in cents. A box is 12 bottles of 20 cl. Screens show box prices and totals first. Pro prices and pro totals are excluding VAT (8.1% in Settings).
+Prices are stored **per bottle** in cents. A shop box is 12 bottles of 20 cl, a pro box is 24 bottles of 20 cl. Screens show box prices and totals first. Pro prices and pro totals are excluding VAT (8.1% in Settings).
 
 | Item | Starting value |
 |---|---|
-| Retail price | CHF 39.00 per box, VAT included (existing site) |
-| Pro list price | CHF 2.20 per bottle = CHF 26.40 per box (placeholder, founders to confirm) |
+| Retail price | CHF 39.00 per box of 12 (CHF 3.25 per bottle), VAT included. Minimum 1 box |
+| Shop delivery | Fee (VAT included), or free pickup, chosen at checkout. **CHF 9.00 is a placeholder: the founders have not given the fee yet** |
+| Pro list price | CHF 2.45 per bottle = CHF 58.80 per box of 24 (founders, not final) |
+| Pro minimum order | 5 boxes, all flavours together |
 | Negotiated price | Optional, per pro and per flavour, to the cent, set in the admin. Floor CHF 1.80, never above the list price |
 | Consumer welcome offer | 10% off the first order of an account, no quantity cap |
 | Pro welcome offer | 10% off the first order |
-| Volume tiers (per order) | 1-9 boxes: 0% · 10-20 boxes: -5% · 21+ boxes: -10% |
+| Volume tiers (per order) | 5-9 boxes: 0% · 10-20 boxes: -5% · 21+ boxes: -10% |
 
 **Calculation order** (sequential, not additive):
-1. `base = Σ boxes × 12 × the pro's price for that flavour` (negotiated or list)
+1. `base = Σ boxes × 24 × the pro's price for that flavour` (negotiated or list)
 2. `afterTier = base × (1 − tier%)`, tier on the total boxes of the order
 3. `net = afterTier × (1 − extra%)` where `extra%` is the welcome offer (first order) **or** the referral credit used, never both.
 
 Per-pro switches: "volume tiers apply" and "welcome and credit apply" (both on by default; Hotel Selva has the second one off).
 The order stores the unit prices and percentages it was priced with.
-Invariant checked in Settings: the list box price excl. VAT stays below the consumer first-order price excl. VAT (CHF 32.47).
-"First order" = the pro's first order that is not cancelled. Shipping is outside the discount base. Delivery: "within 4 weeks".
+Invariant checked in Settings: the pro list price per bottle excl. VAT stays below the consumer first-order price per bottle excl. VAT (CHF 2.706).
+"First order" = the pro's first order that is not cancelled. The delivery fee is outside the discount base. Delivery times: shop orders **within 5 working days**, pro orders **within 4 weeks**.
 
 ## 4. Pro-to-pro referral
 
@@ -176,7 +178,7 @@ Without the API, fictional data lives in the browser (localStorage). In producti
 
 ## 13. Not decided / still to do
 
-- Exact pro price, VAT handling on invoices, minimum order for pros.
+- Final prices (the founders say the numbers can still change), the shop delivery fee and the pickup arrangements, VAT handling on invoices.
 - Payment-link for pro invoices (Stripe or bank transfer only).
 - Real email delivery of temporary passwords; real password security (the browser demo stores demo passwords).
 - Statement PDF, payout threshold, referral credit ledger with stored percentages (the browser demo recomputes credit from current settings).

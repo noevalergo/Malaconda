@@ -140,7 +140,7 @@
         <div class="cline__txt"><h3 class="flavor-name flavor-name--sm">${esc(l.name)}</h3><p class="small">${chf(sum.unit)} per box of 12</p></div>
         <div class="qty qty--sm"><button type="button" data-cart-step="-1" data-k="${l.flavor}" aria-label="Fewer ${esc(l.name)}">−</button><span aria-live="polite">${l.boxes}</span><button type="button" data-cart-step="1" data-k="${l.flavor}" aria-label="More ${esc(l.name)}">+</button></div></div>`).join("");
       const p = sum.price;
-      foot.innerHTML = `${welcomeNote(sum)}<table class="breakdown"><tr><td>${sum.boxes} box${sum.boxes > 1 ? "es" : ""}</td><td>${chf(p.gross)}</td></tr>${p.welcomePct ? `<tr class="neg"><td>First order −${pct(p.welcomePct)}</td><td>−${chf(p.discount)}</td></tr>` : ""}<tr class="total"><td>Total (VAT incl.)</td><td>${chf(p.net)}</td></tr></table>
+      foot.innerHTML = `${welcomeNote(sum)}<table class="breakdown"><tr><td>${sum.boxes} box${sum.boxes > 1 ? "es" : ""}</td><td>${chf(p.gross)}</td></tr>${p.welcomePct ? `<tr class="neg"><td>First order −${pct(p.welcomePct)}</td><td>−${chf(p.discount)}</td></tr>` : ""}<tr class="total"><td>Subtotal (VAT incl.)</td><td>${chf(p.net)}</td></tr></table><p class="small muted">Delivery fee or free pickup: chosen at checkout.</p>
         <div class="cdrawer__cta"><a class="btn btn--ghost" href="shop.html">View cart</a><a class="btn" href="checkout.html">Checkout</a></div>`;
     }
     function open() { last = document.activeElement; paint(); wrap.classList.add("is-open"); drawer.setAttribute("aria-hidden", "false"); document.documentElement.classList.add("is-locked"); drawer.focus(); }

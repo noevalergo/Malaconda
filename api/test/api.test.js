@@ -59,6 +59,10 @@ test("health answers and every response says noindex", async () => {
 test("quote: a guest pays full price", async () => {
   const q = (await call("POST", "/api/quote", { cart: { lulo: 2, guava: 1 } })).json;
   assert.deepEqual([q.boxes, q.grossCents, q.discountCents, q.netCents, q.welcomePct], [3, 11700, 0, 11700, 0]);
+  assert.deepEqual([q.delivery, q.shippingCents, q.totalCents], ["ship", 900, 12600], "delivery has a fee");
+  const p = (await call("POST", "/api/quote", { cart: { lulo: 2, guava: 1 }, delivery: "pickup" })).json;
+  assert.deepEqual([p.delivery, p.shippingCents, p.totalCents], ["pickup", 0, 11700], "free pickup");
+  assert.equal((await call("POST", "/api/quote", { cart: {} })).json.shippingCents, 0, "an empty cart pays no delivery");
 });
 
 test("config: the publishable key is served, never the secret", async () => {
@@ -74,9 +78,31 @@ test("guest checkout: pending order, server-side price, PaymentIntent in CHF wit
   assert.match(r.json.clientSecret, /^pi_test_\d+_secret_/);
   const o = await db.one("SELECT * FROM orders WHERE ref = ?", [r.json.ref]);
   assert.deepEqual([o.status, o.email, o.net_cents, o.discount_cents, o.user_id], ["pending", "guest@example.test", 11700, 0, null]);
+  assert.deepEqual([o.delivery_method, o.shipping_cents], ["ship", 900]);
   const pi = created.intents.at(-1);
-  assert.deepEqual([pi.amount, pi.currency, pi.receipt_email, pi.metadata.ref], [11700, "chf", "guest@example.test", r.json.ref]);
+  assert.deepEqual([pi.amount, pi.currency, pi.receipt_email, pi.metadata.ref], [12600, "chf", "guest@example.test", r.json.ref], "the boxes plus the delivery fee");
   assert.equal(o.stripe_payment_id, pi.id);
+});
+
+test("free pickup: no address needed, no delivery fee in the charged amount", async () => {
+  const r = await call("POST", "/api/checkout", { email: "pick@example.test", name: "Pick Up", delivery: "pickup", cart: { lulo: 2, guava: 1 } });
+  assert.equal(r.status, 201);
+  const o = await db.one("SELECT * FROM orders WHERE ref = ?", [r.json.ref]);
+  assert.deepEqual([o.delivery_method, o.shipping_cents, o.ship_address, o.net_cents], ["pickup", 0, "", 11700]);
+  assert.equal(created.intents.at(-1).amount, 11700);
+  assert.match(created.intents.at(-1).description, /pickup/);
+  const st = (await call("POST", "/api/order/status", { clientSecret: r.json.clientSecret })).json;
+  assert.deepEqual([st.delivery, st.shippingCents, st.totalCents], ["pickup", 0, 11700]);
+  // a delivery still needs the address
+  assert.equal((await call("POST", "/api/checkout", { email: "p2@example.test", name: "X", delivery: "ship", cart: { lulo: 1 } })).status, 400);
+});
+
+test("the database is brought up to date: columns added after the first release are created on an existing table", async () => {
+  await db.query("ALTER TABLE orders DROP COLUMN delivery_method, DROP COLUMN shipping_cents");
+  await migrate();
+  const cols = (await db.query("SELECT column_name AS c FROM information_schema.columns WHERE table_schema = DATABASE() AND table_name = 'orders' AND column_name IN ('delivery_method','shipping_cents')")).map((x) => x.c);
+  assert.deepEqual(cols.sort(), ["delivery_method", "shipping_cents"]);
+  await migrate();   // and again: nothing breaks
 });
 
 test("a Stripe error leaves no pending order behind", async () => {
@@ -113,7 +139,7 @@ test("account first order: 10% off in the charged amount; webhook marks it paid 
   assert.equal(r.status, 201);
   const o = await db.one("SELECT * FROM orders WHERE ref = ?", [r.json.ref]);
   assert.deepEqual([o.gross_cents, o.discount_cents, o.net_cents, o.welcome_pct], [11700, 1170, 10530, 10]);
-  assert.equal(created.intents.at(-1).amount, 10530);
+  assert.equal(created.intents.at(-1).amount, 11430, "10% off the boxes, plus the delivery fee");
 
   const bad = await hook(JSON.stringify({ id: "evt_bad" }), "t=1,v1=deadbeef");
   assert.equal(bad.status, 400);
@@ -190,28 +216,29 @@ test("pro: login needed to price or pay; wrong password refused", async () => {
 
 test("pro quote: list price excl. VAT, volume tier, welcome offer on the first order, VAT added at the end", async () => {
   const cookie = await proLogin("new@pro.test");
-  // 10 boxes: 10 x 12 x 2.20 = 264.00; tier 5% -> 250.80; welcome 10% -> 225.72; VAT 8.1% = 18.28; total 244.00
+  // 10 boxes of 24 bottles: 10 x 24 x 2.45 = 588.00; tier 5% -> 558.60; welcome 10% -> 502.74; VAT 8.1% = 40.72; total 543.46
   const q = (await call("POST", "/api/pro/quote", { lines: [{ flavor: "lulo", boxes: 6 }, { flavor: "guava", boxes: 4 }], total: 1 }, cookie)).json;
   assert.deepEqual([q.boxes, q.grossCents, q.tierPct, q.tierCents, q.welcomePct, q.creditPct, q.extraCents, q.netCents, q.vatCents, q.totalCents],
-    [10, 26400, 5, 1320, 10, 0, 2508, 22572, 1828, 24400]);
+    [10, 58800, 5, 2940, 10, 0, 5586, 50274, 4072, 54346]);
+  assert.deepEqual([q.moq, q.belowMoq], [5, false]);
 });
 
 test("pro with negotiated prices and no extras: own price, tier only", async () => {
   await addPro("selva@pro.test", { name: "Hotel Selva", price_lulo: 2.1, price_guava: 2.1, extras: 0 });
   const cookie = await proLogin("selva@pro.test");
   const q = (await call("POST", "/api/pro/quote", { lines: [{ flavor: "lulo", boxes: 10 }] }, cookie)).json;
-  assert.deepEqual([q.lines[0].unitMilli, q.grossCents, q.tierPct, q.welcomePct, q.creditPct, q.netCents], [2100, 25200, 5, 0, 0, 23940]);
+  assert.deepEqual([q.lines[0].unitMilli, q.grossCents, q.tierPct, q.welcomePct, q.creditPct, q.netCents], [2100, 50400, 5, 0, 0, 47880]);   // 10 boxes x 24 bottles x 2.10, less 5%
 });
 
 test("pro with referral credit: welcome offer on the first order, then the credit instead (never both)", async () => {
   await addPro("cobra@pro.test", { credit_pct: 5 });
   const cookie = await proLogin("cobra@pro.test");
-  const q1 = (await call("POST", "/api/pro/quote", { lines: [{ flavor: "lulo", boxes: 2 }] }, cookie)).json;
+  const q1 = (await call("POST", "/api/pro/quote", { lines: [{ flavor: "lulo", boxes: 5 }] }, cookie)).json;
   assert.deepEqual([q1.welcomePct, q1.creditPct], [10, 0]);
-  const r = await call("POST", "/api/pro/checkout", { lines: [{ flavor: "lulo", boxes: 2 }], ...ship }, cookie);
+  const r = await call("POST", "/api/pro/checkout", { lines: [{ flavor: "lulo", boxes: 5 }], ...ship }, cookie);
   intentStatus[created.intents.at(-1).id] = "succeeded";
   await call("POST", "/api/order/status", { clientSecret: r.json.clientSecret });
-  const q2 = (await call("POST", "/api/pro/quote", { lines: [{ flavor: "lulo", boxes: 2 }] }, cookie)).json;
+  const q2 = (await call("POST", "/api/pro/quote", { lines: [{ flavor: "lulo", boxes: 5 }] }, cookie)).json;
   assert.deepEqual([q2.welcomePct, q2.creditPct], [0, 5]);
 });
 
@@ -221,9 +248,9 @@ test("pro checkout: pending order priced by the server, PaymentIntent for the VA
   assert.equal(r.status, 201);
   assert.match(r.json.ref, /^P-/);
   const o = await db.one("SELECT * FROM pro_orders WHERE ref = ?", [r.json.ref]);
-  assert.deepEqual([o.status, o.net_cents, o.vat_cents, o.total_cents, o.welcome_pct], ["pending", 22572, 1828, 24400, 10]);
+  assert.deepEqual([o.status, o.net_cents, o.vat_cents, o.total_cents, o.welcome_pct], ["pending", 50274, 4072, 54346, 10]);
   const pi = created.intents.at(-1);
-  assert.deepEqual([pi.amount, pi.currency, pi.metadata.ref], [24400, "chf", r.json.ref]);
+  assert.deepEqual([pi.amount, pi.currency, pi.metadata.ref], [54346, "chf", r.json.ref]);
 
   const ev = signedEvent("evt_pro_1", { id: o.stripe_payment_id, status: "succeeded" });
   assert.equal((await hook(ev.payload, ev.header)).status, 200);
@@ -232,7 +259,7 @@ test("pro checkout: pending order priced by the server, PaymentIntent for the VA
   assert.deepEqual(sent.filter((x) => x === o.ref), [o.ref]);
 
   const st = (await call("POST", "/api/order/status", { clientSecret: r.json.clientSecret })).json;
-  assert.deepEqual([st.kind, st.status, st.totalCents, st.lines.length], ["pro", "paid", 24400, 2]);
+  assert.deepEqual([st.kind, st.status, st.totalCents, st.lines.length], ["pro", "paid", 54346, 2]);
 
   // the welcome offer is used up
   const q2 = (await call("POST", "/api/pro/quote", { lines: [{ flavor: "lulo", boxes: 10 }] }, cookie)).json;
@@ -246,7 +273,38 @@ test("pro checkout: empty selection and missing address are refused; a Stripe er
   const original = fakeStripe.paymentIntents.create;
   fakeStripe.paymentIntents.create = async () => { throw new Error("stripe down"); };
   const before = (await db.one("SELECT COUNT(*) AS n FROM pro_orders WHERE status = 'pending'")).n;
-  assert.equal((await call("POST", "/api/pro/checkout", { lines: [{ flavor: "lulo", boxes: 1 }], ...ship }, cookie)).status, 500);
+  assert.equal((await call("POST", "/api/pro/checkout", { lines: [{ flavor: "lulo", boxes: 5 }], ...ship }, cookie)).status, 500);
   fakeStripe.paymentIntents.create = original;
   assert.equal((await db.one("SELECT COUNT(*) AS n FROM pro_orders WHERE status = 'pending'")).n, before);
+});
+
+test("pro minimum order: 5 boxes of 24 bottles, all flavours together; below it the quote says so and the checkout refuses", async () => {
+  const cookie = await proLogin("new@pro.test");
+  const low = (await call("POST", "/api/pro/quote", { lines: [{ flavor: "lulo", boxes: 2 }, { flavor: "guava", boxes: 2 }] }, cookie)).json;
+  assert.deepEqual([low.boxes, low.moq, low.belowMoq], [4, 5, true]);
+  const before = (await db.one("SELECT COUNT(*) AS n FROM pro_orders")).n;
+  const r = await call("POST", "/api/pro/checkout", { lines: [{ flavor: "lulo", boxes: 2 }, { flavor: "guava", boxes: 2 }], ...ship }, cookie);
+  assert.equal(r.status, 400);
+  assert.match(r.json.error, /Minimum order: 5 boxes of 24 bottles/);
+  assert.equal((await db.one("SELECT COUNT(*) AS n FROM pro_orders")).n, before, "nothing was created");
+  const ok = (await call("POST", "/api/pro/quote", { lines: [{ flavor: "lulo", boxes: 3 }, { flavor: "guava", boxes: 2 }] }, cookie)).json;
+  assert.equal(ok.belowMoq, false, "3 + 2 flavours make 5 boxes");
+});
+
+test("emails: the order confirmation tells a delivery from a pickup, with the right total and delivery time", () => {
+  const { T } = require("../emails");
+  const base = { ref: "M-TEST", net_cents: 11700, discount_cents: 0, welcome_pct: 0, ship_address: "Seestrasse 1", ship_zip: "8002", ship_city: "Zurich" };
+  const lines = [{ flavor: "lulo", boxes: 2, unit_cents: 3900 }, { flavor: "guava", boxes: 1, unit_cents: 3900 }];
+  const ship = T.orderConfirmation({ order: { ...base, delivery_method: "ship", shipping_cents: 900 }, lines, name: "Anna" });
+  assert.match(ship.html, /sous 5 jours ouvrés/);
+  assert.doesNotMatch(ship.html, /Retrait gratuit/);
+  assert.match(ship.text, /Total TVA incluse: CHF 126\.00/);
+  assert.match(ship.text, /Seestrasse 1/);
+  const pick = T.orderConfirmation({ order: { ...base, delivery_method: "pickup", shipping_cents: 0 }, lines, name: "Anna" });
+  assert.match(pick.html, /Retrait gratuit/);
+  assert.doesNotMatch(pick.html + pick.text, /5 jours ouvrés|Seestrasse/);
+  assert.match(pick.text, /Total TVA incluse: CHF 117\.00/);
+  const pro = T.proOrderConfirmation({ order: { ref: "P-1", net_cents: 50274, vat_cents: 4072, total_cents: 54346, tier_cents: 2940, tier_pct: 5, extra_cents: 5586, welcome_pct: 10, ship_address: "a", ship_zip: "1", ship_city: "c" }, lines: [{ flavor: "lulo", boxes: 10, unit_milli: 2450 }], name: "Bar" });
+  assert.match(pro.html, /caisses de 24 bouteilles/);
+  assert.match(pro.html, /sous 4 semaines/);
 });

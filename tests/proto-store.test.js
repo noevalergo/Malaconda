@@ -24,7 +24,7 @@ const byName = (S, n) => S.get().pros.find((p) => p.name === n);
 test("seed: prices, credit and conditions match the model table", () => {
   const S = fresh();
   const cobra = S.conditionsOf(byName(S, "Bar Cobra").id);
-  assert.deepEqual(cobra.unit, { lulo: 2.2, guava: 2.2 });
+  assert.deepEqual(cobra.unit, { lulo: 2.45, guava: 2.45 });
   assert.deepEqual([cobra.credit.earned, cobra.credit.used, cobra.credit.available], [15, 0, 15]);
   assert.deepEqual(cobra.next, { kind: "credit", pct: 15 });
   const selva = S.conditionsOf(byName(S, "Hotel Selva").id);
@@ -32,7 +32,7 @@ test("seed: prices, credit and conditions match the model table", () => {
   assert.equal(selva.negotiated, true);
   assert.equal(selva.flags.extras, false);
   assert.equal(selva.next, null, "negotiated pro gets neither welcome nor credit");
-  assert.equal(selva.sheet.flavors[0].boxPrice, 25.2);
+  assert.equal(selva.sheet.flavors[0].boxPrice, 50.4);   // 24 bottles at 2.10
   const terraza = S.conditionsOf(byName(S, "Terraza 7").id);
   assert.deepEqual(terraza.next, { kind: "welcome", pct: 10 });
   assert.equal(S.ordersOfPro(terraza.pro.id).length, 0);
@@ -45,8 +45,8 @@ test("seed: orders were priced with the conditions of the time", () => {
   assert.equal(o("Bar Cobra", 1).creditPct, 0, "second order came before any referral qualified");
   assert.equal(o("Hotel Selva", 0).welcomePct, 0, "negotiated pro: no welcome");
   assert.equal(o("Hotel Selva", 0).unitPrices.lulo, 2.1);
-  assert.equal(o("Hotel Selva", 0).net, 680.4); // 30 boxes x 25.20 = 756, less 10% tier
-  assert.equal(o("Cafe Lulo", 0).boxes, 4);
+  assert.equal(o("Hotel Selva", 0).net, 1360.8); // 30 boxes x 50.40 = 1512, less 10% tier
+  assert.equal(o("Cafe Lulo", 0).boxes, 5, "the minimum order");
 });
 
 test("seed: referral ledger has three qualified pros and one below the threshold", () => {
@@ -71,14 +71,14 @@ test("negotiated prices: validation, log, and existing orders keep their price",
   const cafe = byName(S, "Cafe Lulo");
   const before = S.ordersOfPro(cafe.id)[0].net;
   assert.throws(() => S.setProPrices(cafe.id, { lulo: 1.7, guava: "" }), /floor/);
-  assert.throws(() => S.setProPrices(cafe.id, { lulo: 2.3, guava: "" }), /list price/);
+  assert.throws(() => S.setProPrices(cafe.id, { lulo: 2.5, guava: "" }), /list price/);
   S.setProPrices(cafe.id, { lulo: 2.05, guava: 2.05, tiers: true, extras: true, note: "Volume promise" }, "Founders");
   assert.equal(S.unitPricesOf(cafe.id).lulo, 2.05);
   assert.equal(cafe.priceLog.length, 1);
   assert.equal(cafe.priceLog[0].note, "Volume promise");
   assert.equal(S.ordersOfPro(cafe.id)[0].net, before, "old orders are not repriced");
   S.setProPrices(cafe.id, { lulo: "", guava: "" }, "Founders");
-  assert.equal(S.unitPricesOf(cafe.id).lulo, 2.2, "blank goes back to the list price");
+  assert.equal(S.unitPricesOf(cafe.id).lulo, 2.45, "blank goes back to the list price");
   assert.equal(cafe.prices.lulo, null);
 });
 
@@ -89,36 +89,19 @@ test("changing the list price flags pros whose negotiated price would be out of 
   assert.deepEqual(S.priceConflicts({ ...S.get().settings, minBottlePrice: 2.15 }), ["Hotel Selva"], "2.10 is below a 2.15 floor");
 });
 
-test("order request: stores the quote, shows the difference, welcome is consumed when the order is created", () => {
+test("the welcome offer is used once: a pro's second order pays full price, at the prices of the day", () => {
   const S = fresh();
-  const t = byName(S, "Terraza 7");
-  const lines = [{ flavor: "lulo", boxes: 5 }, { flavor: "guava", boxes: 5 }];
-  S.submitOrderRequest({ proId: t.id, lines });
-  S.submitOrderRequest({ proId: t.id, lines });
-  const reqs = S.get().requests.filter((r) => r.kind === "order" && r.proId === t.id);
-  assert.equal(reqs.length, 2);
-  assert.equal(reqs[0].quote.welcomePct, 10);
-  assert.equal(reqs[1].quote.welcomePct, 10, "both open requests quote the welcome offer");
-  const o1 = S.createOrderFromRequest(reqs[0].id);
-  assert.equal(o1.welcomePct, 10);
-  const diff = S.requestDiff(reqs[1].id);
-  assert.equal(diff.changed, true, "the second request no longer gets the welcome offer");
-  const o2 = S.createOrderFromRequest(reqs[1].id);
-  assert.equal(o2.welcomePct, 0);
-  assert.ok(o2.net > o1.net);
-  assert.throws(() => S.createOrderFromRequest(reqs[1].id), /already handled/);
-});
-
-test("order request uses today's prices when a price changed after the quote", () => {
-  const S = fresh();
-  const cafe = byName(S, "Cafe Lulo");
-  S.submitOrderRequest({ proId: cafe.id, lines: [{ flavor: "lulo", boxes: 10 }] });
-  const req = S.get().requests.filter((r) => r.kind === "order").pop();
-  S.setProPrices(cafe.id, { lulo: 2.0, guava: "" }, "Founders");
-  assert.equal(S.requestDiff(req.id).changed, true);
-  const order = S.createOrderFromRequest(req.id);
-  assert.equal(order.unitPrices.lulo, 2.0);
-  assert.equal(order.requestId, req.id);
+  const tz = byName(S, "Terraza 7");
+  const lines = [{ flavor: "lulo", boxes: 3 }, { flavor: "guava", boxes: 2 }];
+  const a = S.payProOrder({ proId: tz.id, lines, paymentRef: "pi_a" });
+  const b = S.payProOrder({ proId: tz.id, lines, paymentRef: "pi_b" });
+  assert.equal(a.welcomePct, 10);
+  assert.equal(b.welcomePct, 0);
+  assert.ok(b.net > a.net);
+  S.setProPrices(tz.id, { lulo: 2.0, guava: "" }, "Founders");
+  const c = S.payProOrder({ proId: tz.id, lines, paymentRef: "pi_c" });
+  assert.equal(c.unitPrices.lulo, 2.0);
+  assert.equal(a.unitPrices.lulo, 2.45, "earlier orders keep their prices");
 });
 
 test("credit ledger: percentage frozen, cancel revokes, settings changes do not rewrite it", () => {
@@ -209,7 +192,7 @@ test("edit an order: fix the date, payment, parcel and items; every change is lo
   // change the items: priced again with the order's own unit prices (2.10), not today's
   S.updateOrder(o.id, { lines: [{ flavor: "lulo", boxes: 10 }, { flavor: "guava", boxes: 10 }] }, "Founders");
   assert.equal(o.boxes, 20);
-  assert.equal(o.net, 478.8); // 20 x 25.20 = 504, less 5% tier, no welcome
+  assert.equal(o.net, 957.6); // 20 x 50.40 = 1008, less 5% tier, no welcome
   assert.notEqual(o.net, netBefore);
 });
 
@@ -221,9 +204,9 @@ test("edit an order: the commission follows the paid date, and un-paying revokes
   assert.ok(S.ledger(camila.id).lines.some((l) => l.orderId === o.id && l.month === "2026-11"));
   S.updateOrder(o.id, { paidAt: "2026-10-30" }, "Founders");
   assert.ok(S.ledger(camila.id).lines.some((l) => l.orderId === o.id && l.month === "2026-10"));
-  const cobra = byName(S, "Bar Cobra"), vinyl = byName(S, "Vinyl Room");
+  const cobra = byName(S, "Bar Cobra"), anaconda = byName(S, "Club Anaconda");
   assert.equal(S.creditOf(cobra.id).earned, 15);
-  S.updateOrder(S.ordersOfPro(vinyl.id)[0].id, { paidAt: "" }, "Founders");
+  S.updateOrder(S.ordersOfPro(anaconda.id)[0].id, { paidAt: "" }, "Founders");
   assert.equal(S.creditOf(cobra.id).earned, 10, "an order that is no longer paid no longer qualifies the referrer");
 });
 
@@ -288,7 +271,9 @@ test("a pro pays online by card: the order is created paid, welcome offer and re
   assert.equal(o.payment.reference, "pi_test_x");
   assert.equal(o.welcomePct, 10, "a first order keeps the welcome offer");
   assert.equal(o.shipping.city, "Geneva");
-  assert.throws(() => S.payProOrder({ proId: t.id, lines: [] }), /at least one box/);
+  assert.throws(() => S.payProOrder({ proId: t.id, lines: [] }), /Minimum order/);
+  assert.throws(() => S.payProOrder({ proId: t.id, lines: [{ flavor: "lulo", boxes: 4 }] }), /Minimum order: 5 boxes of 24 bottles/);
+  S.payProOrder({ proId: t.id, lines: [{ flavor: "lulo", boxes: 3 }, { flavor: "guava", boxes: 2 }], paymentRef: "pi_test_y" });   // 3 + 2 = 5: enough
 });
 
 test("shipping a shop order needs a carrier and a tracking number, and the edit form cannot skip it", () => {
@@ -356,7 +341,7 @@ test("a manual pro order stays fully editable, and a parcel without tracking is 
   assert.throws(() => S.updateOrder(o.id, { shippedAt: "2026-11-05", "shipping.carrier": "Swiss Post", "shipping.tracking": "" }, "t"), /tracking number/);
   S.updateOrder(o.id, { shippedAt: "2026-11-05", "shipping.carrier": "Swiss Post", "shipping.tracking": "", "shipping.noTracking": true }, "t");
   assert.equal(o.status, "shipped");
-  const w = S.payProOrder({ proId: byName(S, "Terraza 7").id, lines: [{ flavor: "lulo", boxes: 2 }], paymentRef: "pi_1" });
+  const w = S.payProOrder({ proId: byName(S, "Terraza 7").id, lines: [{ flavor: "lulo", boxes: 5 }], paymentRef: "pi_1" });
   assert.equal(S.isWebOrder("pro", w), true);
   assert.throws(() => S.updateOrder(w.id, { "payment.method": "Cash" }, "t"), /placed on the website/);
 });

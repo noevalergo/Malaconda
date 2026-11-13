@@ -11,10 +11,14 @@
   const FLAVORS = ["lulo", "guava"];
 
   const DEFAULT_SETTINGS = {
-    retailPrice: 39,            // per box, VAT included
-    bottlesPerBox: 12,
+    retailPrice: 39,            // per box of 12 bottles, VAT included (CHF 3.25 per bottle)
+    bottlesPerBox: 12,          // consumer box
+    shippingFee: 9,             // consumer delivery, VAT included. PLACEHOLDER: the founders have not given the amount yet
+    pickupEnabled: true,        // free pickup instead of delivery
     vatPct: 8.1,
-    proBottlePrice: 2.2,        // list price per bottle, excl. VAT
+    proBottlePrice: 2.45,       // list price per bottle, excl. VAT
+    proBottlesPerBox: 24,       // pro box
+    proMinBoxes: 5,             // minimum pro order (MOQ), all flavours together
     minBottlePrice: 1.8,        // floor for a negotiated base price
     consumerWelcomePct: 10,
     proWelcomePct: 10,
@@ -31,7 +35,14 @@
   const round2 = (n) => (n < 0 ? -1 : 1) * Math.round((Math.abs(n) + 1e-9) * 100) / 100;
   const cents = (n) => Math.round((n + 1e-9) * 100);
 
-  const listBoxPrice = (settings) => round2(settings.proBottlePrice * settings.bottlesPerBox);
+  const listBoxPrice = (settings) => round2(settings.proBottlePrice * settings.proBottlesPerBox);
+
+  // Pro minimum order: all flavours together. Returns a message, or null when the order is large enough.
+  function proMoqMessage(boxes, settings) {
+    return boxes < settings.proMinBoxes ? `Minimum order: ${settings.proMinBoxes} boxes of ${settings.proBottlesPerBox} bottles.` : null;
+  }
+  // What the customer pays for delivery: nothing for a pickup
+  const shippingCharge = (settings, method) => (method === "pickup" && settings.pickupEnabled ? 0 : settings.shippingFee);
 
   function tierPct(boxes, settings) {
     let pct = 0;
@@ -52,11 +63,11 @@
     return null;
   }
 
-  // The most expensive pro price (list, undiscounted, excl. VAT) stays below the consumer first-order price excl. VAT.
+  // The pro list price per bottle (undiscounted, excl. VAT) stays below the consumer first-order price per bottle excl. VAT.
   function checkPriceInvariant(settings) {
-    const limit = round2((settings.retailPrice / (1 + settings.vatPct / 100)) * (1 - settings.consumerWelcomePct / 100));
-    const box = listBoxPrice(settings);
-    return { ok: box < limit, box, limit };
+    const limit = Math.round((settings.retailPrice / settings.bottlesPerBox / (1 + settings.vatPct / 100)) * (1 - settings.consumerWelcomePct / 100) * 1000) / 1000;
+    const bottle = settings.proBottlePrice;
+    return { ok: bottle < limit, bottle, limit };
   }
 
   // Lowest price per bottle a pro could reach: base x best tier x maximum credit.
@@ -82,7 +93,7 @@
      discount: the welcome offer (first order) or the referral credit, never both. */
   function priceProOrder({ lines, boxes, unitPrices, settings, isFirst, creditAvailablePct, flags }) {
     const f = Object.assign({ tiers: true, extras: true }, flags || {});
-    const per = settings.bottlesPerBox;
+    const per = settings.proBottlesPerBox;
     const rows = (lines || [{ flavor: "lulo", boxes: boxes || 0 }]).map((l) => {
       const unit = unitFor(unitPrices, l.flavor, settings);
       return { flavor: l.flavor, boxes: l.boxes, unit, boxPrice: round2(unit * per), amount: round2(l.boxes * per * unit) };
@@ -117,12 +128,12 @@
      Tier rows give the box price for each flavour; per-bottle figures are exact only for the base. */
   function priceSheet({ unitPrices, settings, flags }) {
     const f = Object.assign({ tiers: true, extras: true }, flags || {});
-    const per = settings.bottlesPerBox;
+    const per = settings.proBottlesPerBox;
     const flavors = FLAVORS.map((k) => {
       const unit = unitFor(unitPrices, k, settings);
       return { flavor: k, unit, boxPrice: round2(unit * per), negotiated: unitPrices && unitPrices[k] != null && unitPrices[k] !== settings.proBottlePrice };
     });
-    const bands = [{ from: 1, to: settings.tiers.length ? settings.tiers[0].min - 1 : null, pct: 0 }];
+    const bands = [{ from: settings.proMinBoxes, to: settings.tiers.length ? settings.tiers[0].min - 1 : null, pct: 0 }];
     settings.tiers.forEach((t, i) => bands.push({ from: t.min, to: settings.tiers[i + 1] ? settings.tiers[i + 1].min - 1 : null, pct: t.pct }));
     const tiers = bands.map((b) => {
       const pct = f.tiers ? b.pct : 0;
@@ -203,7 +214,7 @@
   }
 
   return {
-    FLAVORS, DEFAULT_SETTINGS, round2, tierPct, listBoxPrice, validateNegotiated, checkPriceInvariant, bestCaseBottle,
+    FLAVORS, DEFAULT_SETTINGS, round2, tierPct, listBoxPrice, proMoqMessage, shippingCharge, validateNegotiated, checkPriceInvariant, bestCaseBottle,
     isFirstOrder, priceProOrder, priceConsumerOrder, vatIncluded, priceSheet,
     firstPaidOrder, referredStatuses, creditSummary, venueWindow, commissionLines, monthKey, addMonths,
   };

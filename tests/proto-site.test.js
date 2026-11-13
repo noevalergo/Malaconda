@@ -200,3 +200,28 @@ test("the picker keeps the bottle still: sticky stage, section grows instead of 
   assert.ok(/@media \(min-width:901px\)[\s\S]*#flavors \{[^}]*overflow:clip/.test(css));
   assert.ok(/\.picker__stage \{ position:sticky/.test(css));
 });
+
+test("the founders' brand copy, ingredients, origin and delivery times are on the site, translated", () => {
+  const home = read("index.html"), tr = read("i18n.js");
+  const copy = [
+    "Some days are scripted. Malaconda is for the moment you break the script.",
+    "dangerous amount of fizz", "Switzerland’s Barkeeper of the Year",
+    "It carries the bite of the snake. Born where the jungle keeps watch.",
+    "The one that bites back.", "She doesn't need to bite. She charms.",
+    "Carbonated coconut water, lulo purée (20%), peppermint tea, cane sugar, citric acid.",
+    "Carbonated coconut water, guava purée (20%), cane sugar, citric acid, natural guava essence.",
+    "Made in Switzerland",
+    "Give your customers something that makes them slither through your doors.", "Stock the temptation. Watch them surrender.",
+    "You already know the right businesses.", "Be the one who brought the snake to town.", "Get rewarded for every order.",
+    "Order. Partnerships. Press.", "Or just a bite of curiosity.",
+  ];
+  for (const c of copy) assert.ok(home.includes(c), `home has: ${c}`);
+  for (const c of copy.filter((x) => x.length > 20 && !x.startsWith("dangerous") && !x.startsWith("Switzerland"))) assert.ok(tr.includes(`"${c}"`) || tr.includes(c), `translated: ${c}`);
+  assert.ok(!/Bartender/.test(home + tr), "the title is Barkeeper of the Year everywhere");
+  assert.ok(!home.includes("steviol") && !home.includes("TEMPORARY"), "the placeholder ingredient lists are gone");
+  // delivery: shop 5 working days or free pickup, pros 4 weeks
+  for (const f of ["index.html", "shop.html", "checkout.html"]) assert.ok(/5 working days/.test(read(f)), `${f} promises 5 working days`);
+  for (const f of ["shop.html", "checkout.html"]) assert.ok(!/4 weeks/.test(read(f)), `${f} no longer says 4 weeks to shoppers`);
+  for (const f of ["for-pros.html", "pro-checkout.html"]) assert.ok(/4 weeks/.test(read(f)), `${f} says 4 weeks to pros`);
+  assert.ok(/5 boxes of 24 bottles/.test(read("for-pros.html")), "the pros page states the minimum order and the box size");
+});
