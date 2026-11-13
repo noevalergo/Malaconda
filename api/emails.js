@@ -1,7 +1,7 @@
 /* Transactional emails (French base). Table layout, inline CSS, safe for Gmail / Apple Mail / Outlook; one <style> block only adds web fonts, base resets and the mobile breakpoint.
    Each template returns { subject, html, text }. Every dynamic value is escaped. No product prices or rates are shown to ambassadors; pro prices are excl. VAT. */
 const config = require("./config");
-const { esc, chf, FLAVOR_NAMES, SETTINGS } = require("./lib");   // { lulo: "Biting Lulo", guava: "Sweet Guava" }
+const { esc, chf, FLAVOR_NAMES, SETTINGS } = require("./lib");   // { lulo: "Biting Lulo", guava: "Pink Guava" }
 
 // Charter (client/css/styles.css)
 const C = { ink: "#131313", surface: "#1B1B1B", charcoal: "#393938", graphite: "#4F4F4D", stone: "#ADADA7", paper: "#E9E9E1", lulo: "#FFD900", guava: "#FF7E6E", berry: "#95F6EE" };
@@ -77,7 +77,7 @@ const T = {
       subject: `Bienvenue chez Malaconda : ${WELCOME_PCT} % sur votre première commande`,
       html: layout({ preheader: `Votre compte est créé. ${WELCOME_PCT} % de réduction sur votre première commande.`, footerNote: AUTH_NOTE, body:
         label("Compte créé") + h1("Bienvenue chez Malaconda") + p(hello(name)) +
-        p("Votre compte est prêt. Malaconda, c’est le soda d’une bande d’amis colombiens installés en Suisse, en deux saveurs&nbsp;: <b style=\"color:" + C.guava + "\">Sweet Guava</b> et <b style=\"color:" + C.lulo + "\">Biting Lulo</b>.") +
+        p("Votre compte est prêt. Malaconda, c’est le soda d’une bande d’amis colombiens installés en Suisse, en deux saveurs&nbsp;: <b style=\"color:" + C.guava + "\">Pink Guava</b> et <b style=\"color:" + C.lulo + "\">Biting Lulo</b>.") +
         box(label("Votre cadeau de bienvenue") + `<p style="margin:0 0 6px;font:400 44px/1 ${DISPLAY};color:${C.lulo}">−${WELCOME_PCT} %</p><p style="margin:0;font:400 15px/1.5 ${BODY};color:${C.stone}">sur votre première commande. La réduction s’applique automatiquement lorsque vous êtes connecté, sans code à saisir. Elle est valable une seule fois.</p>`) +
         p(`Nous vendons par caisses de 12 bouteilles et livrons en Suisse uniquement.`) +
         button("Choisir mes saveurs", url("/#flavours")) +
@@ -163,7 +163,7 @@ const T = {
         p(`Le compte de ${strong(company || "votre établissement")} est prêt. Une fois connecté, vous voyez vos prix professionnels (hors TVA) directement sur le site.`) +
         box(label("Vos accès") + p("Email&nbsp;: " + strong(email), "margin:0 0 10px") + p("Mot de passe temporaire&nbsp;: " + code(tempPassword), "margin:0 0 10px") + p("Vous devrez le changer à la première connexion.", "margin:0;font-size:14px")) +
         box(label("Offre de bienvenue pro") + `<p style="margin:0 0 6px;font:400 44px/1 ${DISPLAY};color:${C.lulo}">−${WELCOME_PCT} %</p><p style="margin:0;font:400 15px/1.5 ${BODY};color:${C.stone}">sur votre première commande. Elle s’applique automatiquement.</p>`) +
-        p(`Nous vendons par caisses de ${PRO_PER} bouteilles (Sweet Guava et Biting Lulo), à partir de ${SETTINGS.proMinBoxes} caisses, et livrons en Suisse uniquement, sous 4 semaines.`) +
+        p(`Nous vendons par caisses de ${PRO_PER} bouteilles (Pink Guava et Biting Lulo), à partir de ${SETTINGS.proMinBoxes} caisses, et livrons en Suisse uniquement, sous 4 semaines.`) +
         button("Me connecter", url("/pro-space.html")) +
         p("Bienvenue dans la famille Malaconda.", "margin-bottom:0") }),
       text: `Votre compte pro Malaconda est ouvert.\n\n${helloText(name)}\nEmail: ${email}\nMot de passe temporaire: ${tempPassword} (à changer à la première connexion)\n${WELCOME_PCT} % de réduction sur votre première commande.\n${url("/pro-space.html")}`,

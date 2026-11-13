@@ -1,6 +1,6 @@
 # MALACONDA
 
-Website and back office for **MALACONDA**, a sparkling soda from the Amazon (Biting Lulo · Sweet Guava).
+Website and back office for **MALACONDA**, a sparkling soda from the Amazon (Biting Lulo · Pink Guava).
 One site for everyone: visitors and customers (shop, cart, card payment, "My account"), professionals (bars, hotels, restaurants: pro prices, online ordering, pro space), ambassadors (commission space) and the founders' admin.
 
 ## What is where

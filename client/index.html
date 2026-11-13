@@ -5,7 +5,7 @@
 <meta name="robots" content="noindex, nofollow">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>MALACONDA - Sparkling soda from the Amazon</title>
-<meta name="description" content="A sparkling soda with bold flavours developed by Switzerland’s Barkeeper of the Year. Biting Lulo and Sweet Guava, 12 x 20 cl.">
+<meta name="description" content="A sparkling soda with bold flavours developed by Switzerland’s Barkeeper of the Year. Biting Lulo and Pink Guava, 12 x 20 cl.">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Chivo:wght@400;500&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
@@ -38,13 +38,13 @@
       <div class="picker__stage" tabindex="0" role="group" aria-roledescription="carousel" aria-label="Flavours, swipe or use the arrow keys">
         <div class="picker__words" aria-hidden="true" data-parallax><span class="picker__word is-on" data-for="lulo">Lulo</span><span class="picker__word" data-for="guava">Guava</span></div>
         <img class="picker__img is-active" data-i="0" src="images/lulo-cutout.webp" alt="Biting Lulo bottle" width="1000" height="1250">
-        <img class="picker__img" data-i="1" src="images/guava-cutout.webp" alt="Sweet Guava bottle" width="1000" height="1250">
+        <img class="picker__img" data-i="1" src="images/guava-cutout.webp" alt="Pink Guava bottle" width="1000" height="1250">
       </div>
       <div class="picker__info">
         <h2 class="display h2">Pick your poison</h2>
         <div class="picker__tabs" role="tablist" aria-label="Flavour">
           <button class="picker__tab" role="tab" type="button" data-i="0" data-flavor="lulo" aria-selected="true"><span class="picker__tab-name">Biting Lulo</span><span class="label">Citrusy · Floral</span></button>
-          <button class="picker__tab" role="tab" type="button" data-i="1" data-flavor="guava" aria-selected="false"><span class="picker__tab-name">Sweet Guava</span><span class="label">Fruity · Exotic</span></button>
+          <button class="picker__tab" role="tab" type="button" data-i="1" data-flavor="guava" aria-selected="false"><span class="picker__tab-name">Pink Guava</span><span class="label">Fruity · Exotic</span></button>
         </div>
         <div class="picker__panels">
           <div class="picker__panel is-active" data-i="0" role="tabpanel">
@@ -54,7 +54,7 @@
             <div class="notes"><span>Citrus</span><span>Floral</span><span>Tart</span></div>
           </div>
           <div class="picker__panel" data-i="1" role="tabpanel">
-            <h3 class="flavor-name sticker">Sweet Guava</h3>
+            <h3 class="flavor-name sticker">Pink Guava</h3>
             <p class="picker__lead">Soft, floral, pink all the way through.</p>
             <p>She doesn't need to bite. She charms.</p>
             <div class="notes"><span>Fruity</span><span>Soft</span><span>Tropical</span></div>
@@ -167,7 +167,7 @@ Common.mount({active:"index.html"});
 (function(){
   const {$,$$,chf,Cart,toast}=Common, S=Store.get().settings;
   const root=$("[data-picker]"), stage=$(".picker__stage");
-  const F=[{k:"lulo",name:"Biting Lulo"},{k:"guava",name:"Sweet Guava"}];
+  const F=[{k:"lulo",name:"Biting Lulo"},{k:"guava",name:"Pink Guava"}];
   // A logged-in pro sees their own prices here, in real time. They do not check out: they request an order.
   const pro=Store.currentUser("pro");
   const qty=pro?{lulo:0,guava:0}:{lulo:1,guava:1}, minQ=pro?0:1; let i=0;

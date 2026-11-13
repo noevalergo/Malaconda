@@ -4,7 +4,7 @@ const path = require("node:path");
 const Engine = require(path.join(__dirname, "..", "client", "engine.js"));   // one source of truth for the price rules
 
 const SETTINGS = Engine.DEFAULT_SETTINGS;
-const FLAVOR_NAMES = { lulo: "Biting Lulo", guava: "Sweet Guava" };
+const FLAVOR_NAMES = { lulo: "Biting Lulo", guava: "Pink Guava" };
 const cents = (chf) => Math.round(chf * 100);
 
 // Price an order from the cart. The browser is never trusted for prices: only flavours and box counts come from it.

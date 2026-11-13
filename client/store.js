@@ -7,7 +7,7 @@
   const KEY = "malaconda_proto_v2";   // v2: pro box of 24, minimum order, delivery or pickup. Older demo data is dropped.
   const FLAVORS = {
     lulo: { name: "Biting Lulo", no: "02", color: "var(--lulo)" },
-    guava: { name: "Sweet Guava", no: "03", color: "var(--guava)" },
+    guava: { name: "Pink Guava", no: "03", color: "var(--guava)" },
   };
   const PRO_TYPES = ["Bar", "Restaurant", "Club", "Hotel", "Shop", "Distributor"];
   const STATUS_FLOW = ["placed", "invoiced", "paid", "shipped", "delivered"];
