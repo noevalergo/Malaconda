@@ -9,6 +9,8 @@
     "start": "node server.js",
     "dev": "node --watch server.js",
     "migrate": "node migrate.js",
+    "seed:pros": "node seed-pros.js",
+    "reset:data": "node reset-data.js",
     "test": "node --test --test-concurrency=1 test/*.test.js"
   },
   "dependencies": {

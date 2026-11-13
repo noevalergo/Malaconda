@@ -1,0 +1,197 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="robots" content="noindex, nofollow">
+<title>Payment - MALACONDA</title>
+<meta name="description" content="Pay for your Malaconda order. Log in, create an account or check out as a guest.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Chivo:wght@400;500&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<script src="theme.js"></script>
+<script src="i18n.js"></script>
+<link rel="stylesheet" href="proto.css">
+</head>
+<body>
+<div id="site-nav"></div>
+<main><section class="block" id="co-root"></section></main>
+<div id="site-footer"></div>
+<script src="engine.js"></script>
+<script src="store.js"></script>
+<script src="common.js"></script>
+<script src="pay.js"></script>
+<script>
+Common.mount({active:"checkout.html"});
+(function(){
+  const {esc,chf,pct,$,$$,Cart,IMG}=Common, F=Store.FLAVORS;
+  const eur=c=>chf(c/100);
+  const STEPS=(cur)=>`<ol class="steps"><li${cur==="shop"?' aria-current="step"':""}><a href="index.html#flavors">Shop</a></li><li><a href="shop.html">Cart</a></li><li aria-current="step">Payment</li></ol>`;
+  let mode="guest";          // guest | login | signup (only used when nobody is signed in)
+  let me=null;               // the signed-in customer, from the server session
+  let q=null;                // the server's price for the cart
+  let msg={};                // inline messages per block
+  let pay=null;              // the mounted Payment Element
+  let intent=null;           // the order + payment already created for the current form and cart (reused after a declined card)
+  let busy=false;
+
+  /* ---------- prices: the server's quote, the same engine as the cart ---------- */
+  async function refreshQuote(){
+    const c=Cart.get();
+    try{ q=await Pay.api("/quote",{cart:c}); }
+    catch(e){
+      const sum=Common.cartSummary(), p=sum.price, cents=n=>Math.round(n*100);   // server away: show the local figure, payment stays closed
+      q={boxes:sum.boxes,lines:sum.lines.map(l=>({flavor:l.flavor,boxes:l.boxes,unitCents:cents(sum.unit)})),grossCents:cents(p.gross),discountCents:cents(p.discount),netCents:cents(p.net),vatCents:cents(Engine.vatIncluded(p.net,Store.get().settings)),welcomePct:p.welcomePct,offline:true};
+    }
+  }
+  const welcomePct=()=>Store.get().settings.consumerWelcomePct;
+
+  function summary(o){
+    const lines=o.lines.map(l=>`<div class="cline" data-flavor="${l.flavor}"><img src="${IMG[l.flavor]}" alt="" width="56" height="70"><div class="cline__txt"><h3 class="flavor-name flavor-name--sm">${esc(F[l.flavor].name)}</h3><p class="small">${l.boxes} box${l.boxes>1?"es":""} of 12</p></div><span class="mono">${eur(l.boxes*l.unitCents)}</span></div>`).join("");
+    return `<p class="label">Your order</p>${lines}
+      <table class="breakdown"><tr><td>${o.boxes} box${o.boxes>1?"es":""}</td><td>${eur(o.grossCents)}</td></tr>
+      ${o.welcomePct?`<tr class="neg"><td>First order −${pct(o.welcomePct)}</td><td>−${eur(o.discountCents)}</td></tr>`:""}
+      <tr><td>Delivery</td><td>Free</td></tr>
+      <tr class="total"><td>Total</td><td>${eur(o.netCents)}</td></tr>
+      <tr class="vat"><td>VAT ${pct(Store.get().settings.vatPct)} included</td><td>${eur(o.vatCents)}</td></tr></table>`;
+  }
+  function renderSummary(){ $("#co-summary").innerHTML=summary(q)+'<a class="link-quiet" href="shop.html">Edit cart</a>'; const b=$("#pay-label"); if(b) b.textContent=`Pay ${eur(q.netCents)}`; }
+
+  /* ---------- block 1: who is paying ---------- */
+  function contactBlock(){
+    if(me) return `<h2 class="co-title"><span>1</span>Contact</h2>
+      <p class="small">Signed in as <span class="paper">${esc(me.email)}</span>. <a class="link-quiet" href="account.html">My account</a></p>
+      ${q.welcomePct?`<p class="small">${pct(q.welcomePct)} off your first order is applied.</p>`:""}`;
+    const tabs=`<div class="choice" role="tablist">${[["guest","Guest"],["login","Log in"],["signup","Create an account"]].map(([k,l])=>`<button type="button" role="tab" data-mode="${k}" aria-selected="${mode===k}">${l}</button>`).join("")}</div>`;
+    const cta=`<div class="offer"><p><strong>Create an account and get ${pct(welcomePct())} on your first order.</strong></p>${mode!=="signup"?'<button class="btn btn--sm btn--ghost" type="button" data-mode="signup">Create an account</button>':""}</div>`;
+    let body="";
+    if(mode==="guest") body=`<div class="field full"><label class="label" for="c-email">Email</label><input class="input" id="c-email" type="email" autocomplete="email" value="${esc(msg.email||"")}" required></div><p class="hint">We send your order confirmation here. No account needed.</p>${cta}`;
+    if(mode==="login") body=`<form class="stack" id="f-login" novalidate><div class="field"><label class="label" for="l-email">Email</label><input class="input" id="l-email" autocomplete="username" required></div>
+      <div class="field"><label class="label" for="l-pw">Password</label><input class="input" id="l-pw" type="password" autocomplete="current-password" required></div>
+      <div class="row"><button class="btn btn--sm" type="submit">Log in</button></div>${msg.login||""}</form>${cta}`;
+    if(mode==="signup") body=`<form class="stack" id="f-signup" novalidate>${cta}<div class="form-grid"><div class="field full"><label class="label" for="s-name">Name</label><input class="input" id="s-name" autocomplete="name" required></div>
+      <div class="field"><label class="label" for="s-email">Email</label><input class="input" id="s-email" type="email" autocomplete="email" required></div>
+      <div class="field"><label class="label" for="s-pw">Password</label><input class="input" id="s-pw" type="password" minlength="8" autocomplete="new-password" required></div></div>
+      <div class="row"><button class="btn btn--sm" type="submit">Create my account</button></div>${msg.signup||""}</form>`;
+    return `<h2 class="co-title"><span>1</span>Contact</h2>${tabs}<div class="stack">${body}</div>`;
+  }
+  function renderContact(){ $("#co-contact").innerHTML=contactBlock(); }
+
+  /* ---------- the page ---------- */
+  function empty(){
+    $("#co-root").innerHTML=`${STEPS()}<div class="stack narrow"><h1 class="display h2">Your cart is empty</h1><p>Add a box before paying.</p><div><a class="btn" href="index.html#flavors">Pick a flavour</a></div></div>`;
+  }
+  async function build(){
+    if(!Cart.count()){ empty(); return; }
+    const u=me||{};
+    $("#co-root").innerHTML=`${STEPS()}
+      <div class="shopgrid"><div class="stack"><h1 class="display h2">Checkout</h1>
+        <div class="co-block" id="co-contact"></div>
+        <form class="stack" id="co" novalidate>
+          <div class="co-block"><h2 class="co-title"><span>2</span>Delivery</h2>
+            <div class="form-grid">
+              <div class="field full"><label class="label" for="c-name">Full name</label><input class="input" id="c-name" autocomplete="name" value="${esc(u.name||"")}" required></div>
+              <div class="field full"><label class="label" for="c-address">Address</label><input class="input" id="c-address" autocomplete="street-address" value="${esc(u.address||"")}" required></div>
+              <div class="field"><label class="label" for="c-zip">Postcode</label><input class="input" id="c-zip" autocomplete="postal-code" value="${esc(u.zip||"")}" required></div>
+              <div class="field"><label class="label" for="c-city">City</label><input class="input" id="c-city" autocomplete="address-level2" value="${esc(u.city||"")}" required></div>
+              <div class="field full"><label class="label" for="c-phone">Phone (for the carrier)</label><input class="input" id="c-phone" type="tel" autocomplete="tel" value="${esc(u.phone||"")}"></div></div></div>
+          <div class="co-block"><h2 class="co-title"><span>3</span>Payment</h2>
+            <div id="payment-element" class="payment-element"><p class="small muted" id="pay-wait">Loading the secure payment form…</p></div>
+            <p class="hint" id="pay-hint">Card, Apple Pay, Google Pay or TWINT. Payments are handled by Stripe: your card details never touch our server. <span class="badge">Test mode</span></p></div>
+          <button class="btn btn--block" id="pay" type="submit" disabled><span id="pay-label">Pay ${eur(q.netCents)}</span></button><div id="co-err" aria-live="polite"></div>
+        </form></div>
+        <aside class="card stack" id="co-summary"></aside></div>`;
+    renderContact(); renderSummary();
+    try{
+      pay=await Pay.mount($("#payment-element"),q.netCents);
+      pay.onReady(()=>{ const w=$("#pay-wait"); if(w) w.remove(); $("#pay").disabled=false; });
+    }catch(e){ $("#payment-element").innerHTML=`<div class="alert alert--warn">${esc(e.message)}</div>`; }
+  }
+
+  /* ---------- after the payment ---------- */
+  function done(o,fromReturn){
+    const first=o.lines[0]?o.lines[0].flavor:"lulo";
+    $("#co-root").innerHTML=`${STEPS()}
+      <div class="shopgrid" data-flavor="${first}"><div class="stack"><p class="label">Order ${esc(o.ref)}</p><h1 class="display h2 accent">Thank you.</h1>
+        <p>Your confirmation goes to <span class="paper">${esc(o.email)}</span>. Delivery within 4 weeks.</p>
+        ${o.hasAccount?`<div class="row"><a class="btn" href="account.html">Track my order</a><a class="link-quiet" href="index.html">Back to the site</a></div>`:
+          `<div class="offer"><p><strong>Create an account to follow your order.</strong></p><a class="btn btn--sm" href="account.html?signup=1">Create an account</a></div><div><a class="link-quiet" href="index.html">Back to the site</a></div>`}</div>
+        <aside class="card stack" data-flavor="${first}"><span class="badge badge--ok">Paid</span>${summary({boxes:o.boxes,lines:o.lines,grossCents:o.grossCents,discountCents:o.discountCents,netCents:o.netCents,vatCents:Math.round(Engine.vatIncluded(o.netCents/100,Store.get().settings)*100),welcomePct:o.welcomePct})}</aside></div>`;
+    scrollTo(0,0);
+  }
+  function mirror(o){   // the prototype's own spaces (account, admin) read the browser store: keep them in step
+    try{
+      const s=Store.get(); if(s.consumerOrders.some(x=>x.payment&&x.payment.reference===o.ref)) return;
+      const acc=s.consumers.find(c=>c.email===o.email);
+      const c=Store.consumerCheckout({email:o.email,name:"",accountId:acc?acc.id:null,lines:o.lines.map(l=>({flavor:l.flavor,boxes:l.boxes})),paid:true,paymentRef:o.ref});
+      Object.assign(c,{gross:o.grossCents/100,net:o.netCents/100,welcomePct:o.welcomePct}); Store.save();
+    }catch(e){}
+  }
+  async function settle(clientSecret){
+    const o=await Pay.api("/order/status",{clientSecret});
+    if(o.paymentStatus==="succeeded"){ Cart.clear(); mirror(o); history.replaceState(null,"",location.pathname); done(o); return true; }
+    return o;
+  }
+
+  /* coming back from a bank or TWINT page: Stripe adds the payment to the address */
+  async function returning(clientSecret,redirectStatus){
+    $("#co-root").innerHTML=`${STEPS()}<div class="stack narrow"><p class="small muted">Checking your payment…</p></div>`;
+    try{
+      const r=await settle(clientSecret);
+      if(r===true) return;
+      if(r.paymentStatus==="processing"||redirectStatus==="pending"){
+        $("#co-root").innerHTML=`${STEPS()}<div class="stack narrow"><h1 class="display h2">Almost there.</h1><p>Your payment is being confirmed. We email you as soon as it goes through.</p><div><a class="link-quiet" href="index.html">Back to the site</a></div></div>`; Cart.clear(); return;
+      }
+    }catch(e){}
+    history.replaceState(null,"",location.pathname);
+    $("#co-root").innerHTML=`${STEPS()}<div class="stack narrow"><h1 class="display h2">Payment not completed.</h1><div class="alert alert--warn">Nothing was charged. Your cart is still here.</div><div><a class="btn" href="checkout.html">Try again</a></div></div>`;
+  }
+
+  /* ---------- events ---------- */
+  function fail(t){ $("#co-err").innerHTML=`<div class="alert alert--warn">${t}</div>`; }
+  function busyState(on){ busy=on; const b=$("#pay"); if(b){ b.disabled=on; $("#pay-label").textContent=on?"Processing…":`Pay ${eur(q.netCents)}`; } }
+  async function identify(u,pw){   // the account exists on the server; the prototype's spaces get the same account in the browser store
+    me=u; try{ Store.registerConsumer({name:u.name,email:u.email,password:pw}); }catch(e){} try{ Store.login("customer",u.email,pw); }catch(e){}
+    await refreshQuote(); renderContact(); renderSummary(); if(pay) pay.setAmount(q.netCents);
+    const set=(id,v)=>{ const n=$("#"+id); if(n&&!n.value&&v) n.value=v; };
+    set("c-name",u.name); set("c-address",u.address); set("c-zip",u.zip); set("c-city",u.city); set("c-phone",u.phone);
+  }
+
+  document.addEventListener("click",e=>{ const m=e.target.closest("[data-mode]"); if(m){ msg.email=($("#c-email")||{}).value||msg.email; mode=m.dataset.mode; msg.login=msg.signup=""; renderContact(); } });
+  document.addEventListener("submit",async e=>{
+    const id=e.target.id;
+    if(id==="f-login"){ e.preventDefault();
+      try{ const r=await Pay.api("/auth/login",{email:$("#l-email").value,password:$("#l-pw").value}); await identify(r.user,$("#l-pw").value); }
+      catch(err){ msg.login=`<div class="alert alert--bad">${esc(err.message)}</div>`; renderContact(); } }
+    if(id==="f-signup"){ e.preventDefault();
+      try{ const pw=$("#s-pw").value, r=await Pay.api("/auth/register",{name:$("#s-name").value,email:$("#s-email").value,password:pw}); await identify(r.user,pw); }
+      catch(err){ msg.signup=`<div class="alert alert--bad">${esc(err.message)}</div>`; renderContact(); } }
+    if(id==="co"){
+      e.preventDefault(); if(busy||!pay) return;
+      const v=i=>$("#"+i).value.trim(), email=me?me.email:(($("#c-email")||{}).value||"").trim();
+      if(!me&&!/^\S+@\S+\.\S+$/.test(email)) return fail("Enter your email in the contact block, or log in.");
+      if(!v("c-name")||!v("c-address")||!v("c-zip")||!v("c-city")) return fail("Fill in your name and delivery address.");
+      $("#co-err").innerHTML=""; busyState(true);
+      const body={email,name:v("c-name"),address:v("c-address"),zip:v("c-zip"),city:v("c-city"),phone:v("c-phone"),cart:Cart.get()};
+      const fp=JSON.stringify([body,q.netCents]);
+      const r=await pay.pay(async()=>{ if(!intent||intent.fp!==fp){ const c=await Pay.api("/checkout",body); intent={fp,clientSecret:c.clientSecret}; } return intent.clientSecret; },
+        {name:body.name,email,returnUrl:new URL("checkout.html",location.href).href}).catch(err=>({error:{message:err.message}}));
+      if(r.error){ busyState(false); if(r.error.type!=="validation_error") fail(esc(r.error.message||"The payment did not go through.")); return; }
+      try{ const s=await settle(r.clientSecret); if(s!==true){ busyState(false); fail("Your payment is being confirmed. We email you as soon as it goes through."); } }
+      catch(err){ busyState(false); fail(esc(err.message)); }
+    }
+  });
+  document.addEventListener("cart:changed",async()=>{ if(busy||!$("#co-root")||!$("#co")&&!$("#co-summary")) return;
+    if(!Cart.count()){ empty(); return; }
+    await refreshQuote(); if($("#co-summary")){ renderSummary(); renderContact(); if(pay) pay.setAmount(q.netCents); } });
+
+  (async function boot(){
+    const p=new URLSearchParams(location.search), cs=p.get("payment_intent_client_secret");
+    if(cs) return returning(cs,p.get("redirect_status"));
+    try{ me=(await Pay.api("/me")).user; }catch(e){}
+    await refreshQuote(); await build();
+  })();
+})();
+</script>
+</body>
+</html>

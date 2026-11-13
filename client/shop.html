@@ -50,7 +50,7 @@ Common.mount({active:"shop.html"});
     const sum=Common.cartSummary(), p=sum.price;
     $("#bd").innerHTML=sum.boxes?`<tr><td>${sum.boxes} box${sum.boxes>1?"es":""} × ${chf(S().retailPrice)}</td><td>${chf(p.gross)}</td></tr>`+
       (p.welcomePct?`<tr class="neg"><td>First order −${pct(p.welcomePct)}</td><td>−${chf(p.discount)}</td></tr>`:"")+
-      `<tr class="total"><td>Total (VAT incl.)</td><td>${chf(p.net)}</td></tr>`:`<tr><td class="muted">Your cart is empty</td><td></td></tr>`;
+      `<tr><td>Delivery</td><td>Free</td></tr><tr class="total"><td>Total</td><td>${chf(p.net)}</td></tr><tr class="vat"><td>VAT ${pct(S().vatPct)} included</td><td>${chf(Engine.vatIncluded(p.net,S()))}</td></tr>`:`<tr><td class="muted">Your cart is empty</td><td></td></tr>`;
     // the invitation to create an account only appears for someone who would still get the offer
     $("#offer").innerHTML=!sum.boxes?"":sum.user?(p.welcomePct?`<p class="small">${pct(p.welcomePct)} off your first order is applied.</p>`:""):
       `<div class="offer"><p><strong>Create an account and get ${pct(S().consumerWelcomePct)} on your first order.</strong></p><a class="btn btn--sm btn--ghost" href="account.html?signup=1&next=checkout.html">Create an account</a></div>`;

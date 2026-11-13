@@ -2,8 +2,8 @@
 Auth.gate("admin", "Founders admin", "", function (admin) {
   const { esc, chf, pct, date, monthLabel, $, $$ } = Common;
   const F = Store.FLAVORS, E = window.Engine;
-  let tab = "overview", proId = null, custId = null, month = null, reqFilter = "all";
-  const TABS = [["overview", "Overview"], ["requests", "Requests"], ["customers", "Customers"], ["pros", "Pro accounts"], ["orders", "Orders"], ["ambassadors", "Ambassadors"], ["commissions", "Commissions"], ["settings", "Settings"]];
+  let tab = "overview", proId = null, custId = null, month = null, reqFilter = "all", ordTab = "shop", ordF = "todo", ordQ = "";
+  const TABS = [["overview", "Overview"], ["requests", "Inbox"], ["customers", "Customers"], ["pros", "Pro accounts"], ["orders", "Orders"], ["ambassadors", "Ambassadors"], ["commissions", "Commissions"], ["settings", "Settings"]];
 
   /* ---------- helpers ---------- */
   function modal(html) {
@@ -26,21 +26,24 @@ Auth.gate("admin", "Founders admin", "", function (admin) {
       `<optgroup label="Ambassadors">${s().ambassadors.map((a) => `<option value="ambassador:${a.id}" ${key === `ambassador:${a.id}` ? "selected" : ""}>${esc(a.name)} (${esc(a.code)})</option>`).join("")}</optgroup>` +
       `<optgroup label="Pros">${s().pros.map((p) => `<option value="pro:${p.id}" ${key === `pro:${p.id}` ? "selected" : ""}>${esc(p.name)} (${esc(p.code)})</option>`).join("")}</optgroup>`;
   }
+  const rowsBox = (items) => `<div class="orows">${items.join("")}</div>`;
+  const dot = (...a) => a.filter(Boolean).join(" · ");
+  const orow = ({ main, sub, meta, metaSub, more, act }) => `<div class="orow"><div class="orow__main">${main}${sub ? `<span class="small muted">${sub}</span>` : ""}</div><div class="orow__meta">${meta || ""}${metaSub ? `<span class="small muted">${metaSub}</span>` : ""}</div><div class="orow__act">${act || ""}</div>${more ? `<div class="orow__more small muted">${more}</div>` : ""}</div>`;
   const parseRef = (v) => { if (!v) return null; const [kind, id] = v.split(":"); return { kind, id, text: "" }; };
 
   function shell(inner) {
-    const open = s().requests.filter((r) => r.status === "open").length;
+    const open = s().requests.filter((r) => r.status === "open" && r.kind !== "order").length;
     document.getElementById("app").innerHTML = `<div class="block app"><nav class="side" role="tablist">${TABS.map(([k, l]) => `<button role="tab" data-tab="${k}" aria-selected="${k === tab}">${l}${k === "requests" && open ? `<span class="count">${open}</span>` : ""}</button>`).join("")}</nav><div class="stack" id="panel">${inner}</div></div>`;
     $$("[data-tab]").forEach((b) => b.addEventListener("click", () => { tab = b.dataset.tab; proId = null; custId = null; render(); }));
   }
 
   /* ---------- requests ---------- */
   function requestsTab() {
-    const FILTERS = [["all", "All"], ["pro", "Access"], ["ambassador", "Ambassadors"], ["order", "Orders"], ["message", "Messages"]];
-    const inFilter = (r) => reqFilter === "all" || r.kind === reqFilter;
+    const FILTERS = [["all", "All"], ["pro", "Pro access"], ["ambassador", "Ambassadors"], ["message", "Messages"]];
+    const inFilter = (r) => r.kind !== "order" && (reqFilter === "all" || r.kind === reqFilter);
     const open = s().requests.filter((r) => r.status === "open" && inFilter(r));
     const done = s().requests.filter((r) => r.status !== "open" && inFilter(r));
-    const countOf = (k) => s().requests.filter((r) => r.status === "open" && (k === "all" || r.kind === k)).length;
+    const countOf = (k) => s().requests.filter((r) => r.status === "open" && r.kind !== "order" && (k === "all" || r.kind === k)).length;
     const card = (r) => {
       if (r.kind === "order") {
         const diff = Store.requestDiff(r.id), q = r.quote;
@@ -67,9 +70,9 @@ Auth.gate("admin", "Founders admin", "", function (admin) {
         <p>${esc(r.email)} ${r.handle ? "· " + esc(r.handle) : ""}</p><p class="small">${esc(r.network)}</p>
         <div class="row"><button class="btn btn--sm" data-approve-amb="${r.id}">Approve and create account</button><button class="btn btn--sm btn--danger" data-reject="${r.id}">Reject</button></div></div>`;
     };
-    shell(`<div><p class="label">Requests</p><h1 class="display h2">To review</h1></div>
+    shell(`<div><p class="label">Inbox</p><h1 class="display h2">Applications and messages</h1><p class="small muted">Forms filled in by visitors: pro access requests, ambassador applications and contact messages. Pros order and pay on the site themselves.</p></div>
       <div class="row">${FILTERS.map(([k, l]) => `<button class="btn btn--sm ${reqFilter === k ? "" : "btn--ghost"}" data-filter="${k}" type="button">${l}${countOf(k) ? " · " + countOf(k) : ""}</button>`).join("")}</div>${open.length ? open.map(card).join("") : '<div class="card">Nothing to review.</div>'}
-      ${done.length ? `<p class="label">Closed</p><div class="tablewrap"><table class="tbl"><tbody>${done.map((r) => `<tr><td>${esc(r.business || r.name || proName(r.proId))}</td><td>${r.kind}</td><td><span class="badge ${r.status === "approved" ? "badge--ok" : "badge--bad"}">${r.status}</span></td></tr>`).join("")}</tbody></table></div>` : ""}`);
+      ${done.length ? `<p class="label">Closed</p>${rowsBox(done.map((r) => orow({ main: `<span class="orow__id"><b>${esc(r.business || r.name || proName(r.proId))}</b><span class="badge ${r.status === "approved" || r.status === "handled" ? "badge--ok" : "badge--bad"}">${r.status}</span></span>`, sub: r.kind === "pro" ? "Pro access" : r.kind === "ambassador" ? "Ambassador application" : "Message" })))}` : ""}`);
     $$("[data-filter]").forEach((b) => b.addEventListener("click", () => { reqFilter = b.dataset.filter; render(); }));
     $$("[data-create-order]").forEach((b) => b.addEventListener("click", () => { try { const o = Store.createOrderFromRequest(b.dataset.createOrder); Common.toast(`Order ${o.id} created.`); } catch (err) { Common.toast(err.message); } render(); }));
     $$("[data-handled]").forEach((b) => b.addEventListener("click", () => { Store.closeRequest(b.dataset.handled, "handled"); render(); }));
@@ -142,9 +145,9 @@ Auth.gate("admin", "Founders admin", "", function (admin) {
   function prosTab() {
     if (proId) return proDetail();
     shell(`<div class="row" style="justify-content:space-between"><div><p class="label">Pro accounts</p><h1 class="display h2">Venues</h1></div><button class="btn btn--sm" id="newpro">New pro account</button></div>
-      <div class="tablewrap"><table class="tbl"><thead><tr><th>Venue</th><th>City</th><th>Introduced by</th><th>Prices</th><th class="num">Orders</th><th class="num">Credit</th><th></th></tr></thead><tbody>
-      ${s().pros.map((p) => `<tr><td>${esc(p.name)}<br><span class="small muted">${esc(p.type)} · ${esc(p.email)}</span> ${p.mustChange ? '<span class="badge badge--warn">temp password</span>' : ""}</td><td>${esc(p.city)}</td><td>${esc(Store.refLabel(p.referredBy))}</td><td>${(() => { const c = Store.conditionsOf(p.id); return c.negotiated ? `<span class="badge badge--warn">Negotiated</span><br><span class="small muted">${chf(c.sheet.flavors[0].boxPrice)} per box</span>` : `<span class="badge">List</span><br><span class="small muted">${chf(c.sheet.flavors[0].boxPrice)} per box</span>`; })()}</td><td class="num">${Store.ordersOfPro(p.id).length}</td><td class="num">${pct(Store.creditOf(p.id).available)}</td><td><button class="btn btn--sm btn--ghost" data-open="${p.id}">Open</button></td></tr>`).join("")}
-      </tbody></table></div>`);
+      ${rowsBox(s().pros.map((p) => { const c = Store.conditionsOf(p.id);
+        return orow({ main: `<span class="orow__id"><b>${esc(p.name)}</b><span class="badge ${c.negotiated ? "badge--warn" : ""}">${c.negotiated ? "Negotiated prices" : "List prices"}</span>${p.mustChange ? '<span class="badge badge--warn">temp password</span>' : ""}</span>`, sub: dot(esc(p.type), esc(p.city), esc(p.email), "introduced by " + esc(Store.refLabel(p.referredBy))),
+          meta: `<b>${chf(c.sheet.flavors[0].boxPrice)}</b> per box`, metaSub: dot(`${Store.ordersOfPro(p.id).length} orders`, `credit ${pct(Store.creditOf(p.id).available)}`), act: `<button class="btn btn--sm" data-open="${p.id}">Open</button>` }); }))}`);
     $("#newpro").addEventListener("click", () => proDialog(null));
     $$("[data-open]").forEach((b) => b.addEventListener("click", () => { proId = b.dataset.open; render(); }));
   }
@@ -183,7 +186,7 @@ Auth.gate("admin", "Founders admin", "", function (admin) {
         <p class="hint">Orders keep the source in force when they were created.</p>
         ${(p.attrHistory || []).length ? `<ul class="hist">${p.attrHistory.slice().reverse().map((h) => `<li>${date(h.at)} · ${esc(h.by)} · ${esc(h.from)} → ${esc(h.to)}</li>`).join("")}</ul>` : ""}</div>
       <div class="kpis"><div class="kpi"><span class="label">Credit earned</span><b>${pct(c.earned)}</b></div><div class="kpi"><span class="label">Used</span><b>${pct(c.used)}</b></div><div class="kpi"><span class="label">Available</span><b>${pct(c.available)}</b></div></div>
-      ${c.refs.length ? `<div class="tablewrap"><table class="tbl"><thead><tr><th>Recommended pro</th><th>Status</th><th class="num">First paid order (boxes)</th></tr></thead><tbody>${c.refs.map((r) => `<tr><td>${esc(r.pro.name)}</td><td><span class="badge ${r.status === "qualified" ? "badge--ok" : r.status === "below" ? "badge--warn" : ""}">${r.status}</span></td><td class="num">${r.boxes || "—"}</td></tr>`).join("")}</tbody></table></div>` : ""}
+      ${c.refs.length ? rowsBox(c.refs.map((r) => orow({ main: `<span class="orow__id"><b>${esc(r.pro.name)}</b><span class="badge ${r.status === "qualified" ? "badge--ok" : r.status === "below" ? "badge--warn" : ""}">${r.status}</span></span>`, meta: r.boxes ? `<b>${r.boxes}</b> boxes` : "No paid order yet", metaSub: "first paid order" }))) : ""}
       ${Auth.profileForm(p, PRO_FIELDS, "Company details")}<p class="label">Orders</p>${orders.length ? orderTable(orders, false) : '<div class="card">No orders.</div>'}
       <div class="row"><button class="btn btn--sm btn--ghost" id="reset-pw">Reset password</button><button class="btn btn--sm" id="neworder">New manual order</button></div>`);
     $("#back").addEventListener("click", () => { proId = null; render(); });
@@ -214,37 +217,123 @@ Auth.gate("admin", "Founders admin", "", function (admin) {
     return `${esc(sh.carrier || "")}<br><span class="small">${url ? `<a class="link-quiet" href="${esc(url)}" target="_blank" rel="noopener">${esc(sh.tracking)}</a>` : esc(sh.tracking || "no number yet")}</span>`;
   }
   const payCell = (o) => `${esc((o.payment || {}).method || "")}<br><span class="small muted">${o.paidAt ? "paid " + date(o.paidAt) : "not paid yet"}</span>`;
+  const carrierInput = (id, val) => `<input class="input" id="${id}" list="${id}-list" value="${esc(val || "")}" placeholder="Type it: Swiss Post, DHL..." autocomplete="off"><datalist id="${id}-list">${Store.CARRIERS.map((c) => `<option value="${esc(c)}">`).join("")}</datalist>`;
+  const noTrkBox = (id, on) => `<label class="row small"><input type="checkbox" id="${id}" ${on ? "checked" : ""}> No tracking number (standard post, nothing to follow)</label>`;
+  function wireTracking(d, carId, trkId, boxId) {
+    const car = $("#" + carId, d), trk = $("#" + trkId, d), box = $("#" + boxId, d);
+    const sync = () => { if (/^own delivery$/i.test(car.value.trim())) box.checked = true; trk.disabled = box.checked; if (box.checked) trk.value = ""; };
+    car.addEventListener("input", sync); box.addEventListener("change", sync); sync();
+  }
+  const trackTxt = (o) => { const sh = o.shipping || {}; if (!sh.tracking && !sh.carrier) return "No parcel yet"; return `${esc(sh.carrier || "Parcel")} ${sh.tracking ? `<a class="link-quiet" href="${esc(Store.trackingUrl(sh.carrier, sh.tracking, "en"))}" target="_blank" rel="noopener">${esc(sh.tracking)}</a>` : sh.noTracking ? "(no tracking number)" : "(no number yet)"}`; };
+  const payTxt = (o) => `${esc((o.payment || {}).method || "Payment")} · ${o.paidAt ? "paid " + date(o.paidAt) : "not paid yet"}`;
+  const STEP = { invoiced: "Mark invoice sent", paid: "Mark as paid", shipped: "Mark as shipped", delivered: "Mark as delivered" };
+  // a website order is marked paid by the card payment itself: no hand button, only a note
+  const stepBtn = (kind, o, nx, attr) => (!nx ? "" : nx === "paid" && Store.isWebOrder(kind, o) ? '<span class="small muted">Waiting for the card payment</span>' : `<button class="btn btn--sm" ${attr}="${o.id}">${STEP[nx]}</button>`);
+  const proLink = (id) => `<button class="link-quiet" data-gopro="${id}" type="button">${esc(proName(id))}</button>`;
   function orderTable(list, withPro) {
-    return `<div class="tablewrap"><table class="tbl"><thead><tr><th>Order</th><th>Date</th>${withPro ? "<th>Pro</th>" : ""}<th>Received</th><th>Boxes</th><th class="num">Net excl. VAT</th><th>Payment</th><th>Parcel</th><th>Ambassador</th><th>Status</th><th></th></tr></thead><tbody>
-      ${list.map((o) => { const nx = Store.nextStatus(o); return `<tr><td>${esc(o.id)}${o.invoiceNo ? `<br><span class="small muted">${esc(o.invoiceNo)}</span>` : ""}</td><td>${date(o.createdAt)}</td>${withPro ? `<td>${esc(proName(o.proId))}</td>` : ""}<td>${esc(o.via || "")}${o.reference ? `<br><span class="small muted">${esc(o.reference)}</span>` : ""}</td><td>${o.boxes}</td><td class="num">${chf(o.net)}<br><span class="small muted">${o.tierPct ? `vol −${o.tierPct}% ` : ""}${o.welcomePct ? `welcome −${o.welcomePct}% ` : ""}${o.creditPct ? `credit −${o.creditPct}%` : ""}</span></td>
-        <td>${payCell(o)}</td><td>${trackCell(o)}</td><td>${esc(ambName(o.ambassadorId))}</td><td>${statusBadge(o)}</td>
-        <td class="row" style="gap:6px;flex-wrap:nowrap">${nx ? `<button class="btn btn--sm" data-adv="${o.id}">${nx === "invoiced" ? "Invoice sent" : nx === "paid" ? "Mark paid" : nx === "shipped" ? "Shipped" : "Delivered"}</button>` : ""}<button class="btn btn--sm btn--ghost" data-edit="${o.id}">Edit</button></td></tr>`; }).join("")}
-      </tbody></table></div>`;
+    return rowsBox(list.map((o) => { const nx = Store.nextStatus(o);
+      return orow({ main: `<span class="orow__id"><b>${esc(o.id)}</b>${statusBadge(o)}</span>${withPro ? `<span>${proLink(o.proId)}</span>` : ""}`, sub: dot(date(o.createdAt), esc(o.invoiceNo || ""), esc(o.via || ""), esc(o.reference || "")),
+        meta: `<b>${chf(o.net)}</b> excl. VAT`, metaSub: dot(`${o.boxes} boxes`, o.tierPct ? `volume −${o.tierPct}%` : "", o.welcomePct ? `welcome −${o.welcomePct}%` : "", o.creditPct ? `credit −${o.creditPct}%` : ""),
+        more: dot(payTxt(o), trackTxt(o), o.ambassadorId ? "ambassador " + esc(ambName(o.ambassadorId)) : ""),
+        act: `${stepBtn("pro", o, nx, "data-adv")}<button class="btn btn--sm btn--ghost" data-edit="${o.id}">${Store.isWebOrder("pro", o) ? "Details" : "Edit"}</button>` }); }));
   }
+  /* ---------- one step forward on an order: asks for what the step needs, then confirms ---------- */
+  const todayDay = () => new Date().toISOString().slice(0, 10);
+  function stepDialog(kind, id) {
+    const pro = kind === "pro", o = (pro ? s().orders : s().consumerOrders).find((x) => x.id === id); if (!o) return;
+    const step = pro ? Store.nextStatus(o) : Store.nextConsumerStatus(o); if (!step) return;
+    const owner = pro ? s().pros.find((p) => p.id === o.proId) || {} : null;
+    const email = pro ? owner.email || "" : o.email, who = pro ? proName(o.proId) : o.name;
+    const a = pro ? o.shipping || {} : o.shipTo || {};
+    const addr = dot(a.address, ((a.zip || "") + " " + (a.city || "")).trim());
+    const contents = o.lines.map((l) => `${l.boxes} × ${F[l.flavor].name}`).join(", ");
+    const money = pro ? `${chf(o.net)} excl. VAT, ${chf(o.net * (1 + s().settings.vatPct / 100))} with ${s().settings.vatPct}% VAT` : `${chf(o.net)} incl. VAT`;
+    const head = (title, intro) => `<h2 class="card__title">${esc(title)}</h2><p class="small">${esc(o.id)} · ${esc(who)} · ${o.boxes} boxes</p>${intro ? `<p>${intro}</p>` : ""}`;
+    const dateField = (idp, label, val) => `<div class="field"><label class="label" for="${idp}">${label}</label><input class="input" type="date" id="${idp}" value="${val || todayDay()}" max="${todayDay()}"></div>`;
+    const d = modal('<div class="stack" id="stepbox"></div>'); d.classList.add("wide"); const box = $("#stepbox", d);
+    const fail = (e) => { $("#sterr", d).innerHTML = `<div class="alert alert--bad">${esc(e.message)}</div>`; };
+    const done = (msg) => { closeModal(d); render(); Common.toast(msg); };
+    const v = (x) => $("#" + x, d).value.trim();
+    const buttons = (go, label) => `<div id="sterr"></div><div class="row"><button class="btn btn--sm" type="button" id="${go}">${label}</button><button class="btn btn--sm btn--ghost" type="button" id="stx">Cancel</button></div>`;
+    const cancel = () => $("#stx", d).addEventListener("click", () => closeModal(d));
+
+    if (step === "invoiced") {
+      box.innerHTML = head("Invoice sent", `Record that the invoice for this order went to ${esc(email || "the pro")}. Nothing is emailed from here.`) +
+        `<div class="form-grid"><div class="field"><label class="label" for="st-inv">Invoice number</label><input class="input" id="st-inv" value="${esc(o.invoiceNo || "")}" placeholder="INV-2026-0000"></div>${dateField("st-at", "Sent on")}</div>
+         <p class="hint">Amount invoiced: ${money}.</p>` + buttons("stgo", "Confirm invoice sent");
+      cancel(); $("#stgo", d).addEventListener("click", () => { try { Store.progress(kind, id, "invoiced", { invoiceNo: v("st-inv"), at: v("st-at") }, admin.name); done(`Invoice recorded for ${o.id}.`); } catch (e) { fail(e); } });
+    } else if (step === "paid") {
+      box.innerHTML = head("Mark as paid", pro ? `Use this when the money has reached the bank account. Check the amount received: <b class="paper">${money}</b>.` : "Card payments are marked paid by Stripe on their own. Use this only if the money arrived another way.") +
+        `<div class="form-grid"><div class="field"><label class="label" for="st-m">Paid by</label><select class="input select" id="st-m">${optList(Store.PAYMENT_METHODS, pro ? "Bank transfer" : (o.payment || {}).method)}</select></div>${dateField("st-at", "Money received on")}
+         <div class="field full"><label class="label" for="st-ref">Payment reference (optional)</label><input class="input" id="st-ref" placeholder="Transfer reference, receipt number"></div></div>` + buttons("stgo", "Confirm payment received");
+      cancel(); $("#stgo", d).addEventListener("click", () => { try { Store.progress(kind, id, "paid", { method: v("st-m"), reference: v("st-ref"), at: v("st-at") }, admin.name); done(`${o.id} marked as paid.`); } catch (e) { fail(e); } });
+    } else if (step === "shipped") {
+      const form = (val) => {
+        box.innerHTML = head("Ship this order", `The customer receives an email with the carrier and a link to follow the parcel. You check everything on the next screen before it goes.`) +
+          `<div class="form-grid"><div class="field"><label class="label" for="st-car">Carrier</label>${carrierInput("st-car", val.carrier)}</div>
+           <div class="field"><label class="label" for="st-trk">Tracking number</label><input class="input" id="st-trk" value="${esc(val.tracking)}" autocomplete="off" placeholder="From the parcel label"></div>${dateField("st-at", "Shipped on", val.at)}</div>
+           ${noTrkBox("st-no", val.noTracking)}
+           <p class="small muted">Delivering to ${esc(addr || "no address on file")}</p><p class="hint">Copy the number exactly from the label: the customer follows the parcel with it and it cannot be fixed once the email is sent.</p>` + buttons("stgo", "Review the email");
+        wireTracking(d, "st-car", "st-trk", "st-no"); cancel();
+        $("#stgo", d).addEventListener("click", () => { try { const c = Store.checkShipping(v("st-car"), v("st-trk"), $("#st-no", d).checked); review({ ...c, at: v("st-at") }); } catch (e) { fail(e); } });
+      };
+      const review = (x) => {
+        const url = Store.trackingUrl(x.carrier, x.tracking, "fr");
+        box.innerHTML = head("Check before sending", "Is everything right? The customer will read this.") +
+          `<table class="breakdown review"><tr><td>Email to</td><td>${esc(email)}</td></tr><tr><td>Subject</td><td>Votre commande ${esc(o.id)} est en route</td></tr><tr><td>Carrier</td><td>${esc(x.carrier)}</td></tr>
+           <tr><td>Tracking number</td><td>${x.tracking ? `<b class="paper" style="font-size:18px">${esc(x.tracking)}</b>` : "None: the email shows the carrier only"}</td></tr>
+           <tr><td>Tracking link</td><td>${url ? `<a class="link-quiet" href="${esc(url)}" target="_blank" rel="noopener">${esc(url)}</a><br><span class="small muted">Open it to check it finds the parcel.</span>` : "None"}</td></tr>
+           <tr><td>Delivering to</td><td>${esc(addr)}</td></tr><tr><td>Contents</td><td>${esc(contents)}</td></tr><tr><td>Shipped on</td><td>${esc(x.at)}</td></tr></table>
+           <p class="hint">Prototype: orders live in this browser, so the email is shown here but not sent yet. It goes out for real once orders are stored in the database.</p>
+           <div id="sterr"></div><div class="row"><button class="btn btn--sm" type="button" id="stgo">Confirm and email ${esc(email)}</button><button class="btn btn--sm btn--ghost" type="button" id="stback">Back and edit</button></div>`;
+        $("#stback", d).addEventListener("click", () => form(x));
+        $("#stgo", d).addEventListener("click", () => { try { Store.progress(kind, id, "shipped", { ...x, email }, admin.name); done(`${o.id} marked as shipped.`); } catch (e) { fail(e); } });
+      };
+      form({ carrier: (o.shipping || {}).carrier || "", tracking: (o.shipping || {}).tracking || "", noTracking: !!(o.shipping || {}).noTracking, at: todayDay() });
+    } else {
+      const sh = o.shipping || {}, url = Store.trackingUrl(sh.carrier, sh.tracking, "en");
+      box.innerHTML = head("Mark as delivered", "Confirm only when the customer has the parcel. This closes the order.") +
+        `<table class="breakdown review"><tr><td>Parcel</td><td>${esc(sh.carrier || "")} ${url ? `<a class="link-quiet" href="${esc(url)}" target="_blank" rel="noopener">${esc(sh.tracking)}</a>` : "(no tracking number)"}</td></tr><tr><td>Shipped on</td><td>${esc(dayVal(o.shippedAt))}</td></tr><tr><td>Delivered to</td><td>${esc(addr)}</td></tr></table>
+         <div class="form-grid">${dateField("st-at", "Received on")}</div><p class="hint">No email is sent for this step.</p>` + buttons("stgo", "Confirm delivered");
+      cancel(); $("#stgo", d).addEventListener("click", () => { try { Store.progress(kind, id, "delivered", { at: v("st-at") }, admin.name); done(`${o.id} marked as delivered.`); } catch (e) { fail(e); } });
+    }
+  }
+
   function bindOrderButtons() {
-    $$("[data-adv]").forEach((b) => b.addEventListener("click", () => { Store.advanceOrder(b.dataset.adv); render(); }));
-    $$("[data-edit]").forEach((b) => b.addEventListener("click", () => orderDialog(null, b.dataset.edit)));
+    $$("[data-adv]").forEach((b) => b.addEventListener("click", () => stepDialog("pro", b.dataset.adv)));
+    $$("[data-edit]").forEach((b) => b.addEventListener("click", () => (Store.isWebOrder("pro", s().orders.find((x) => x.id === b.dataset.edit)) ? webOrderDialog("pro", b.dataset.edit) : orderDialog(null, b.dataset.edit))));
+    $$("[data-gopro]").forEach((b) => b.addEventListener("click", () => { tab = "pros"; proId = b.dataset.gopro; render(); }));
   }
-  function shopOrderTable(list) {
-    return `<div class="tablewrap"><table class="tbl"><thead><tr><th>Order</th><th>Date</th><th>Customer</th><th>Deliver to</th><th>Boxes</th><th class="num">Total incl. VAT</th><th>Payment</th><th>Parcel</th><th>Status</th><th></th></tr></thead><tbody>
-      ${list.map((o) => { const nx = Store.nextConsumerStatus(o); const st = o.shipTo || {}; return `<tr><td>${esc(o.id)}</td><td>${date(o.createdAt)}</td><td>${esc(o.name)}<br><span class="small muted">${esc(o.email)}${o.accountId ? "" : " · guest"}</span></td>
-        <td class="small">${esc(st.address || "")}<br>${esc((st.zip || "") + " " + (st.city || ""))}</td><td>${o.boxes}</td><td class="num">${chf(o.net)}<br><span class="small muted">${o.welcomePct ? `first −${o.welcomePct}%` : ""}</span></td>
-        <td>${payCell(o)}</td><td>${trackCell(o)}</td><td>${statusBadge(o)}</td>
-        <td class="row" style="gap:6px;flex-wrap:nowrap">${nx ? `<button class="btn btn--sm" data-cadv="${o.id}">${nx === "paid" ? "Mark paid" : nx === "shipped" ? "Shipped" : "Delivered"}</button>` : ""}<button class="btn btn--sm btn--ghost" data-cedit="${o.id}">Edit</button></td></tr>`; }).join("")}
-      </tbody></table></div>`;
+  function shopOrderTable(list, hideWho) {
+    return rowsBox(list.map((o) => { const nx = Store.nextConsumerStatus(o); const st = o.shipTo || {};
+      return orow({ main: `<span class="orow__id"><b>${esc(o.id)}</b>${statusBadge(o)}</span>${hideWho ? "" : `<span>${o.accountId ? `<button class="link-quiet" data-gocust="${o.accountId}" type="button">${esc(o.name)}</button>` : esc(o.name)}</span>`}`, sub: hideWho ? date(o.createdAt) : dot(date(o.createdAt), esc(o.email), o.accountId ? "" : "guest"),
+        meta: `<b>${chf(o.net)}</b> incl. VAT`, metaSub: dot(`${o.boxes} boxes`, o.welcomePct ? `first order −${o.welcomePct}%` : ""),
+        more: dot(payTxt(o), trackTxt(o), "deliver to " + esc(dot(st.address, ((st.zip || "") + " " + (st.city || "")).trim()))),
+        act: `${stepBtn("shop", o, nx, "data-cadv")}<button class="btn btn--sm btn--ghost" data-cedit="${o.id}">Details</button>` }); }));
   }
   function bindShopButtons() {
-    $$("[data-cadv]").forEach((b) => b.addEventListener("click", () => { Store.advanceConsumerOrder(b.dataset.cadv); render(); }));
-    $$("[data-cedit]").forEach((b) => b.addEventListener("click", () => shopOrderDialog(b.dataset.cedit)));
+    $$("[data-cadv]").forEach((b) => b.addEventListener("click", () => stepDialog("shop", b.dataset.cadv)));
+    $$("[data-cedit]").forEach((b) => b.addEventListener("click", () => webOrderDialog("shop", b.dataset.cedit)));
+    $$("[data-gocust]").forEach((b) => b.addEventListener("click", () => { tab = "customers"; custId = b.dataset.gocust; render(); }));
   }
   function ordersTab() {
-    const list = s().orders.slice().sort((a, b) => b.createdAt.localeCompare(a.createdAt));
-    const co = s().consumerOrders.slice().sort((a, b) => b.createdAt.localeCompare(a.createdAt));
-    shell(`<div class="row" style="justify-content:space-between"><div><p class="label">Orders</p><h1 class="display h2">Pro orders</h1></div><div class="row"><button class="btn btn--sm btn--ghost" id="exp-orders">Export CSV</button><button class="btn btn--sm" id="neworder">New manual order</button></div></div>
-      ${orderTable(list, true)}
-      <div><p class="label">Shop</p><h2 class="display h2" style="font-size:40px">Consumer orders</h2></div>${co.length ? shopOrderTable(co) : '<div class="card">No shop orders yet.</div>'}`);
-    $("#neworder").addEventListener("click", () => orderDialog(null));
+    const byDate = (a, b) => b.createdAt.localeCompare(a.createdAt);
+    const sources = { shop: s().consumerOrders.slice().sort(byDate), pro: s().orders.slice().sort(byDate) };
+    const todo = (o) => { const nx = ordTab === "pro" ? Store.nextStatus(o) : Store.nextConsumerStatus(o); return o.status !== "cancelled" && !!nx && !(nx === "paid" && Store.isWebOrder(ordTab, o)); };
+    const who = (o) => (ordTab === "pro" ? proName(o.proId) : o.name + " " + o.email);
+    const visible = () => sources[ordTab].filter((o) => (ordF === "all" || todo(o)) && (!ordQ || (o.id + " " + who(o)).toLowerCase().includes(ordQ.toLowerCase())));
+    const inner = () => { const v = visible(); return v.length ? (ordTab === "pro" ? orderTable(v, true) : shopOrderTable(v)) : `<div class="card">${ordF === "todo" && !ordQ ? "Nothing to do on these orders." : "No order matches."}</div>`; };
+    const n = (k) => sources[k].length;
+    shell(`<div class="row" style="justify-content:space-between"><div><p class="label">Orders</p><h1 class="display h2">${ordTab === "pro" ? "Pro orders" : "Shop orders"}</h1></div><div class="row"><button class="btn btn--sm btn--ghost" id="exp-orders">Export CSV</button>${ordTab === "pro" ? '<button class="btn btn--sm" id="neworder">New manual order</button>' : ""}</div></div>
+      <div class="row"><button class="btn btn--sm ${ordTab === "shop" ? "" : "btn--ghost"}" data-ot="shop" type="button">Shop · ${n("shop")}</button><button class="btn btn--sm ${ordTab === "pro" ? "" : "btn--ghost"}" data-ot="pro" type="button">Pros · ${n("pro")}</button>
+        <span class="orow__gap"></span><button class="btn btn--sm ${ordF === "todo" ? "" : "btn--ghost"}" data-of="todo" type="button">To do</button><button class="btn btn--sm ${ordF === "all" ? "" : "btn--ghost"}" data-of="all" type="button">All</button>
+        <input class="input" id="oq" type="search" placeholder="Search name, email, order" value="${esc(ordQ)}" style="max-width:260px;margin-left:auto"></div>
+      <div class="stack" id="olist">${inner()}</div>`);
+    const nb = $("#neworder"); if (nb) nb.addEventListener("click", () => orderDialog(null));
     $("#exp-orders").addEventListener("click", exportOrders);
+    $$("[data-ot]").forEach((b) => b.addEventListener("click", () => { ordTab = b.dataset.ot; render(); }));
+    $$("[data-of]").forEach((b) => b.addEventListener("click", () => { ordF = b.dataset.of; render(); }));
+    $("#oq").addEventListener("input", (e) => { ordQ = e.target.value; $("#olist").innerHTML = inner(); bindOrderButtons(); bindShopButtons(); });
     bindOrderButtons(); bindShopButtons();
   }
   function download(name, rows) {
@@ -267,7 +356,7 @@ Auth.gate("admin", "Founders admin", "", function (admin) {
       ...s().consumerOrders.map((o) => ({ id: o.id, at: o.createdAt, who: o.name, kind: "Shop", boxes: o.boxes, net: o.net, status: Store.CONSUMER_LABEL[o.status] })),
     ].sort((a, b) => b.at.localeCompare(a.at)).slice(0, 8);
     const todo = [
-      [st.openRequests, "access requests and applications to review", "requests"],
+      [s().requests.filter((r) => r.status === "open" && r.kind !== "order").length, "applications and messages in the inbox", "requests"],
       [s().orders.filter((o) => o.status === "placed").length, "pro orders waiting for an invoice", "orders"],
       [s().orders.filter((o) => o.status === "invoiced").length, "invoices waiting for payment", "orders"],
       [s().consumerOrders.filter((o) => o.status === "placed").length, "shop orders waiting for payment", "orders"],
@@ -278,8 +367,7 @@ Auth.gate("admin", "Founders admin", "", function (admin) {
         <div class="kpi"><span class="label">Boxes sold</span><b>${st.proBoxes + st.shopBoxes}</b></div><div class="kpi"><span class="label">Commissions to pay</span><b>${chf(st.commissionsOwed)}</b></div></div>
       <div class="kpis"><div class="kpi"><span class="label">Venues</span><b>${st.pros}</b></div><div class="kpi"><span class="label">Customers</span><b>${st.customers}</b></div><div class="kpi"><span class="label">Active ambassadors</span><b>${st.ambassadors}</b></div></div>
       <div class="card stack"><p class="label">To do</p>${todo.length ? todo.map((t) => `<p><button class="link-quiet" data-go="${t[2]}" type="button">${t[0]} ${t[1]}</button></p>`).join("") : "<p>Nothing waiting.</p>"}</div>
-      <p class="label">Latest orders</p><div class="tablewrap"><table class="tbl"><thead><tr><th>Order</th><th>Date</th><th>Type</th><th>Customer</th><th>Boxes</th><th class="num">Net</th><th>Status</th></tr></thead><tbody>
-      ${recent.map((o) => `<tr><td>${esc(o.id)}</td><td>${date(o.at)}</td><td>${o.kind}</td><td>${esc(o.who)}</td><td>${o.boxes}</td><td class="num">${chf(o.net)}</td><td>${esc(o.status)}</td></tr>`).join("")}</tbody></table></div>`);
+      <p class="label">Latest orders</p>${rowsBox(recent.map((o) => orow({ main: `<span class="orow__id"><b>${esc(o.id)}</b><span class="badge">${esc(o.status)}</span></span><span>${esc(o.who)}</span>`, sub: dot(o.kind + " order", date(o.at)), meta: `<b>${chf(o.net)}</b>`, metaSub: `${o.boxes} boxes` })))}`);
     $$("[data-go]").forEach((b) => b.addEventListener("click", () => { tab = b.dataset.go; render(); }));
   }
 
@@ -288,15 +376,15 @@ Auth.gate("admin", "Founders admin", "", function (admin) {
     if (custId) return customerDetail();
     const list = s().consumers;
     shell(`<div class="row" style="justify-content:space-between"><div><p class="label">Customers</p><h1 class="display h2">Accounts</h1></div><button class="btn btn--sm btn--ghost" id="exp-cust">Export CSV</button></div>
-      ${list.length ? `<div class="tablewrap"><table class="tbl"><thead><tr><th>Name</th><th>Email</th><th>City</th><th class="num">Orders</th><th class="num">Spent</th><th>Joined</th><th></th></tr></thead><tbody>
-      ${list.map((c) => { const os = Store.consumerOrdersOf(c.id).filter((o) => o.status !== "cancelled"); return `<tr><td>${esc(c.name)}</td><td>${esc(c.email)}</td><td>${esc(c.city || "")}</td><td class="num">${os.length}</td><td class="num">${chf(os.reduce((n, o) => n + o.net, 0))}</td><td>${date(c.createdAt)}</td><td><button class="btn btn--sm btn--ghost" data-opencust="${c.id}">Open</button></td></tr>`; }).join("")}</tbody></table></div>` : '<div class="card">No customer accounts yet.</div>'}`);
+      ${list.length ? rowsBox(list.map((c) => { const os = Store.consumerOrdersOf(c.id).filter((o) => o.status !== "cancelled"); return orow({ main: `<span class="orow__id"><b>${esc(c.name)}</b></span>`, sub: dot(esc(c.email), esc(c.city || ""), "joined " + date(c.createdAt)), meta: `<b>${chf(os.reduce((n, o) => n + o.net, 0))}</b> spent`, metaSub: `${os.length} order${os.length === 1 ? "" : "s"}`, act: `<button class="btn btn--sm" data-opencust="${c.id}">Open</button>` }); })) : '<div class="card">No customer accounts yet.</div>'}`);
     $("#exp-cust").addEventListener("click", () => download("customers.csv", [["name", "email", "phone", "address", "zip", "city", "joined"], ...list.map((c) => [c.name, c.email, c.phone, c.address, c.zip, c.city, c.createdAt.slice(0, 10)])]));
     $$("[data-opencust]").forEach((b) => b.addEventListener("click", () => { custId = b.dataset.opencust; render(); }));
   }
   function customerDetail() {
     const c = s().consumers.find((x) => x.id === custId); const os = Store.consumerOrdersOf(c.id).sort((a, b) => b.createdAt.localeCompare(a.createdAt));
     shell(`<div><button class="link-quiet" id="back" type="button">← All customers</button><h1 class="display h2" style="margin-top:12px">${esc(c.name)}</h1><p>${esc(c.email)} · ${esc(c.phone || "no phone")}</p><p class="small">${esc(c.address || "")} ${esc(c.zip || "")} ${esc(c.city || "")}</p></div>
-      ${os.length ? shopOrderTable(os) : '<div class="card">No orders.</div>'}
+      <div class="kpis"><div class="kpi"><span class="label">Orders</span><b>${os.filter((o) => o.status !== "cancelled").length}</b></div><div class="kpi"><span class="label">Spent</span><b>${chf(os.filter((o) => o.status !== "cancelled").reduce((n, o) => n + o.net, 0))}</b></div><div class="kpi"><span class="label">Customer since</span><b>${date(c.createdAt)}</b></div></div>
+      <p class="label">Orders</p>${os.length ? shopOrderTable(os, true) : '<div class="card">No orders.</div>'}
       <div class="row"><button class="btn btn--sm btn--ghost" id="reset-cust" type="button">Reset password</button></div>`);
     $("#back").addEventListener("click", () => { custId = null; render(); });
     $("#reset-cust").addEventListener("click", () => { const pw = Store.resetPassword("customer", c.id); credModal(`Password reset: ${c.name}`, c.email, pw); });
@@ -342,8 +430,9 @@ Auth.gate("admin", "Founders admin", "", function (admin) {
         <div class="field full"><label class="label" for="o-addr">Street and number</label><input class="input" id="o-addr" value="${esc(sh.address || "")}"></div>
         <div class="field"><label class="label" for="o-zip">Postcode</label><input class="input" id="o-zip" value="${esc(sh.zip || "")}"></div>
         <div class="field"><label class="label" for="o-city">City</label><input class="input" id="o-city" value="${esc(sh.city || "")}"></div>
-        <div class="field"><label class="label" for="o-car">Carrier</label><select class="input select" id="o-car"><option value="">None yet</option>${optList(Store.CARRIERS, sh.carrier)}</select></div>
+        <div class="field"><label class="label" for="o-car">Carrier</label>${carrierInput("o-car", sh.carrier)}</div>
         <div class="field"><label class="label" for="o-trk">Tracking number</label><input class="input" id="o-trk" value="${esc(sh.tracking || "")}"></div>
+        <div class="field full">${noTrkBox("o-no", sh.noTracking)}</div>
         <div class="field"><label class="label" for="o-ship">Shipped on</label><input class="input" type="date" id="o-ship" value="${dayVal(ex ? ex.shippedAt : "")}"></div>
         <div class="field"><label class="label" for="o-deliv">Delivered on</label><input class="input" type="date" id="o-deliv" value="${dayVal(ex ? ex.deliveredAt : "")}"></div>
       </div>
@@ -354,6 +443,7 @@ Auth.gate("admin", "Founders admin", "", function (admin) {
       ${ex ? changeLog(ex) : ""}</form>`);
     d.classList.add("wide");
     const val = (id) => $("#" + id, d).value;
+    wireTracking(d, "o-car", "o-trk", "o-no");
     const linesNow = () => Object.keys(F).map((k) => ({ flavor: k, boxes: parseInt(val("o-" + k)) || 0 })).filter((l) => l.boxes > 0);
     const draw = () => {
       const pid = val("o-pro"), lines = linesNow(), pro = s().pros.find((x) => x.id === pid);
@@ -373,51 +463,63 @@ Auth.gate("admin", "Founders admin", "", function (admin) {
       try {
         if (ex) {
           Store.updateOrder(ex.id, { createdAt: val("o-date"), via: val("o-via"), reference: val("o-ref"), invoiceNo: val("o-inv"), invoicedAt: val("o-invd"), paidAt: val("o-paid"), shippedAt: val("o-ship"), deliveredAt: val("o-deliv"), note: val("o-note"),
-            "payment.method": val("o-pm"), "payment.reference": val("o-payref"), "shipping.carrier": val("o-car"), "shipping.tracking": val("o-trk"), "shipping.address": val("o-addr"), "shipping.zip": val("o-zip"), "shipping.city": val("o-city"),
+            "payment.method": val("o-pm"), "payment.reference": val("o-payref"), "shipping.carrier": val("o-car"), "shipping.tracking": val("o-trk"), "shipping.noTracking": $("#o-no", d).checked, "shipping.address": val("o-addr"), "shipping.zip": val("o-zip"), "shipping.city": val("o-city"),
             lines: linesNow(), cancelled: $("#o-cancelled", d).checked }, admin.name);
           closeModal(d); render(); Common.toast(`Order ${ex.id} updated.`);
         } else {
           const o = Store.createManualOrder({ proId: val("o-pro"), lines: linesNow(), createdAt: val("o-date"), via: val("o-via"), reference: val("o-ref"), invoiceNo: val("o-inv"), invoicedAt: val("o-invd"), paymentMethod: val("o-pm"), paymentReference: val("o-payref"), paidAt: val("o-paid"),
-            carrier: val("o-car"), tracking: val("o-trk"), address: val("o-addr"), zip: val("o-zip"), city: val("o-city"), shippedAt: val("o-ship"), deliveredAt: val("o-deliv"), note: val("o-note") }, admin.name);
+            carrier: val("o-car"), tracking: val("o-trk"), noTracking: $("#o-no", d).checked, address: val("o-addr"), zip: val("o-zip"), city: val("o-city"), shippedAt: val("o-ship"), deliveredAt: val("o-deliv"), note: val("o-note") }, admin.name);
           closeModal(d); render(); Common.toast(`Order ${o.id} created.`);
         }
       } catch (err) { $("#oerr", d).innerHTML = `<div class="alert alert--bad">${esc(err.message)}</div>`; }
     });
   }
 
-  /* Edit a shop (consumer) order: payment, parcel, address, dates. */
-  function shopOrderDialog(id) {
-    const o = s().consumerOrders.find((x) => x.id === id), st = o.shipTo || {};
-    const qtyOf = (k) => (o.lines.find((l) => l.flavor === k) || { boxes: 0 }).boxes;
-    const d = modal(`<form class="stack" id="sform2"><h2 class="card__title">Edit order ${esc(o.id)}</h2><p class="small">${esc(o.name)} · ${esc(o.email)}${o.accountId ? "" : " · guest"}. Every change is logged.</p>
-      <div class="form-grid">
-        <div class="field"><label class="label" for="c-date">Order date</label><input class="input" type="date" id="c-date" value="${dayVal(o.createdAt)}" required></div>
-        <div class="field"><label class="label" for="c-pm">Payment method</label><select class="input select" id="c-pm">${optList(Store.PAYMENT_METHODS, o.payment.method)}</select></div>
-        ${Object.keys(F).map((k) => `<div class="field"><label class="label" for="c-${k}">${F[k].name} (boxes)</label><input class="input" id="c-${k}" type="number" min="0" value="${qtyOf(k)}"></div>`).join("")}
-        <div class="field"><label class="label" for="c-paid">Paid on</label><input class="input" type="date" id="c-paid" value="${dayVal(o.paidAt)}"></div>
-        <div class="field"><label class="label" for="c-payref">Payment reference</label><input class="input" id="c-payref" value="${esc(o.payment.reference || "")}"></div>
-        <div class="field full"><label class="label" for="c-addr">Street and number</label><input class="input" id="c-addr" value="${esc(st.address || "")}"></div>
-        <div class="field"><label class="label" for="c-zip">Postcode</label><input class="input" id="c-zip" value="${esc(st.zip || "")}"></div>
-        <div class="field"><label class="label" for="c-city">City</label><input class="input" id="c-city" value="${esc(st.city || "")}"></div>
-        <div class="field"><label class="label" for="c-car">Carrier</label><select class="input select" id="c-car"><option value="">None yet</option>${optList(Store.CARRIERS, o.shipping.carrier)}</select></div>
-        <div class="field"><label class="label" for="c-trk">Tracking number</label><input class="input" id="c-trk" value="${esc(o.shipping.tracking || "")}"></div>
-        <div class="field"><label class="label" for="c-ship">Shipped on</label><input class="input" type="date" id="c-ship" value="${dayVal(o.shippedAt)}"></div>
-        <div class="field"><label class="label" for="c-deliv">Delivered on</label><input class="input" type="date" id="c-deliv" value="${dayVal(o.deliveredAt)}"></div>
-        <div class="field full"><label class="label" for="c-note">Internal note</label><textarea class="input" id="c-note" rows="2">${esc(o.note || "")}</textarea></div>
-      </div>
-      <label class="row small"><input type="checkbox" id="c-cancelled" ${o.cancelledAt ? "checked" : ""}> This order is cancelled</label><div id="cerr"></div>
-      <div class="row"><button class="btn btn--sm" type="submit">Save changes</button><button class="btn btn--sm btn--ghost" type="button" id="cclose">Close</button></div>${changeLog(o)}</form>`);
+  /* An order placed on the website is what the customer paid: items, amounts, dates and payment are locked.
+     Only the delivery address (until it ships), the parcel details and the note can change. */
+  function webOrderDialog(kind, id) {
+    const pro = kind === "pro", o = (pro ? s().orders : s().consumerOrders).find((x) => x.id === id); if (!o) return;
+    const email = pro ? (s().pros.find((p) => p.id === o.proId) || {}).email || "" : o.email, who = pro ? proName(o.proId) : o.name;
+    const grp = pro ? "shipping" : "shipTo", a = o[grp] || {}, sh = o.shipping || {}, shipped = !!o.shippedAt, pay = o.payment || {};
+    const addrF = (idp, label, val, full) => `<div class="field ${full ? "full" : ""}"><label class="label" for="${idp}">${label}</label><input class="input" id="${idp}" value="${esc(val || "")}" ${shipped ? "disabled" : ""}></div>`;
+    const dateF = (idp, label, iso) => `<div class="field"><label class="label" for="${idp}">${label}</label><input class="input" type="date" id="${idp}" value="${dayVal(iso)}" max="${todayDay()}"></div>`;
+    const d = modal(`<form class="stack" id="wform"><h2 class="card__title">Order ${esc(o.id)}</h2>
+      <p class="small">${esc(who)} · ${esc(email)}</p>
+      <table class="breakdown review"><tr><td>Status</td><td>${statusBadge(o)}</td></tr><tr><td>Placed on</td><td>${date(o.createdAt)}, on the website</td></tr>
+        <tr><td>Items</td><td>${esc(o.lines.map((l) => `${l.boxes} × ${F[l.flavor].name}`).join(", "))}</td></tr>
+        <tr><td>Amount</td><td>${chf(o.net)} ${pro ? "excl. VAT" : "incl. VAT"}${o.welcomePct ? ` (welcome −${o.welcomePct}%)` : ""}${o.tierPct ? ` (volume −${o.tierPct}%)` : ""}</td></tr>
+        <tr><td>Payment</td><td>${esc(pay.method || "")}${pay.reference ? " · " + esc(pay.reference) : ""} · ${o.paidAt ? "paid " + date(o.paidAt) : "not paid yet"}</td></tr></table>
+      <p class="hint">Items, amounts and payment cannot be changed: this is exactly what the customer paid.</p>
+      <p class="label">Delivery address</p>
+      <div class="form-grid">${addrF("w-addr", "Street and number", a.address, true)}${addrF("w-zip", "Postcode", a.zip)}${addrF("w-city", "City", a.city)}</div>
+      <p class="hint">${shipped ? "Already shipped: the address is locked." : "Correct a typo or a change the customer asked for. It is logged."}</p>
+      ${shipped ? `<p class="label">Parcel</p><div class="form-grid"><div class="field"><label class="label" for="w-car">Carrier</label>${carrierInput("w-car", sh.carrier)}</div>
+        <div class="field"><label class="label" for="w-trk">Tracking number</label><input class="input" id="w-trk" value="${esc(sh.tracking || "")}" autocomplete="off"></div>
+        <div class="field full">${noTrkBox("w-no", sh.noTracking)}</div>${dateF("w-ship", "Shipped on", o.shippedAt)}${o.deliveredAt ? dateF("w-deliv", "Delivered on", o.deliveredAt) : ""}</div>
+        <p class="hint">Correct a mistake only. The customer is not emailed again.</p>` : ""}
+      <div class="field"><label class="label" for="w-note">Internal note</label><textarea class="input" id="w-note" rows="2">${esc(o.note || "")}</textarea></div>
+      ${o.cancelledAt ? "" : o.paidAt ? '<p class="hint">Cancelling a paid card order needs a card refund, which is not available yet.</p>' : '<label class="row small"><input type="checkbox" id="w-cancel"> Cancel this order (the payment was never completed)</label>'}
+      <div id="werr"></div><div class="row"><button class="btn btn--sm" type="submit">Save changes</button><button class="btn btn--sm btn--ghost" type="button" id="wclose">Close</button></div>${changeLog(o)}</form>`);
     d.classList.add("wide");
-    const val = (x) => $("#" + x, d).value;
-    $("#cclose", d).addEventListener("click", () => closeModal(d));
-    $("#sform2", d).addEventListener("submit", (e) => {
+    const val = (x) => $("#" + x, d).value.trim();
+    if (shipped) wireTracking(d, "w-car", "w-trk", "w-no");
+    $("#wclose", d).addEventListener("click", () => closeModal(d));
+    $("#wform", d).addEventListener("submit", (e) => {
       e.preventDefault();
       try {
-        Store.updateConsumerOrder(o.id, { createdAt: val("c-date"), paidAt: val("c-paid"), shippedAt: val("c-ship"), deliveredAt: val("c-deliv"), note: val("c-note"), "payment.method": val("c-pm"), "payment.reference": val("c-payref"),
-          "shipping.carrier": val("c-car"), "shipping.tracking": val("c-trk"), "shipTo.address": val("c-addr"), "shipTo.zip": val("c-zip"), "shipTo.city": val("c-city"),
-          lines: Object.keys(F).map((k) => ({ flavor: k, boxes: parseInt(val("c-" + k)) || 0 })), cancelled: $("#c-cancelled", d).checked }, admin.name);
+        const patch = { note: $("#w-note", d).value };
+        if (!shipped) { patch[grp + ".address"] = val("w-addr"); patch[grp + ".zip"] = val("w-zip"); patch[grp + ".city"] = val("w-city"); }
+        else {
+          if (!val("w-ship")) throw new Error("Enter the shipping date.");
+          if (val("w-ship") > todayDay() || (o.deliveredAt && val("w-deliv") > todayDay())) throw new Error("A date cannot be in the future.");
+          if (o.deliveredAt && val("w-deliv") < val("w-ship")) throw new Error("The delivery date cannot be before the shipping date.");
+          patch["shipping.carrier"] = val("w-car"); patch["shipping.tracking"] = $("#w-no", d).checked ? "" : val("w-trk"); patch["shipping.noTracking"] = $("#w-no", d).checked; patch.shippedAt = val("w-ship");
+          if (o.deliveredAt) patch.deliveredAt = val("w-deliv");
+        }
+        if ($("#w-cancel", d)) patch.cancelled = $("#w-cancel", d).checked;
+        (pro ? Store.updateOrder : Store.updateConsumerOrder)(o.id, patch, admin.name);
         closeModal(d); render(); Common.toast(`Order ${o.id} updated.`);
-      } catch (err) { $("#cerr", d).innerHTML = `<div class="alert alert--bad">${esc(err.message)}</div>`; }
+      } catch (err) { $("#werr", d).innerHTML = `<div class="alert alert--bad">${esc(err.message)}</div>`; }
     });
   }
 
@@ -425,10 +527,9 @@ Auth.gate("admin", "Founders admin", "", function (admin) {
   function ambassadorsTab() {
     const S = s().settings;
     shell(`<div class="row" style="justify-content:space-between"><div><p class="label">Ambassadors</p><h1 class="display h2">Introducers</h1></div><button class="btn btn--sm" id="newamb">New ambassador</button></div>
-      <div class="tablewrap"><table class="tbl"><thead><tr><th>Name</th><th>Code</th><th>Rate</th><th>Duration</th><th class="num">Venues</th><th>Status</th><th></th></tr></thead><tbody>
-      ${s().ambassadors.map((a) => { const v = Store.ambassadorView(a.id); return `<tr><td>${esc(a.name)}<br><span class="small muted">${esc(a.email)}${a.iban ? " · " + esc(a.iban) : ""}</span> ${a.mustChange ? '<span class="badge badge--warn">temp password</span>' : ""}</td><td>${esc(a.code)}</td><td>${pct(a.pct == null ? S.commission.pct : a.pct)}${a.pct == null ? ' <span class="small muted">default</span>' : ""}</td><td>${a.months == null ? S.commission.months : a.months} months</td><td class="num">${v.venues.length}</td><td><span class="badge ${a.active ? "badge--ok" : "badge--bad"}">${a.active ? "Active" : "Inactive"}</span></td>
-        <td class="row" style="gap:6px;flex-wrap:nowrap"><button class="btn btn--sm btn--ghost" data-toggle="${a.id}">${a.active ? "Deactivate" : "Activate"}</button><button class="btn btn--sm btn--ghost" data-editamb="${a.id}">Edit</button><button class="btn btn--sm btn--ghost" data-resetamb="${a.id}">Reset password</button></td></tr>`; }).join("")}
-      </tbody></table></div>`);
+      ${rowsBox(s().ambassadors.map((a) => { const v = Store.ambassadorView(a.id); return orow({ main: `<span class="orow__id"><b>${esc(a.name)}</b><span class="badge ${a.active ? "badge--ok" : "badge--bad"}">${a.active ? "Active" : "Inactive"}</span>${a.mustChange ? '<span class="badge badge--warn">temp password</span>' : ""}</span>`, sub: dot(esc(a.email), a.iban ? esc(a.iban) : "no IBAN"),
+        meta: `<b>${pct(a.pct == null ? S.commission.pct : a.pct)}</b> for ${a.months == null ? S.commission.months : a.months} months`, metaSub: dot(`code ${esc(a.code)}`, `${v.venues.length} venues`),
+        act: `<button class="btn btn--sm btn--ghost" data-toggle="${a.id}">${a.active ? "Deactivate" : "Activate"}</button><button class="btn btn--sm btn--ghost" data-editamb="${a.id}">Edit</button><button class="btn btn--sm btn--ghost" data-resetamb="${a.id}">Reset password</button>` }); }))}`);
     $("#newamb").addEventListener("click", () => ambDialog(null));
     $$("[data-toggle]").forEach((b) => b.addEventListener("click", () => { const a = s().ambassadors.find((x) => x.id === b.dataset.toggle); a.active = !a.active; Store.save(); render(); }));
     $$("[data-editamb]").forEach((b) => b.addEventListener("click", () => editAmbDialog(s().ambassadors.find((x) => x.id === b.dataset.editamb))));

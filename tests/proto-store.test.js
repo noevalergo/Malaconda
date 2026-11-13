@@ -4,7 +4,7 @@ const test = require("node:test");
 const assert = require("node:assert/strict");
 const path = require("node:path");
 
-const DIR = path.join(__dirname, "..", "client", "proto");
+const DIR = path.join(__dirname, "..", "client");
 
 function fresh() {
   const ls = {}, ss = {};
@@ -183,8 +183,9 @@ test("manual order: visit, cash, paid, shipped with a tracking number, all recor
   assert.deepEqual(o.history.map((h) => h.status), ["placed", "invoiced", "paid", "shipped"]);
   assert.equal(o.welcomePct, 10, "first order of a new pro");
   assert.equal(o.shipping.tracking, "JD0146000");
-  assert.match(S.trackingUrl("DHL", "JD0146000"), /dhl\.com.*JD0146000/);
-  assert.equal(S.trackingUrl("Swiss Post", "99.60.1"), null, "no link for carriers without a stable public URL");
+  assert.equal(S.trackingUrl("DHL", "JD0146000", "fr"), "https://parcelsapp.com/fr/tracking/JD0146000", "one tracker for every carrier, in the reader's language");
+  assert.equal(S.trackingUrl("Swiss Post", "99.60 .1", "xx"), "https://parcelsapp.com/en/tracking/99.60.1", "spaces removed, unknown language falls back to English");
+  assert.equal(S.trackingUrl("Swiss Post", ""), null);
   assert.equal(o.editLog[0].changes[0], "Order created");
 });
 
@@ -243,10 +244,11 @@ test("shop orders carry payment and tracking, editable by the founders", () => {
   assert.ok(shipped.shipping.tracking, "seeded shipped order has a tracking number");
   assert.equal(shipped.payment.method, "Card (online)");
   const open = orders.find((o) => !o.shippedAt);
-  S.updateConsumerOrder(open.id, { shippedAt: "2026-11-09", "shipping.carrier": "DHL", "shipping.tracking": "JD0147777", "payment.method": "Bank transfer" }, "Founders");
+  assert.throws(() => S.updateConsumerOrder(open.id, { "payment.method": "Bank transfer" }, "Founders"), /placed on the website/, "what the customer paid is locked");
+  S.updateConsumerOrder(open.id, { shippedAt: "2026-11-09", "shipping.carrier": "DHL", "shipping.tracking": "JD0147777", note: "Fragile" }, "Founders");
   assert.equal(open.status, "shipped");
   assert.equal(open.shipping.tracking, "JD0147777");
-  assert.ok(open.editLog[0].changes.length >= 3);
+  assert.ok(open.editLog[0].changes.length >= 2);
 });
 
 test("seeded orders have invoice numbers, payment methods and parcels that fit their status", () => {
@@ -287,4 +289,74 @@ test("a pro pays online by card: the order is created paid, welcome offer and re
   assert.equal(o.welcomePct, 10, "a first order keeps the welcome offer");
   assert.equal(o.shipping.city, "Geneva");
   assert.throws(() => S.payProOrder({ proId: t.id, lines: [] }), /at least one box/);
+});
+
+test("shipping a shop order needs a carrier and a tracking number, and the edit form cannot skip it", () => {
+  const S = fresh();
+  const o = S.get().consumerOrders.find((x) => x.status === "paid");
+  assert.throws(() => S.progress("shop", o.id, "shipped", { carrier: "", tracking: "", at: "2026-11-06" }), /carrier/);
+  assert.throws(() => S.progress("shop", o.id, "shipped", { carrier: "DHL", tracking: "", at: "2026-11-06" }), /tracking number/);
+  assert.throws(() => S.progress("shop", o.id, "shipped", { carrier: "DHL", tracking: "ab", at: "2026-11-06" }), /looks wrong/);
+  assert.throws(() => S.progress("shop", o.id, "delivered", { at: "2026-11-06" }), /next step is shipped/, "no skipping a step");
+  assert.throws(() => S.progress("shop", o.id, "shipped", { carrier: "DHL", tracking: "JD0146000", at: "2099-01-01" }), /future/);
+  assert.throws(() => S.progress("shop", o.id, "shipped", { carrier: "DHL", tracking: "JD0146000", at: "2000-01-01" }), /before/);
+  assert.equal(S.get().consumerOrders.find((x) => x.id === o.id).status, "paid", "failed attempts change nothing");
+  S.progress("shop", o.id, "shipped", { carrier: "DHL", tracking: " JD0146000 ", at: o.paidAt.slice(0, 10), email: o.email }, "Founders");
+  const after = S.get().consumerOrders.find((x) => x.id === o.id);
+  assert.equal([after.status, after.shipping.carrier, after.shipping.tracking].join("|"), "shipped|DHL|JD0146000");
+  assert.match(after.editLog.at(-1).changes[0], /JD0146000.*shipping email to/);
+  S.progress("shop", o.id, "delivered", { at: o.paidAt.slice(0, 10) });
+  assert.equal(S.get().consumerOrders.find((x) => x.id === o.id).status, "delivered");
+  // the edit form cannot mark an order shipped without a number
+  const p = S.get().consumerOrders.find((x) => x.status === "paid") || o;
+  const q = S.consumerCheckout({ email: "x@y.demo", name: "X", lines: [{ flavor: "lulo", boxes: 1 }], paid: true });
+  assert.throws(() => S.updateConsumerOrder(q.id, { shippedAt: "2026-11-09", "shipping.carrier": "DHL", "shipping.tracking": "" }, "t"), /tracking number/);
+  assert.equal(S.get().consumerOrders.find((x) => x.id === q.id).shippedAt, null, "nothing was half-applied");
+  S.updateConsumerOrder(q.id, { shippedAt: "2026-11-09", "shipping.carrier": "Own delivery", "shipping.tracking": "" }, "t");
+});
+
+test("pro order steps: invoice number, payment method, then shipping rules", () => {
+  const S = fresh();
+  const t = byName(S, "Terraza 7");
+  const o = S.createManualOrder({ proId: t.id, lines: [{ flavor: "lulo", boxes: 3 }], createdAt: "2026-11-01", via: "Email" }, "t");
+  assert.equal(o.status, "placed");
+  assert.throws(() => S.progress("pro", o.id, "paid", { method: "Bank transfer", at: "2026-11-02" }), /next step is invoiced/);
+  assert.throws(() => S.progress("pro", o.id, "invoiced", { invoiceNo: "", at: "2026-11-02" }), /invoice number/);
+  S.progress("pro", o.id, "invoiced", { invoiceNo: "INV-2026-0100", at: "2026-11-02" });
+  assert.throws(() => S.progress("pro", o.id, "paid", { method: "", at: "2026-11-03" }), /how it was paid/);
+  S.progress("pro", o.id, "paid", { method: "Bank transfer", reference: "REF1", at: "2026-11-03" });
+  assert.throws(() => S.progress("pro", o.id, "shipped", { carrier: "Swiss Post", tracking: "", at: "2026-11-04" }), /tracking number/);
+  S.progress("pro", o.id, "shipped", { carrier: "Swiss Post", tracking: "99.60.310822.40215468", at: "2026-11-04" });
+  const done = S.get().orders.find((x) => x.id === o.id);
+  assert.equal([done.status, done.invoiceNo, done.payment.reference].join("|"), "shipped|INV-2026-0100|REF1");
+});
+
+test("a website order is locked: items, payment and dates cannot be rewritten, only delivery details", () => {
+  const S = fresh();
+  const o = S.get().consumerOrders.find((x) => x.status === "paid");
+  assert.ok(S.isWebOrder("shop", o));
+  const locked = [{ lines: [{ flavor: "lulo", boxes: 9 }] }, { paidAt: "2026-01-01" }, { createdAt: "2026-01-01" }, { "payment.reference": "x" }, { cancelled: true }];
+  locked.forEach((patch) => assert.throws(() => S.updateConsumerOrder(o.id, patch, "t"), /website|refund/, JSON.stringify(patch)));
+  S.updateConsumerOrder(o.id, { "shipTo.address": "Bahnhofstrasse 1", note: "call before" }, "t");
+  assert.equal(o.shipTo.address, "Bahnhofstrasse 1", "the address can be corrected before it ships");
+  S.progress("shop", o.id, "shipped", { carrier: "Swiss Post", noTracking: true, at: o.paidAt.slice(0, 10) });
+  assert.equal(o.shipping.noTracking, true);
+  assert.equal(o.shipping.tracking, "");
+  assert.throws(() => S.updateConsumerOrder(o.id, { "shipTo.address": "Elsewhere 2" }, "t"), /once the parcel has shipped/);
+  const pending = S.consumerCheckout({ email: "w@y.demo", name: "W", lines: [{ flavor: "lulo", boxes: 1 }] });
+  assert.throws(() => S.progress("shop", pending.id, "paid", { method: "Cash", at: "2026-11-10" }), /card payment itself/, "never mark a website order paid by hand");
+});
+
+test("a manual pro order stays fully editable, and a parcel without tracking is allowed when said so", () => {
+  const S = fresh();
+  const o = S.createManualOrder({ proId: byName(S, "Terraza 7").id, lines: [{ flavor: "lulo", boxes: 3 }], createdAt: "2026-11-01", via: "Email", paymentMethod: "Bank transfer", paidAt: "2026-11-02" }, "t");
+  assert.equal(S.isWebOrder("pro", o), false);
+  S.updateOrder(o.id, { "payment.method": "Cash", lines: [{ flavor: "lulo", boxes: 4 }] }, "t");
+  assert.equal(o.payment.method, "Cash");
+  assert.throws(() => S.updateOrder(o.id, { shippedAt: "2026-11-05", "shipping.carrier": "Swiss Post", "shipping.tracking": "" }, "t"), /tracking number/);
+  S.updateOrder(o.id, { shippedAt: "2026-11-05", "shipping.carrier": "Swiss Post", "shipping.tracking": "", "shipping.noTracking": true }, "t");
+  assert.equal(o.status, "shipped");
+  const w = S.payProOrder({ proId: byName(S, "Terraza 7").id, lines: [{ flavor: "lulo", boxes: 2 }], paymentRef: "pi_1" });
+  assert.equal(S.isWebOrder("pro", w), true);
+  assert.throws(() => S.updateOrder(w.id, { "payment.method": "Cash" }, "t"), /placed on the website/);
 });

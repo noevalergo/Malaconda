@@ -1,759 +1,305 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-
-  <!-- =========================================================
-       MALACONDA — Sitio web oficial (una página con scroll)
-       · Textos en inglés: este archivo (busca "EDITAR")
-       · Textos en alemán: js/i18n.js (misma clave data-i18n)
-       · Colores, tipografía, espaciado: css/styles.css (sección 1)
-       · Moneda, checkout, códigos promo, pre-order: js/main.js (CONFIG)
-       ========================================================= -->
-
-  <title>MALACONDA — Sparkling soda from the Amazon</title>
-  <meta name="description" content="A sparkling soda with flavours developed by the Swiss Bartender of the Year. Sweet Guava and Biting Lulo, 12 x 200 ml.">
-  <link rel="icon" href="images/favicon.png">
-
-  <!-- Chivo (texto) y DM Mono (etiquetas). Andreas (titulares) se carga desde /fonts — ver css/styles.css -->
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Chivo:wght@400;500&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
-
-  <link rel="preload" href="fonts/Andreas-Regular.woff2" as="font" type="font/woff2" crossorigin>
-  <link rel="stylesheet" href="css/styles.css">
+<meta charset="UTF-8">
+<meta name="robots" content="noindex, nofollow">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>MALACONDA - Sparkling soda from the Amazon</title>
+<meta name="description" content="A sparkling soda with bold flavours developed by Switzerland’s Bartender of the Year. Biting Lulo and Sweet Guava, 12 x 20 cl.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Chivo:wght@400;500&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<script src="theme.js"></script>
+<script src="i18n.js"></script>
+<link rel="stylesheet" href="proto.css">
 </head>
 <body>
-
-  <!-- =====================================================
-       BARRA DE ANUNCIOS (arriba del todo)
-       EDITAR: texto y enlace. Alemán en js/i18n.js ("announce", "announce-link").
-       Para ocultarla, añade el atributo hidden a <div class="announce">.
-       ===================================================== -->
-  <div class="announce" data-announce>
-    <div class="container announce__inner">
-      <a href="#ambassadors" class="announce__text">
-        <span data-i18n="announce">Give 10% off. Earn CHF 5 per new customer as an Ambassador.</span>
-        <span class="announce__link" aria-hidden="true">→</span>
-      </a>
-      <button type="button" class="announce__close" data-announce-close aria-label="Close announcement">✕</button>
-    </div>
+<div id="site-nav"></div>
+<main>
+<section class="block hero">
+  <h1 class="display h1 reveal">The fruit <span class="accent is-lulo sticker">nobody</span> was meant to <span class="accent is-guava sticker">touch</span></h1>
+  <div class="hero__bottom reveal">
+    <p class="hero__intro">A sparkling soda with bold flavours developed by Switzerland’s Bartender of the Year and a serious amount of fizz. Made to be enjoyed straight from the bottle or mixed into something unexpected. Go on, give in to temptation.</p>
+    <span class="hero__slot" data-fab-slot aria-hidden="true"></span>
   </div>
+</section>
 
-  <!-- =====================================================
-       NAVEGACIÓN
-       ===================================================== -->
-  <header class="nav" id="top" data-nav>
-    <div class="container nav__inner">
-      <a href="#top" class="nav__logo" aria-label="Malaconda, back to top">
-        <img src="images/logo-wordmark.svg" alt="MALACONDA" class="logo-img" width="580" height="118" data-fallback="text">
-        <span class="logo-text">MALACONDA<sup>®</sup></span>
-      </a>
-
-      <nav class="nav__links" aria-label="Main">
-        <a href="#shop" data-shop-open data-i18n="nav-shop">Shop</a>
-        <a href="#partners" data-i18n="nav-partners">Partners</a>
-        <a href="#ambassadors" data-i18n="nav-ambassadors">Ambassadors</a>
-        <a href="#reviews" data-i18n="nav-reviews">Reviews</a>
-        <a href="#contact" data-i18n="nav-contact">Contact</a>
-      </nav>
-
-      <div class="nav__actions">
-        <div class="lang" role="group" aria-label="Language">
-          <button type="button" class="lang__btn" data-lang="en" aria-pressed="true">EN</button>
-          <button type="button" class="lang__btn" data-lang="de" aria-pressed="false">DE</button>
-          <button type="button" class="lang__btn" data-lang="fr" aria-pressed="false">FR</button>
-          <button type="button" class="lang__btn" data-lang="it" aria-pressed="false">IT</button>
-          <button type="button" class="lang__btn" data-lang="es" aria-pressed="false">ES</button>
-        </div>
-        <button class="cart-toggle" type="button" aria-label="Open cart" data-cart-open>
-          <span class="cart-toggle__word" data-i18n="cart">Cart</span>
-          <span class="cart-count" data-cart-count>0</span>
-        </button>
-        <a href="#shop" data-shop-open class="btn btn--primary btn--sm nav__cta" data-i18n="shop-now">Shop now <span class="btn__arrow" aria-hidden="true">→</span></a>
-        <button type="button" class="burger" data-menu-open aria-label="Open menu" aria-expanded="false" aria-controls="mobile-menu">
-          <span></span><span></span>
-        </button>
-      </div>
-    </div>
-  </header>
-
-  <!-- Menú móvil (pantalla completa) -->
-  <div class="menu" id="mobile-menu" data-menu hidden>
-    <nav class="menu__links" aria-label="Mobile">
-      <a href="#shop" data-shop-open data-menu-link><span class="label">01</span><span data-i18n="nav-shop">Shop</span></a>
-      <a href="#partners" data-menu-link><span class="label">02</span><span data-i18n="nav-partners">Partners</span></a>
-      <a href="#ambassadors" data-menu-link><span class="label">03</span><span data-i18n="nav-ambassadors">Ambassadors</span></a>
-      <a href="#reviews" data-menu-link><span class="label">04</span><span data-i18n="nav-reviews">Reviews</span></a>
-      <a href="#contact" data-menu-link><span class="label">05</span><span data-i18n="nav-contact">Contact</span></a>
-    </nav>
-    <div class="menu__foot">
-      <div class="lang" role="group" aria-label="Language">
-        <button type="button" class="lang__btn" data-lang="en" aria-pressed="true">EN</button>
-        <button type="button" class="lang__btn" data-lang="de" aria-pressed="false">DE</button>
-        <button type="button" class="lang__btn" data-lang="fr" aria-pressed="false">FR</button>
-        <button type="button" class="lang__btn" data-lang="it" aria-pressed="false">IT</button>
-        <button type="button" class="lang__btn" data-lang="es" aria-pressed="false">ES</button>
-      </div>
-      <a href="https://www.instagram.com/drinkmalaconda/" class="text-link" target="_blank" rel="noopener">@drinkmalaconda</a>
-    </div>
-  </div>
-
-  <main>
-
-    <!-- =====================================================
-         01 · HERO
-         ===================================================== -->
-    <section class="hero" aria-labelledby="hero-title">
-      <div class="container">
-        <div class="hero__top">
-          <!-- EDITAR -->
-          <p class="label eyebrow anim-in" style="--d:.15s" data-i18n="hero-eyebrow">Sparkling soda | 200 ml</p>
-          <p class="label anim-in" style="--d:.25s" data-i18n="hero-eyebrow-right">Forbidden fruits</p>
-        </div>
-
-        <h1 class="display hero__title" id="hero-title">
-          <span class="mask"><span class="anim-up" style="--d:.2s" data-i18n="hero-line-1">The fruit nobody</span></span>
-          <span class="mask"><span class="anim-up" style="--d:.35s" data-i18n="hero-line-2">was meant to touch.</span></span>
-        </h1>
-
-        <div class="hero__bottom">
-          <!-- EDITAR -->
-          <p class="hero__intro anim-in" style="--d:.6s" data-i18n="hero-intro">A sparkling soda with flavours developed by the Swiss Bartender of the Year. Maximum carbonation — hypnotic as a mixer or straight from the bottle. For those who dare to fall to temptation.</p>
-          <div class="btn-row anim-in" style="--d:.7s">
-            <a href="#shop" data-shop-open class="btn btn--primary" data-i18n="hero-cta">Shop now <span class="btn__arrow" aria-hidden="true">→</span></a>
-            <a href="#partners" class="btn btn--secondary" data-i18n="hero-cta-2">For partners</a>
-          </div>
-        </div>
-
-        <div class="collage">
-          <!-- IMAGEN: images/hero-bottles.jpg -->
-          <figure class="frame frame--hero anim-scale" style="--d:.45s">
-            <img src="images/hero-bottles.jpg" alt="Malaconda bottles on ice" width="2000" height="1333" fetchpriority="high" data-parallax="0.06">
-          </figure>
-          <aside class="card collage__card anim-in" style="--d:.8s">
-            <p class="label label--muted">2026</p>
-            <!-- EDITAR -->
-            <p class="mono-text" data-i18n="collage-text">Every bottle carries more than soda. It carries the bite of Malaconda. Brewed in Colombia, bound for the bold.</p>
-            <div class="badge" aria-hidden="true">
-              <img src="images/badge.svg" alt="" class="badge__img" width="120" height="123" data-fallback="badge">
-              <span class="badge__fallback">Forbidden · Fruits ·</span>
-            </div>
-          </aside>
-        </div>
-      </div>
-    </section>
-
-
-
-    <!-- =====================================================
-         02 · SHOP — productos
-         Cada <article class="product"> es un producto:
-         data-id, data-name y data-price alimentan el carrito.
-         EDITAR precio en data-price Y en data-price-display.
-         ===================================================== -->
-    <section class="section shop" id="shop" aria-labelledby="shop-title">
-      <div class="container">
-        <header class="section-head">
-          <div>
-            <p class="label eyebrow section-head__label" data-i18n="shop-label">Shop</p>
-            <h2 class="display h2 reveal" id="shop-title">TWO FLAVORS | 200 ML</h2>
-          </div>
-          <p class="label section-head__aside" data-i18n="shop-aside">1 box = 12 bottles of 200 ml</p>
-        </header>
-
-        <!-- SELECTOR DE SABOR: una sola botella que cambia (derecha) + compra (izquierda).
-             Para añadir un sabor: copia un botón .choose__tab, una <figure> y un <article> con el mismo data-flavor. -->
-        <div class="picker reveal" data-picker>
-          <div class="picker__info">
-            <div class="choose__tabs" role="tablist" aria-label="Flavor">
-              <button type="button" role="tab" class="choose__tab" data-pick="lulo" id="shop-pick-lulo" aria-controls="shop-lulo" aria-selected="true">
-                <span class="label choose__num">NO. 01</span><span>Sweet Guava</span>
-              </button>
-              <button type="button" role="tab" class="choose__tab" data-pick="guava" id="shop-pick-guava" aria-controls="shop-guava" aria-selected="false" tabindex="-1">
-                <span class="label choose__num">NO. 02</span><span>Biting Lulo</span>
-              </button>
-            </div>
-            <div class="choose__panels">
-            <!-- ============ NO. 01 · SWEET GUAVA ============ -->
-            <article class="product is-selected" role="tabpanel" id="shop-lulo" aria-labelledby="shop-pick-lulo" data-flavor="lulo" data-id="sweet-guava-12" data-name="Sweet Guava · 12 x 200 ml" data-price="39.00">
-              <div class="product__meta">
-                <span class="label product__num">NO. 01</span>
-                <span class="label label--muted">12 x 200 ML</span>
-              </div>
-              <h3 class="display choose__name">Sweet Guava</h3>
-              <!-- EDITAR -->
-              <p class="product__desc" data-i18n="p1-desc"><span>Cloud-forest citrus with a temper.</span><span>Crisp acidity strikes first, refreshes second.</span></p>
-              <div class="product__buy">
-                <p class="product__price"><span data-price-display>39.00</span><span class="label label--muted" data-i18n="per-box">per box · 12 x 200 ml</span></p>
-                <div class="qty" data-qty>
-                  <button type="button" class="qty__btn" data-qty-minus aria-label="Less">−</button>
-                  <input class="qty__input" type="number" min="1" max="99" value="1" aria-label="Quantity" data-qty-input>
-                  <button type="button" class="qty__btn" data-qty-plus aria-label="More">+</button>
-                </div>
-                <button type="button" class="btn btn--primary product__add" data-add-to-cart data-i18n="add-to-cart">Add to cart</button>
-              </div>
-            </article>
-            <!-- ============ NO. 02 · BITING LULO ============ -->
-            <article class="product" role="tabpanel" id="shop-guava" aria-labelledby="shop-pick-guava" data-flavor="guava" data-id="pink-guava-12" data-name="Biting Lulo · 12 x 200 ml" data-price="39.00">
-              <div class="product__meta">
-                <span class="label product__num">NO. 02</span>
-                <span class="label label--muted">12 x 200 ML</span>
-              </div>
-              <h3 class="display choose__name">Biting Lulo</h3>
-              <!-- EDITAR -->
-              <p class="product__desc" data-i18n="p2-desc"><span>Soft, floral, pink all the way through.</span><span>The sweet one you shouldn't trust.</span></p>
-              <div class="product__buy">
-                <p class="product__price"><span data-price-display>39.00</span><span class="label label--muted" data-i18n="per-box">per box · 12 x 200 ml</span></p>
-                <div class="qty" data-qty>
-                  <button type="button" class="qty__btn" data-qty-minus aria-label="Less">−</button>
-                  <input class="qty__input" type="number" min="1" max="99" value="1" aria-label="Quantity" data-qty-input>
-                  <button type="button" class="qty__btn" data-qty-plus aria-label="More">+</button>
-                </div>
-                <button type="button" class="btn btn--primary product__add" data-add-to-cart data-i18n="add-to-cart">Add to cart</button>
-              </div>
-            </article>
-            </div>
-          </div>
-
-          <!-- IMÁGENES: Sweet Guava = images/guava-bottle.jpg (etiqueta rosa), Biting Lulo = images/lulo-bottle.jpg (etiqueta amarilla) -->
-          <div class="choose__stage picker__stage">
-            <figure class="choose__img is-selected" data-flavor-img="lulo">
-              <img src="images/guava-bottle.jpg" alt="Malaconda NO. 01 Sweet Guava bottle" width="1400" height="1750" loading="lazy">
-            </figure>
-            <figure class="choose__img" data-flavor-img="guava">
-              <img src="images/lulo-bottle.jpg" alt="Malaconda NO. 02 Biting Lulo bottle" width="1400" height="1750" loading="lazy">
-            </figure>
-          </div>
-        </div>
-
-      </div>
-      <div class="container">
-        <!-- LOS 4 BENEFICIOS (comunes a ambos sabores, centrados) -->
-        <ul class="benefits-row">
-          <li class="reveal">
-            <svg class="icon icon--sm" viewBox="0 0 32 32" aria-hidden="true"><path d="M7 25c0-10 6-17 18-18 0 12-7 18-17 18z"/><path d="M7 25l10-10"/></svg>
-            <span data-i18n="usp-1">Natural ingredients</span>
-          </li>
-          <li class="reveal" style="--d:.06s">
-            <svg class="icon icon--sm" viewBox="0 0 32 32" aria-hidden="true"><path d="M16 4c5 7 8 11 8 15a8 8 0 0 1-16 0c0-4 3-8 8-15z"/><path d="M12 20a4 4 0 0 0 4 4"/></svg>
-            <span data-i18n="usp-2">Clean hydration</span>
-          </li>
-          <li class="reveal" style="--d:.12s">
-            <svg class="icon icon--sm" viewBox="0 0 32 32" aria-hidden="true"><circle cx="12" cy="22" r="4"/><circle cx="21" cy="14" r="3"/><circle cx="13" cy="9" r="2"/><circle cx="22" cy="24" r="1.5"/><circle cx="20" cy="5" r="1"/></svg>
-            <span data-i18n="usp-3">Maximum carbonation</span>
-          </li>
-          <li class="reveal" style="--d:.18s">
-            <svg class="icon icon--sm" viewBox="0 0 32 32" aria-hidden="true"><circle cx="16" cy="12" r="7"/><path d="M12 18l-2 10 6-3 6 3-2-10"/></svg>
-            <span data-i18n="usp-4">Developed by Swiss Bartender of the Year</span>
-          </li>
-        </ul>
-        <p class="shop__note label label--muted reveal" data-i18n="shop-note">Mix both flavors in one order — combine them freely in your cart.</p>
-      </div>
-    </section>
-
-    <!-- =====================================================
-         03 · POR QUÉ MALACONDA — los 4 puntos de la marca (una sola vez)
-         EDITAR solo con información verificada.
-         ===================================================== -->
-
-
-
-
-    <!-- =====================================================
-         04 · PARTNERS — pre-order B2B (modo claro, compacto)
-         Precios y Stripe: js/main.js (CONFIG.preorder) y preorder.php
-         ===================================================== -->
-    <section class="section partners" id="partners" aria-labelledby="partners-title">
-      <div class="container">
-        <!-- ENCABEZADO -->
-        <header class="partners__head">
-          <p class="label eyebrow section-head__label" data-i18n="partners-label">Partners | Pre-order 2027</p>
-          <h2 class="display partners__title reveal" id="partners-title" data-i18n="partners-title">Put the snake on your bar</h2>
-          <p class="partners__strike reveal" style="--d:.1s" data-i18n="partners-strike">Be the first to strike</p>
-          <div class="partners__offer reveal" style="--d:.15s">
-            <p data-i18n="partners-offer">Pre-order 5 or 10 boxes of 12 x 200 ml with a 20% downpayment.</p>
-            <!-- DISPONIBILIDAD: se configura en js/main.js → CONFIG.availability -->
-            <p class="status" data-status data-state="unset">
-              <span class="status__dot" aria-hidden="true"></span>
-              <span class="label status__text" data-status-text>Availability: to be announced</span>
-            </p>
-          </div>
-          <!-- Un solo botón con la fecha límite (EDITAR la fecha aquí y en js/i18n.js → "preorder-deadline") -->
-          <div class="btn-row partners__ctas reveal" style="--d:.2s">
-            <a href="#preorder" class="btn btn--primary" data-i18n="preorder-deadline">Pre-order until 31 January <span class="btn__arrow" aria-hidden="true">→</span></a>
-          </div>
-        </header>
-
-
-      </div>
-      <div class="container">
-        <!-- PRE-ORDER BENEFITS -->
-        <p class="label eyebrow partners__sub reveal" data-i18n="pb-label">Pre-order benefits</p>
-        <div class="pb-grid">
-          <article class="pb reveal">
-            <p class="label pb__tag" data-i18n="pb-1-tag">Benefit 01 — Guest shift</p>
-            <h3 class="display pb__title" data-i18n="pb-1-title">An all-inclusive trip, destination unknown</h3>
-            <p data-i18n="pb-1-text">Every pre-order is entered to win an all-inclusive trip to a surprise destination.</p>
-          </article>
-          <article class="pb reveal" style="--d:.08s">
-            <p class="label pb__tag" data-i18n="pb-2-tag">Benefit 02 — 10% off</p>
-            <h3 class="display pb__title" data-i18n="pb-2-title">On top of your partner wholesale prices</h3>
-            <p data-i18n="pb-2-text">Pre-order now and your first order lands at 10% below wholesale prices.</p>
-          </article>
-          <article class="pb pb--image reveal" style="--d:.16s">
-            <img src="images/delivery-boxes-1200.jpg" srcset="images/delivery-boxes-1200.jpg 1200w, images/delivery-boxes.jpg 2400w" sizes="(max-width: 720px) 100vw, 420px" alt="Malaconda boxes sealed with Forbidden Fruits tape" width="1200" height="800" loading="lazy">
-            <div class="pb__overlay">
-              <p class="label pb__tag" data-i18n="pb-3-tag">Benefit 03 — Partner kit</p>
-              <h3 class="display pb__title" data-i18n="pb-3-title">Everything to pour it right</h3>
-              <p data-i18n="pb-3-text">Signature recipes, table talkers, coasters, stickers, and promotional material.</p>
-            </div>
-          </article>
-        </div>
-
-      </div>
-      <div class="container">
-        <!-- FORMULARIO DE PRE-ORDER -->
-        <div class="preorder" id="preorder">
-          <div class="preorder__intro">
-            <p class="label eyebrow" data-i18n="reg-label">Registration</p>
-            <h3 class="display h3" data-i18n="preorder-title">Reserve your allocation.</h3>
-            <p data-i18n="preorder-text">Choose 5 or 10 boxes. Each box contains 12 bottles of 200 ml. After you submit, you pay the 20% downpayment or receive the invoice by email. Your allocation is reserved once the downpayment is received.</p>
-            <p class="notice" data-preorder-done hidden data-i18n="preorder-paid">Payment received. Check your inbox for the receipt.</p>
-            <!-- Resumen: muestra importes solo si CONFIG.preorder.pricePerBox tiene precio mayorista -->
-            <dl class="summary" data-summary>
-              <div><dt class="label label--muted" data-i18n="sum-bottles">Bottles</dt><dd data-sum-bottles>60</dd></div>
-              <div data-sum-row hidden><dt class="label label--muted" data-i18n="sum-total">Total</dt><dd data-sum-total>—</dd></div>
-              <div data-sum-row hidden><dt class="label label--muted" data-i18n="sum-discount">10% partner discount</dt><dd data-sum-discount>—</dd></div>
-              <div data-sum-row hidden class="summary__due"><dt class="label" data-i18n="sum-deposit">Downpayment (20%)</dt><dd data-sum-deposit>—</dd></div>
-              <div data-sum-row hidden><dt class="label label--muted" data-i18n="sum-balance">On delivery (80%)</dt><dd data-sum-balance>—</dd></div>
-              <div data-sum-norate><dt class="label label--muted" data-i18n="sum-price">Wholesale price</dt><dd class="label" data-i18n="sum-price-note">Confirmed on your invoice</dd></div>
-            </dl>
-
-            <!-- PAGO DEL ANTICIPO (20%)
-                 Los enlaces vienen de js/main.js → CONFIG.preorder.paymentLinks (Stripe Payment Links).
-                 Mientras estén vacíos, los botones se muestran desactivados con un aviso. -->
-            <div class="deposit" id="pay-deposit">
-              <p class="label" data-i18n="deposit-label">Already registered?</p>
-              <h4 class="display deposit__title" data-i18n="deposit-title">Pay your 20% downpayment</h4>
-              <p class="deposit__text" data-i18n="deposit-text">Secure card payment via Stripe. Choose the allocation you registered.</p>
-              <div class="deposit__btns">
-                <a class="btn btn--primary btn--sm" data-deposit-link="5" data-i18n="deposit-5">5 boxes · Pay 20% <span class="btn__arrow" aria-hidden="true">→</span></a>
-                <a class="btn btn--secondary btn--sm" data-deposit-link="10" data-i18n="deposit-10">10 boxes · Pay 20% <span class="btn__arrow" aria-hidden="true">→</span></a>
-              </div>
-              <p class="label label--muted deposit__pending" data-deposit-pending hidden data-i18n="deposit-pending">Online payment opens soon. Until then, we email you the invoice.</p>
-            </div>
-          </div>
-
-          <form class="form preorder__form" action="preorder.php" method="post" data-preorder-form novalidate>
-            <fieldset class="choice">
-              <legend class="label" data-i18n="f-allocation">Allocation</legend>
-              <label class="choice__opt"><input type="radio" name="boxes" value="5" checked><span><b data-i18n="f-5boxes">5 boxes</b><small class="label label--muted" data-i18n="f-60">60 bottles · 200 ml</small></span></label>
-              <label class="choice__opt"><input type="radio" name="boxes" value="10"><span><b data-i18n="f-10boxes">10 boxes</b><small class="label label--muted" data-i18n="f-120">120 bottles · 200 ml</small></span></label>
-            </fieldset>
-
-            <div class="field">
-              <label class="label" for="p-mix" data-i18n="f-mix">Flavors</label>
-              <select class="input" id="p-mix" name="flavour_mix">
-                <option value="Half Sweet Guava / half Biting Lulo" data-i18n="f-mix-half">Half Sweet Guava / half Biting Lulo</option>
-                <option value="Only Sweet Guava" data-i18n="f-mix-lulo">Only Sweet Guava</option>
-                <option value="Only Biting Lulo" data-i18n="f-mix-guava">Only Biting Lulo</option>
-                <option value="Custom (see notes)" data-i18n="f-mix-custom">Custom — tell us in the notes</option>
-              </select>
-            </div>
-
-            <div class="form__row">
-              <div class="field"><label class="label" for="p-business" data-i18n="f-business">Business name</label><input class="input" id="p-business" name="business" type="text" autocomplete="organization" required></div>
-              <div class="field">
-                <label class="label" for="p-type" data-i18n="f-type">Business type</label>
-                <select class="input" id="p-type" name="business_type">
-                  <option value="Bar" data-i18n="t-bar">Bar</option>
-                  <option value="Restaurant" data-i18n="t-restaurant">Restaurant</option>
-                  <option value="Hotel" data-i18n="t-hotel">Hotel</option>
-                  <option value="Retail" data-i18n="t-retail">Retail / shop</option>
-                  <option value="Events" data-i18n="t-events">Events / catering</option>
-                  <option value="Wholesale" data-i18n="t-wholesale">Wholesale / distributor</option>
-                  <option value="Other" data-i18n="t-other">Other</option>
-                </select>
-              </div>
-            </div>
-            <div class="form__row">
-              <div class="field"><label class="label" for="p-contact" data-i18n="f-contact">Contact person</label><input class="input" id="p-contact" name="contact" type="text" autocomplete="name" required></div>
-              <div class="field"><label class="label" for="p-email" data-i18n="f-email">Email</label><input class="input" id="p-email" name="email" type="email" autocomplete="email" required></div>
-            </div>
-            <div class="form__row">
-              <div class="field"><label class="label" for="p-phone" data-i18n="f-phone">Mobile phone</label><input class="input" id="p-phone" name="phone" type="tel" autocomplete="tel" required></div>
-              <div class="field"><label class="label" for="p-address" data-i18n="f-address">Delivery address</label><input class="input" id="p-address" name="address" type="text" autocomplete="street-address" required></div>
-            </div>
-            <div class="field"><label class="label" for="p-notes" data-i18n="f-notes">Additional information</label><textarea class="input" id="p-notes" name="notes" rows="3"></textarea></div>
-
-            <input type="hidden" name="lang" value="en" data-field-lang>
-            <input type="hidden" name="total" data-field-total>
-            <input type="hidden" name="deposit" data-field-deposit>
-            <input type="text" name="website" class="hp" tabindex="-1" autocomplete="off" aria-hidden="true">
-
-            <button type="submit" class="btn btn--primary" data-preorder-submit>Review your pre-order <span class="btn__arrow" aria-hidden="true">→</span></button>
-            <p class="form__status label" data-form-status role="status"></p>
-          </form>
-        </div>
-      </div>
-    </section>
-
-    <!-- =====================================================
-         05 · AMBASSADORS
-         Fotos del banner: images/ambassadors-1.jpg y -2.jpg
-         El formulario envía a apply.php (envía confirmación al aspirante)
-         ===================================================== -->
-    <section class="section ambassadors" id="ambassadors" aria-labelledby="ambassadors-title">
-      <div class="container">
-        <div class="amb-hero reveal">
-          <!-- EDITAR: una sola foto, vertical (4:5) -->
-          <figure class="amb-hero__photo" aria-hidden="true">
-            <img src="images/ambassadors-1.jpg" alt="" width="1300" height="1734" loading="lazy">
-          </figure>
-          <div class="amb-hero__content">
-            <p class="label eyebrow" data-i18n="amb-label">Ambassadors</p>
-            <h2 class="display amb-hero__title" id="ambassadors-title" data-i18n="amb-title">Not everyone<br>gets bitten.</h2>
-            <!-- EDITAR -->
-            <p class="amb-hero__text" data-i18n="amb-text">Give your people 10% off their first box. Earn CHF 5 for every new customer you bring.</p>
-            <button type="button" class="btn btn--primary" data-apply-open aria-controls="apply" aria-expanded="false" data-i18n="apply-now">Apply now <span class="btn__arrow" aria-hidden="true">→</span></button>
-          </div>
-        </div>
-
-      </div>
-      <div class="container">
-        <!-- Ventajas: icono + nombre. Copia un <li> para añadir otra. -->
-        <ul class="perks">
-          <li class="perk reveal">
-            <svg class="icon" viewBox="0 0 32 32" aria-hidden="true"><path d="M5 10l11-5 11 5v12l-11 5-11-5z"/><path d="M5 10l11 5 11-5"/><path d="M16 15v12"/></svg>
-            <span class="perk__title" data-i18n="perk-1">Monthly stock</span>
-          </li>
-          <li class="perk reveal" style="--d:.06s">
-            <svg class="icon" viewBox="0 0 32 32" aria-hidden="true"><path d="M11 5l-6 4 3 5 3-2v15h10V12l3 2 3-5-6-4c-1 2-3 3-5 3s-4-1-5-3z"/></svg>
-            <span class="perk__title" data-i18n="perk-2">Exclusive merchandise</span>
-          </li>
-          <li class="perk reveal" style="--d:.12s">
-            <svg class="icon" viewBox="0 0 32 32" aria-hidden="true"><path d="M10 5h12v6a6 6 0 0 1-12 0z"/><path d="M10 7H6a4 4 0 0 0 4 5M22 7h4a4 4 0 0 1-4 5"/><path d="M16 17v5M11 27h10M13 22h6v5h-6z"/></svg>
-            <span class="perk__title" data-i18n="perk-3">Prizes &amp; experiences</span>
-          </li>
-          <li class="perk reveal" style="--d:.18s">
-            <svg class="icon" viewBox="0 0 32 32" aria-hidden="true"><circle cx="11" cy="11" r="4"/><circle cx="22" cy="12" r="3"/><path d="M4 26c0-4 3-7 7-7s7 3 7 7"/><path d="M19 20c1-.6 2-1 3-1 3 0 6 2.5 6 6"/></svg>
-            <span class="perk__title" data-i18n="perk-4">Community &amp; connections</span>
-          </li>
-          <li class="perk reveal" style="--d:.24s">
-            <svg class="icon" viewBox="0 0 32 32" aria-hidden="true"><circle cx="16" cy="16" r="11"/><path d="M11.5 20.5l9-9"/><circle cx="12" cy="12" r="1.6"/><circle cx="20" cy="20" r="1.6"/></svg>
-            <span class="perk__title" data-i18n="perk-5">Earn CHF 5 per new customer</span>
-          </li>
-        </ul>
-
-        <!-- Formulario de solicitud (se abre con "Apply now") -->
-        <div class="apply" id="apply" data-apply hidden>
-          <div class="apply__intro">
-            <h3 class="display h3" data-i18n="apply-title">Join the pack.</h3>
-            <p data-i18n="apply-text">Tell us who you are. We review every application and reply by email.</p>
-          </div>
-          <form class="form" action="apply.php" method="post" data-apply-form novalidate>
-            <div class="form__row">
-              <div class="field"><label class="label" for="a-first" data-i18n="a-first">First name</label><input class="input" id="a-first" name="first_name" type="text" autocomplete="given-name" required></div>
-              <div class="field"><label class="label" for="a-last" data-i18n="a-last">Last name</label><input class="input" id="a-last" name="last_name" type="text" autocomplete="family-name" required></div>
-            </div>
-            <div class="form__row">
-              <div class="field"><label class="label" for="a-email" data-i18n="f-email">Email</label><input class="input" id="a-email" name="email" type="email" autocomplete="email" required></div>
-              <div class="field"><label class="label" for="a-phone" data-i18n="a-phone">Phone</label><input class="input" id="a-phone" name="phone" type="tel" autocomplete="tel"></div>
-            </div>
-            <div class="form__row">
-              <div class="field"><label class="label" for="a-birth" data-i18n="a-birth">Date of birth</label><input class="input" id="a-birth" name="birth_date" type="date" required></div>
-              <div class="field"><label class="label" for="a-city" data-i18n="a-city">City &amp; country</label><input class="input" id="a-city" name="city" type="text" autocomplete="address-level2" required></div>
-            </div>
-            <div class="form__row">
-              <div class="field"><label class="label" for="a-handle">Instagram / TikTok</label><input class="input" id="a-handle" name="handle" type="text" required placeholder="@"></div>
-              <div class="field">
-                <label class="label" for="a-role" data-i18n="a-role">You are</label>
-                <select class="input" id="a-role" name="role">
-                  <option value="Creator / influencer" data-i18n="r-creator">Creator / influencer</option>
-                  <option value="Bartender" data-i18n="r-bartender">Bartender</option>
-                  <option value="Chef" data-i18n="r-chef">Chef</option>
-                  <option value="Athlete" data-i18n="r-athlete">Athlete</option>
-                  <option value="Bar / venue owner" data-i18n="r-owner">Bar / venue owner</option>
-                  <option value="Other" data-i18n="t-other">Other</option>
-                </select>
-              </div>
-            </div>
-            <div class="field"><label class="label" for="a-why" data-i18n="a-why">Why Malaconda?</label><textarea class="input" id="a-why" name="why" rows="3" required></textarea></div>
-            <label class="check"><input type="checkbox" name="terms" value="yes" required><span data-i18n="a-terms">I agree to be contacted by Malaconda about the ambassador program.</span></label>
-            <input type="hidden" name="lang" value="en" data-field-lang>
-            <input type="text" name="website" class="hp" tabindex="-1" autocomplete="off" aria-hidden="true">
-            <div class="btn-row">
-              <button type="submit" class="btn btn--primary" data-i18n="a-send">Send application <span class="btn__arrow" aria-hidden="true">→</span></button>
-              <button type="button" class="btn btn--secondary" data-apply-close data-i18n="cancel">Cancel</button>
-            </div>
-            <p class="form__status label" data-form-status role="status"></p>
-          </form>
-        </div>
-      </div>
-    </section>
-
-    <!-- =====================================================
-         THEY COULDN'T RESIST — reseñas de Google
-         EDITAR:
-         · Enlaces: "Read reviews" → tu ficha de Google; "Leave a review" → enlace para escribir reseña
-           (Google Business Profile → "Pedir reseñas").
-         · Nota: escribe tu nota real en .reviews-badge__score y quita su atributo hidden.
-         · Reseñas: copia el bloque <article class="review"> de la plantilla de abajo dentro de .review-grid,
-           con el texto, nombre y fecha EXACTOS de Google (con permiso). Luego quita hidden de .review-grid.
-         ===================================================== -->
-    <section class="section reviews" id="reviews" aria-labelledby="reviews-title">
-      <div class="container">
-        <header class="section-head">
-          <div>
-            <p class="label eyebrow section-head__label">Google reviews</p>
-            <h2 class="display h2 reviews__title reveal" id="reviews-title" data-i18n="reviews-title">They couldn't resist</h2>
-          </div>
-          <a class="reviews-badge reveal" href="https://www.google.com/maps/search/Malaconda" target="_blank" rel="noopener">
-            <span class="reviews-badge__g">Google</span>
-            <!-- Nota real de Google: escríbela y quita "hidden" de las dos líneas siguientes -->
-            <span class="reviews-badge__score" hidden>–.–</span>
-            <span class="reviews-badge__stars" aria-hidden="true" hidden>★★★★★</span>
-            <span aria-hidden="true">↗</span>
-          </a>
-        </header>
-
-        <div class="review-grid" hidden>
-          <!-- PLANTILLA DE RESEÑA (copiar por cada reseña real):
-          <article class="review reveal">
-            <p class="review__stars" aria-label="5 out of 5 stars">★★★★★</p>
-            <blockquote class="review__text">“Texto exacto de la reseña.”</blockquote>
-            <footer class="review__author">
-              <p class="review__name">Nombre como aparece en Google</p>
-              <p class="label label--muted">Google · Mes Año</p>
-            </footer>
-          </article>
-          -->
-        </div>
-
-        <p class="reviews__empty reveal" data-i18n="reviews-empty">Tasted the bite? Be among the first to tell the world.</p>
-        <div class="btn-row reviews__actions reveal">
-          <a href="https://www.google.com/maps/search/Malaconda" class="btn btn--secondary" target="_blank" rel="noopener" data-i18n="read-reviews">Read reviews <span class="btn__arrow" aria-hidden="true">↗</span></a>
-          <a href="https://www.google.com/maps/search/Malaconda" class="btn btn--primary" target="_blank" rel="noopener" data-i18n="leave-review">Leave a review <span class="btn__arrow" aria-hidden="true">↗</span></a>
-        </div>
-      </div>
-    </section>
-
-    <!-- =====================================================
-         06 · CONTACTO
-         ===================================================== -->
-    <section class="section contact" id="contact" aria-labelledby="contact-title">
-      <div class="container contact__grid">
-        <div>
-          <p class="label eyebrow section-head__label" data-i18n="nav-contact">Contact</p>
-          <h2 class="display h2 reveal" id="contact-title" data-i18n="contact-title">Talk to the snake.</h2>
-          <p class="contact__text" data-i18n="contact-text">Orders, partnerships, press or just a bite of curiosity.</p>
-          <!-- EDITAR: datos de contacto (confirma el email) -->
-          <ul class="contact__list">
-            <li><span class="label label--muted">Email</span><a class="text-link" href="mailto:hello@malaconda.com">hello@malaconda.com</a></li>
-            <li><span class="label label--muted">Instagram</span><a class="text-link" href="https://www.instagram.com/drinkmalaconda/" target="_blank" rel="noopener">@drinkmalaconda</a></li>
-          </ul>
-        </div>
-
-        <form class="form" action="contact.php" method="post" data-contact-form novalidate>
-          <div class="form__row">
-            <div class="field"><label class="label" for="f-name" data-i18n="c-name">Name</label><input class="input" id="f-name" name="name" type="text" autocomplete="name" required></div>
-            <div class="field"><label class="label" for="f-email" data-i18n="f-email">Email</label><input class="input" id="f-email" name="email" type="email" autocomplete="email" required></div>
-          </div>
-          <div class="field">
-            <label class="label" for="f-topic" data-i18n="c-topic">Topic</label>
-            <select class="input" id="f-topic" name="topic">
-              <option value="General" data-i18n="c-general">General</option>
-              <option value="Order" data-i18n="c-order">Order</option>
-              <option value="Partner" data-i18n="c-partner">Partner</option>
-              <option value="Press" data-i18n="c-press">Press</option>
-            </select>
-          </div>
-          <div class="field"><label class="label" for="f-msg" data-i18n="c-message">Message</label><textarea class="input" id="f-msg" name="message" rows="4" required></textarea></div>
-          <input type="text" name="website" class="hp" tabindex="-1" autocomplete="off" aria-hidden="true">
-          <button type="submit" class="btn btn--primary" data-i18n="c-send">Send message <span class="btn__arrow" aria-hidden="true">→</span></button>
-          <p class="form__status label" data-form-status role="status"></p>
-        </form>
-      </div>
-    </section>
-  </main>
-
-  <!-- =====================================================
-       FOOTER
-       ===================================================== -->
-  <footer class="footer">
-    <div class="container">
-      <div class="footer__top">
-        <a href="#top" class="footer__logo" aria-label="Malaconda">
-          <img src="images/logo-wordmark.svg" alt="MALACONDA" class="logo-img" width="580" height="118" data-fallback="text">
-          <span class="logo-text">MALACONDA<sup>®</sup></span>
-        </a>
-        <form class="newsletter" data-newsletter>
-          <label class="label" for="nl-email">Newsletter</label>
-          <div class="newsletter__row">
-            <input class="input" id="nl-email" type="email" placeholder="email@" required>
-            <button class="btn btn--secondary btn--sm" type="submit" data-i18n="nl-join">Join</button>
-          </div>
-        </form>
-      </div>
-      <div class="footer__bottom">
-        <nav class="footer__links" aria-label="Footer">
-          <a href="#shop" data-shop-open data-i18n="nav-shop">Shop</a>
-          <a href="#partners" data-i18n="nav-partners">Partners</a>
-          <a href="#ambassadors" data-i18n="nav-ambassadors">Ambassadors</a>
-          <a href="#contact" data-i18n="nav-contact">Contact</a>
-          <a href="https://www.instagram.com/drinkmalaconda/" target="_blank" rel="noopener">Instagram ↗</a>
-        </nav>
-        <p class="label label--muted">© <span data-year>2026</span> Malaconda. <span data-i18n="rights">All rights reserved.</span></p>
-      </div>
-    </div>
-  </footer>
-
-  <!-- =====================================================
-       PANTALLA "CHOOSE YOUR POISON"
-       Se abre con cualquier botón Shop (data-shop-open) y con el enlace #choose.
-       Usa los mismos productos (data-id) que la sección #shop: todo va al mismo carrito.
-       Sin JavaScript, los botones Shop llevan a la sección #shop normal.
-       ===================================================== -->
-  <section class="choose" id="choose" data-choose role="dialog" aria-modal="true" aria-labelledby="choose-title" aria-hidden="true" hidden>
-    <div class="container choose__inner" data-picker>
-      <button type="button" class="choose__close" data-choose-close aria-label="Close">✕</button>
-
-      <div class="choose__stage">
-        <figure class="choose__img is-selected" data-flavor-img="lulo">
-          <img src="images/guava-bottle.jpg" alt="Malaconda NO. 01 Sweet Guava bottle" width="1400" height="1750" loading="lazy">
-        </figure>
-        <figure class="choose__img" data-flavor-img="guava">
-          <img src="images/lulo-bottle.jpg" alt="Malaconda NO. 02 Biting Lulo bottle" width="1400" height="1750" loading="lazy">
-        </figure>
-      </div>
-
-      <div class="choose__info">
-        <p class="label label--muted choose__rv" style="--i:0">TWO FLAVORS | 200 ML</p>
-        <h2 class="display choose__title choose__rv" style="--i:1" id="choose-title" tabindex="-1" data-i18n="poison-title">Choose your poison</h2>
-
-        <div class="choose__tabs choose__rv" style="--i:2" role="tablist" aria-label="Flavor">
-          <button type="button" role="tab" class="choose__tab" data-pick="lulo" id="pick-lulo" aria-controls="choose-lulo" aria-selected="true">
-            <span class="label choose__num">NO. 01</span><span>Sweet Guava</span>
-          </button>
-          <button type="button" role="tab" class="choose__tab" data-pick="guava" id="pick-guava" aria-controls="choose-guava" aria-selected="false" tabindex="-1">
-            <span class="label choose__num">NO. 02</span><span>Biting Lulo</span>
-          </button>
-        </div>
-
-        <div class="choose__panels choose__rv" style="--i:3">
-            <article class="product is-selected" role="tabpanel" id="choose-lulo" aria-labelledby="pick-lulo" data-flavor="lulo" data-id="sweet-guava-12" data-name="Sweet Guava · 12 x 200 ml" data-price="39.00">
-              <div class="product__meta">
-                <span class="label product__num">NO. 01</span>
-                <span class="label label--muted">12 x 200 ML</span>
-              </div>
-              <h3 class="display choose__name">Sweet Guava</h3>
-              <p class="product__desc" data-i18n="p1-desc"><span>Cloud-forest citrus with a temper.</span><span>Crisp acidity strikes first, refreshes second.</span></p>
-              <div class="product__buy">
-                <p class="product__price"><span data-price-display>39.00</span><span class="label label--muted" data-i18n="per-box">per box · 12 x 200 ml</span></p>
-                <div class="qty" data-qty>
-                  <button type="button" class="qty__btn" data-qty-minus aria-label="Less">−</button>
-                  <input class="qty__input" type="number" min="1" max="99" value="1" aria-label="Quantity" data-qty-input>
-                  <button type="button" class="qty__btn" data-qty-plus aria-label="More">+</button>
-                </div>
-                <button type="button" class="btn btn--primary product__add" data-add-to-cart data-i18n="pick-poison">Pick your poison <span class="btn__arrow" aria-hidden="true">→</span></button>
-              </div>
-            </article>
-            <article class="product" role="tabpanel" id="choose-guava" aria-labelledby="pick-guava" data-flavor="guava" data-id="pink-guava-12" data-name="Biting Lulo · 12 x 200 ml" data-price="39.00">
-              <div class="product__meta">
-                <span class="label product__num">NO. 02</span>
-                <span class="label label--muted">12 x 200 ML</span>
-              </div>
-              <h3 class="display choose__name">Biting Lulo</h3>
-              <p class="product__desc" data-i18n="p2-desc"><span>Soft, floral, pink all the way through.</span><span>The sweet one you shouldn't trust.</span></p>
-              <div class="product__buy">
-                <p class="product__price"><span data-price-display>39.00</span><span class="label label--muted" data-i18n="per-box">per box · 12 x 200 ml</span></p>
-                <div class="qty" data-qty>
-                  <button type="button" class="qty__btn" data-qty-minus aria-label="Less">−</button>
-                  <input class="qty__input" type="number" min="1" max="99" value="1" aria-label="Quantity" data-qty-input>
-                  <button type="button" class="qty__btn" data-qty-plus aria-label="More">+</button>
-                </div>
-                <button type="button" class="btn btn--primary product__add" data-add-to-cart data-i18n="pick-poison">Pick your poison <span class="btn__arrow" aria-hidden="true">→</span></button>
-              </div>
-            </article>
-        </div>
-
-        <div class="choose__rv" style="--i:4">
-          <ul class="benefits-row">
-          <li class="reveal">
-            <svg class="icon icon--sm" viewBox="0 0 32 32" aria-hidden="true"><path d="M7 25c0-10 6-17 18-18 0 12-7 18-17 18z"/><path d="M7 25l10-10"/></svg>
-            <span data-i18n="usp-1">Natural ingredients</span>
-          </li>
-          <li class="reveal">
-            <svg class="icon icon--sm" viewBox="0 0 32 32" aria-hidden="true"><path d="M16 4c5 7 8 11 8 15a8 8 0 0 1-16 0c0-4 3-8 8-15z"/><path d="M12 20a4 4 0 0 0 4 4"/></svg>
-            <span data-i18n="usp-2">Clean hydration</span>
-          </li>
-          <li class="reveal">
-            <svg class="icon icon--sm" viewBox="0 0 32 32" aria-hidden="true"><circle cx="12" cy="22" r="4"/><circle cx="21" cy="14" r="3"/><circle cx="13" cy="9" r="2"/><circle cx="22" cy="24" r="1.5"/><circle cx="20" cy="5" r="1"/></svg>
-            <span data-i18n="usp-3">Maximum carbonation</span>
-          </li>
-          <li class="reveal">
-            <svg class="icon icon--sm" viewBox="0 0 32 32" aria-hidden="true"><circle cx="16" cy="12" r="7"/><path d="M12 18l-2 10 6-3 6 3-2-10"/></svg>
-            <span data-i18n="usp-4">Developed by Swiss Bartender of the Year</span>
-          </li>
-        </ul>
-        </div>
-        <p class="label label--muted choose__note choose__rv" style="--i:5" data-i18n="shop-note">Mix both flavors in one order — combine them freely in your cart.</p>
-      </div>
-    </div>
-  </section>
-
-  <!-- =====================================================
-       CARRITO
-       ===================================================== -->
-  <div class="cart-overlay" data-cart-overlay hidden></div>
-  <aside class="cart" data-cart aria-label="Cart" aria-hidden="true">
-    <div class="cart__head">
-      <p class="label" data-cart-title data-i18n="cart-title">Your cart</p>
-      <button type="button" class="cart__close" data-cart-close aria-label="Close cart">✕</button>
-    </div>
-    <!-- REVISIÓN DEL PRE-ORDER (B2B): se muestra al enviar el formulario de Partners.
-         No se mezcla con el carrito de la tienda. -->
-    <div class="pre-review" data-pre-review hidden>
-      <p class="display pre-review__title" data-i18n="review-title">Your pre-order</p>
-      <dl class="pre-review__list" data-pre-review-list></dl>
-      <dl class="cart__lines pre-review__amounts" data-pre-review-amounts></dl>
-      <p class="label label--muted pre-review__terms" data-i18n="review-terms">20% downpayment now · 80% on delivery</p>
-      <button type="button" class="btn btn--primary btn--block" data-pre-confirm></button>
-      <button type="button" class="pre-review__edit label" data-pre-edit data-i18n="review-edit">Edit details</button>
-      <p class="label label--muted pre-review__note" data-pre-review-note></p>
-    </div>
-    <ul class="cart__items" data-cart-items></ul>
-    <p class="cart__empty" data-cart-empty data-i18n="cart-empty">Your cart is empty. Pick your poison.</p>
-    <div class="cart__foot">
-      <div class="promo" data-promo>
-        <button type="button" class="promo__toggle" data-promo-toggle aria-expanded="false" data-i18n="promo-toggle">Promo code +</button>
-        <form class="promo__form" data-promo-form hidden>
-          <label class="sr-only" for="promo-input">Promo code</label>
-          <input class="input promo__input" id="promo-input" type="text" autocomplete="off" autocapitalize="characters" spellcheck="false" placeholder="CODE" data-promo-input>
-          <button type="submit" class="btn btn--secondary btn--sm" data-i18n="promo-apply">Apply</button>
-        </form>
-        <p class="promo__applied" data-promo-applied hidden>
-          <span class="label" data-promo-code></span>
-          <button type="button" class="promo__remove" data-promo-remove data-i18n="promo-remove">Remove</button>
-        </p>
-        <p class="promo__msg label label--muted" data-promo-msg role="status"></p>
-      </div>
-
-      <dl class="cart__lines">
-        <div><dt class="label label--muted" data-i18n="cart-subtotal">Subtotal</dt><dd data-cart-subtotal>0.00</dd></div>
-        <div data-promo-line hidden><dt class="label label--muted" data-promo-line-label>Discount</dt><dd data-promo-discount>0.00</dd></div>
-        <div><dt class="label label--muted" data-i18n="cart-shipping">Shipping</dt><dd class="label label--muted" data-i18n="cart-shipping-value">Calculated at checkout</dd></div>
-        <div class="cart__total"><dt class="label" data-i18n="cart-total">Total</dt><dd data-cart-total>0.00</dd></div>
-      </dl>
-      <button type="button" class="btn btn--primary btn--block" data-checkout data-i18n="checkout">Checkout <span class="btn__arrow" aria-hidden="true">→</span></button>
-      <p class="label label--muted cart__note" data-checkout-note></p>
-    </div>
+<section class="photo" aria-label="Bottles on ice" data-parallax-host>
+  <figure class="photo__frame"><img src="images/hero-bottles.jpg" alt="Malaconda bottles on ice" width="2000" height="1333" fetchpriority="high" data-parallax></figure>
+  <aside class="photo__card" data-photo-card role="button" tabindex="0" aria-expanded="false" aria-label="Every bottle carries more than soda">
+    <p class="small" style="color:#E9E9E1">Every bottle carries more than soda. It carries the bite of Malaconda. Brewed in Colombia, bound for the bold.</p>
+    <img class="badge-spin" src="images/badge.svg" alt="" width="84" height="86" aria-hidden="true">
   </aside>
+</section>
 
-  <script src="js/i18n.js"></script>
-  <script src="js/main.js"></script>
-  <script src="js/choose.js"></script>
+<section class="band-dark" id="flavors" data-parallax-host>
+  <div class="block">
+    <div class="picker" data-picker data-flavor="lulo">
+      <div class="picker__stage" tabindex="0" role="group" aria-roledescription="carousel" aria-label="Flavours, swipe or use the arrow keys">
+        <div class="picker__words" aria-hidden="true" data-parallax><span class="picker__word is-on" data-for="lulo">Lulo</span><span class="picker__word" data-for="guava">Guava</span></div>
+        <img class="picker__img is-active" data-i="0" src="images/lulo-cutout.webp" alt="Biting Lulo bottle" width="1000" height="1250">
+        <img class="picker__img" data-i="1" src="images/guava-cutout.webp" alt="Sweet Guava bottle" width="1000" height="1250">
+      </div>
+      <div class="picker__info">
+        <h2 class="display h2">Pick your poison</h2>
+        <div class="picker__tabs" role="tablist" aria-label="Flavour">
+          <button class="picker__tab" role="tab" type="button" data-i="0" data-flavor="lulo" aria-selected="true"><span class="picker__tab-name">Biting Lulo</span><span class="label">Citrus</span></button>
+          <button class="picker__tab" role="tab" type="button" data-i="1" data-flavor="guava" aria-selected="false"><span class="picker__tab-name">Sweet Guava</span><span class="label">Floral</span></button>
+        </div>
+        <div class="picker__panels">
+          <div class="picker__panel is-active" data-i="0" role="tabpanel">
+            <h3 class="flavor-name sticker">Biting Lulo</h3>
+            <p class="picker__lead">Cloud-forest citrus with a temper.</p>
+            <p>Crisp acidity strikes first, refreshes second.</p>
+            <div class="notes"><span>Citrus</span><span>Green</span><span>Dry</span></div>
+          </div>
+          <div class="picker__panel" data-i="1" role="tabpanel">
+            <h3 class="flavor-name sticker">Sweet Guava</h3>
+            <p class="picker__lead">Soft, floral, pink all the way through.</p>
+            <p>The sweet one you shouldn't trust.</p>
+            <div class="notes"><span>Ripe</span><span>Floral</span><span>Soft</span></div>
+          </div>
+        </div>
+        <div class="picker__buy">
+          <p class="price" data-price style="grid-column:1/-1"></p>
+          <div class="qty"><button type="button" data-minus aria-label="Fewer boxes">−</button><input data-qty value="1" inputmode="numeric" aria-label="Boxes"><button type="button" data-plus aria-label="More boxes">+</button></div>
+          <button class="btn" type="button" data-add>Add to cart</button>
+          <p class="small muted picker__meta">1 box = 12 bottles of 20 cl. Delivery within 4 weeks.</p>
+        </div>
+        <!-- TEMPORARY ingredient lists, to be replaced by the founders -->
+        <div class="picker__ingrs">
+          <div class="picker__panel is-active" data-i="0"><div class="ingr"><span class="label">Ingredients</span><p>Carbonated water, lulo juice (8%), cane sugar, citric acid, natural flavours, steviol glycosides.</p></div></div>
+          <div class="picker__panel" data-i="1"><div class="ingr"><span class="label">Ingredients</span><p>Carbonated water, guava purée (8%), cane sugar, citric acid, natural flavours, steviol glycosides.</p></div></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="block features" aria-label="Why Malaconda">
+  <ul class="features__list reveal">
+    <li><svg viewBox="0 0 32 32" aria-hidden="true"><path d="M6 26C6 13 13 6 26 6c0 13-7 20-20 20Z"/><path d="M6 26 18 14"/></svg><span>Natural ingredients</span></li>
+    <li><svg viewBox="0 0 32 32" aria-hidden="true"><path d="M16 4c5 6.5 8 10.5 8 15a8 8 0 0 1-16 0c0-4.5 3-8.5 8-15Z"/><path d="M12 20a4 4 0 0 0 4 4"/></svg><span>Clean hydration</span></li>
+    <li><svg viewBox="0 0 32 32" aria-hidden="true"><circle cx="11" cy="21" r="4.5"/><circle cx="21" cy="14" r="3"/><circle cx="13" cy="9" r="2"/><circle cx="24" cy="24" r="1.5"/><circle cx="24" cy="6" r="1"/></svg><span>Maximum carbonation</span></li>
+    <li><svg viewBox="0 0 32 32" aria-hidden="true"><circle cx="16" cy="12" r="7"/><path d="m11.5 18-2.5 10 7-3.5 7 3.5-2.5-10"/></svg><span>Developed by Switzerland’s Bartender of the Year</span></li>
+  </ul>
+</section>
+
+<section class="band-flower" id="story" data-flavor="lulo" data-parallax-host>
+  <span class="snake snake--story-top" aria-hidden="true" data-parallax></span>
+  <span class="snake snake--story-bottom" aria-hidden="true" data-parallax></span>
+  <div class="block story">
+    <h2 class="display h1 story__title reveal">She doesn't chase<br>She <span class="chip-ink">waits</span></h2>
+    <div class="story__cols reveal">
+      <p class="lead"><em>Mala</em> means bad in Spanish. <em>Conda</em> is the snake. Three friends from Medellín gave that name to a drink that tastes like the opposite.</p>
+      <p class="lead">Lulo grows where a snake keeps watch. Guava is the bait. The flavours were developed by the Swiss Bartender of the Year, and the bubbles do the rest.</p>
+    </div>
+  </div>
+</section>
+
+<section class="block" id="pros">
+  <div class="pros">
+    <div class="stack reveal">
+      <h2 class="display h2">Bring the snake to your business</h2>
+      <p class="lead">Give your customers something different.<br>Bring MALACONDA into your business and let them discover their new favourite soda.</p>
+      <div class="row" style="margin-top:28px"><a class="btn" href="for-pros.html">Pro access →</a><a class="link-quiet" href="pro-space.html">Pro login</a></div>
+    </div>
+    <figure class="pros__photo reveal"><img src="images/insta-1.jpg" alt="Malaconda coasters in yellow, coral and black" width="1440" height="1920" loading="lazy"></figure>
+  </div>
+</section>
+
+<section class="band-photo force-dark" id="ambassadors">
+  <img src="images/partners.jpg" alt="Biting Lulo bottles racked up on a pool table" width="1800" height="1272" loading="lazy">
+  <div class="block"><div class="stack reveal" style="max-width:520px">
+    <h2 class="display h2">Not everyone gets bitten</h2>
+    <p class="lead" style="color:#E9E9E1">Good connections should pay off. Introduce MALACONDA to the right businesses and get rewarded when they order.</p>
+    <div style="margin-top:28px"><a class="btn" href="ambassadors.html">Become an ambassador →</a></div>
+  </div></div>
+</section>
+
+<section class="block" id="contact" data-parallax-host>
+  <div class="contact-in">
+  <div class="contact">
+    <div class="contact__main">
+    <span class="snake snake--contact" aria-hidden="true" data-parallax></span>
+    <form class="lineform reveal" id="cform" data-flavor="lulo" novalidate>
+      <div class="form-grid">
+        <div class="field full">
+          <div class="dd" data-dd>
+            <button class="dd__btn" type="button" id="k-topic" role="combobox" aria-haspopup="listbox" aria-expanded="false" aria-controls="k-topic-list" aria-label="Topic"><span class="dd__val" data-dd-val>Topic</span><svg viewBox="0 0 16 16" aria-hidden="true"><path d="m3 6 5 5 5-5"/></svg></button>
+            <ul class="dd__list" id="k-topic-list" role="listbox" aria-label="Topic" hidden>
+              <li role="option" data-v="General">General</li><li role="option" data-v="Order">Order</li><li role="option" data-v="Partner">Partner</li><li role="option" data-v="Press">Press</li>
+            </ul>
+          </div>
+        </div>
+        <div class="field"><input class="input" id="k-name" placeholder="Name" aria-label="Name" autocomplete="name" required></div>
+        <div class="field"><input class="input" id="k-email" type="email" placeholder="Email" aria-label="Email" autocomplete="email" required></div>
+        <div class="field full"><textarea class="input" id="k-msg" rows="3" placeholder="Message" aria-label="Message" required></textarea></div>
+      </div>
+      <div class="row"><button class="btn" type="submit">Send message →</button></div>
+      <div id="kdone"></div>
+    </form>
+    </div>
+    <div class="contact__copy reveal">
+      <h2 class="display h2">Talk to the snake</h2>
+      <p class="lead">Orders, partnerships, press or just a bite of curiosity.</p>
+      <div><span class="label">Email</span><a class="contact__link" href="mailto:hello@malaconda.com">hello@malaconda.com</a></div>
+      <div><span class="label label--insta">Instagram</span><a class="contact__link" href="https://www.instagram.com/drinkmalaconda/" target="_blank" rel="noopener">@drinkmalaconda</a></div>
+    </div>
+  </div>
+  </div>
+</section>
+</main>
+
+<a class="btn shopfab" href="#flavors" data-shopfab>Shop now →</a>
+<div id="site-footer"></div>
+<script src="engine.js"></script>
+<script src="store.js"></script>
+<script src="common.js"></script>
+<script>
+Common.mount({active:"index.html"});
+(function(){ // mobile: the card is only the badge; a tap opens it to the left to show the sentence, a second tap closes it
+  const c=document.querySelector("[data-photo-card]"); if(!c) return;
+  const flip=()=>{ const on=c.classList.toggle("is-open"); c.setAttribute("aria-expanded",on); };
+  c.addEventListener("click",flip);
+  c.addEventListener("keydown",e=>{ if(e.key==="Enter"||e.key===" "){ e.preventDefault(); flip(); } });
+})();
+(function(){
+  const {$,$$,chf,Cart,toast}=Common, S=Store.get().settings;
+  const root=$("[data-picker]"), stage=$(".picker__stage");
+  const F=[{k:"lulo",name:"Biting Lulo"},{k:"guava",name:"Sweet Guava"}];
+  // A logged-in pro sees their own prices here, in real time. They do not check out: they request an order.
+  const pro=Store.currentUser("pro");
+  const qty=pro?{lulo:0,guava:0}:{lulo:1,guava:1}, minQ=pro?0:1; let i=0;
+  function paintPrice(){
+    const el=$("[data-price]");
+    if(pro){ const f=Store.priceSheetOf(pro.id).flavors[i]; el.innerHTML=chf(f.unit)+"<small>per bottle · "+chf(f.boxPrice)+" per box · excl. VAT</small>"; }
+    else el.innerHTML=chf(S.retailPrice)+"<small>per box · 12 × 20 cl</small>";
+  }
+  function show(n){
+    i=(n+F.length)%F.length; root.dataset.flavor=F[i].k;
+    // whichever direction you go, the old one leaves to the left and the new one arrives from the right; the bottle first, the word a beat later
+    const swap=(els,on)=>els.forEach((el,j)=>{
+      const was=el.classList.contains(on);
+      if(j===i&&!was){ el.style.transition="none"; el.classList.toggle("is-out",false); void el.offsetWidth; el.style.transition=""; el.classList.add(on); }
+      else if(j!==i&&was){ el.classList.toggle(on,false); el.classList.add("is-out"); }
+    });
+    swap($$(".picker__img"),"is-active"); swap($$(".picker__word"),"is-on");
+    $$(".picker__panel").forEach(p=>p.classList.toggle("is-active",+p.dataset.i===i));
+    $$(".picker__tab").forEach(t=>{const on=+t.dataset.i===i; t.setAttribute("aria-selected",on); t.tabIndex=on?0:-1;});
+    $("[data-qty]").value=qty[F[i].k];
+    paintPrice(); if(pro) paintPro();
+    $("#story").dataset.flavor=F[i].k;
+  }
+  $$(".picker__tab").forEach(b=>b.addEventListener("click",()=>show(+b.dataset.i)));
+  stage.addEventListener("keydown",e=>{ if(e.key==="ArrowLeft")show(i-1); if(e.key==="ArrowRight")show(i+1); });
+  let x0=null;
+  stage.addEventListener("pointerdown",e=>{ x0=e.clientX; });
+  stage.addEventListener("pointercancel",()=>{ x0=null; });
+  stage.addEventListener("pointerup",e=>{ if(x0===null)return; const dx=e.clientX-x0; x0=null; if(Math.abs(dx)>50) show(i+(dx<0?1:-1)); });
+  const q=$("[data-qty]");
+  const setQ=n=>{ qty[F[i].k]=Math.max(minQ,Math.min(99,isNaN(n)?minQ:n)); q.value=qty[F[i].k]; if(pro) paintPro(); };
+  $("[data-minus]").addEventListener("click",()=>setQ(qty[F[i].k]-1)); $("[data-plus]").addEventListener("click",()=>setQ(qty[F[i].k]+1));
+  q.addEventListener("input",()=>setQ(parseInt(q.value)));
+  $("[data-add]").addEventListener("click",()=>{
+    if(pro){
+      // a pro pays like anyone else: the quantities go to the pro checkout page
+      try{ sessionStorage.setItem("mlc_pro_order",JSON.stringify(F.map(f=>({flavor:f.k,boxes:qty[f.k]})).filter(l=>l.boxes>0))); }catch(e){}
+      location.href="pro-checkout.html"; return;
+    }
+    const k=F[i].k, n=qty[k]; Cart.add(k,n); Common.openCart();
+  });
+  // pro mode: live total for the whole order (tiers count all flavours together), request instead of cart
+  let sum=null;
+  function paintPro(){
+    const lines=F.map(f=>({flavor:f.k,boxes:qty[f.k]})).filter(l=>l.boxes>0), p=Store.previewProOrder(pro.id,lines), c=Store.conditionsOf(pro.id);
+    $("[data-add]").disabled=!p.boxes;
+    const nextTier=S.tiers.find(t=>t.min>p.boxes);
+    sum.innerHTML=p.boxes
+      ? '<table class="breakdown">'+p.lines.map(r=>`<tr><td>${r.boxes} box${r.boxes>1?"es":""} of ${F.find(f=>f.k===r.flavor).name}<br><span class="small muted">12 bottles of 20 cl each, ${chf(r.boxPrice)} per box</span></td><td>${chf(r.amount)}</td></tr>`).join("")
+        +(p.tierPct?`<tr class="neg"><td>Volume −${p.tierPct}%</td><td>−${chf(p.tierAmount)}</td></tr>`:"")
+        +(p.welcomePct?`<tr class="neg"><td>Welcome −${p.welcomePct}%</td><td>−${chf(p.extraAmount)}</td></tr>`:"")
+        +(p.creditPct?`<tr class="neg"><td>Referral credit −${p.creditPct}%</td><td>−${chf(p.extraAmount)}</td></tr>`:"")
+        +`<tr class="total"><td>Total excl. VAT</td><td>${chf(p.net)}</td></tr></table>`
+        +(nextTier&&c.flags.tiers?`<p class="small muted">${nextTier.min-p.boxes} more box${nextTier.min-p.boxes>1?"es":""} for −${nextTier.pct}% on the whole order.</p>`:"")
+        +(p.welcomePct?'<p class="small muted">The welcome offer applies to your first order.</p>':"")
+      : '<p class="small muted">Choose quantities to see your total. Prices exclude VAT.</p>';
+  }
+  if(pro){
+    $("[data-add]").textContent="Pay and order";
+    $(".picker__meta").innerHTML='1 box = 12 bottles of 20 cl. Pay by card, delivery within 4 weeks. Prefer an invoice or to talk first? <a class="link-quiet" href="#contact">Message us</a>.';
+    const lab=document.createElement("p"); lab.className="label"; lab.textContent="Your prices, "+pro.name; $(".picker__info h2").after(lab);
+    sum=document.createElement("div"); sum.className="picker__sum"; $(".picker__buy").after(sum);
+  }
+  show(0);
+
+  // the big flavour word: from the moment the section enters the screen it fades in and glides down at the same time, on one eased curve,
+  // and settles behind the bottle (glyph tops level with the "Pick your poison" title) at full opacity (CSS, driven by --p)
+
+  // floating Shop now: a vertical glide only. It starts in the hero already at the right edge distance, travels down while the page
+  // scrolls, reaches the bottom corner exactly when the photo's bottom edge enters the screen, then stays attached to the photo,
+  // rides up with it, then fades out when the flavour picker comes up (reversed when scrolling back)
+  const clamp=(v,lo,hi)=>Math.min(hi,Math.max(lo,v));
+  const fab=$("[data-shopfab]"), slot=$("[data-fab-slot]"), pick=$("#flavors"), photo=$(".photo");
+  if(fab&&slot&&pick&&photo){
+    let w=0,h=0,y0=0,end=1,raf=0;
+    const ease=t=>.5-.5*Math.cos(Math.PI*t);
+    function place(){
+      raf=0;
+      const vw=document.documentElement.clientWidth, vh=innerHeight, g=vw<=720?20:24;
+      const bx=vw-w-g;
+      // the glide is spread over a long run: it ends where the photo's bottom edge sits at 92% of the screen, with the button resting on it
+      const yT=vh*.92-h-g;
+      const glide=y0+(yT-y0)*ease(clamp(scrollY/end,0,1));
+      const attached=photo.getBoundingClientRect().bottom-h-g;
+      const k=24, y=(glide+attached)/2-Math.sqrt(Math.pow((glide-attached)/2,2)+k*k/4)+k/2*0;   // smooth minimum: no kink where the two meet
+      // it fades out as the flavour name ("Biting Lulo") comes up; from the first moment of leaving it is no longer clickable or focusable
+      const nm=$(".picker__panel.is-active .flavor-name"), gone=nm?nm.getBoundingClientRect().top<vh-4:false;
+      fab.style.translate=Math.round(bx)+"px "+Math.round(y)+"px";
+      fab.classList.toggle("is-gone",gone);
+      fab.tabIndex=gone?-1:0; fab.setAttribute("aria-hidden",gone?"true":"false");
+    }
+    function measure(){
+      const r=fab.getBoundingClientRect(); w=r.width; h=r.height;
+      slot.style.height=h+"px";
+      y0=slot.getBoundingClientRect().top+scrollY;
+      end=Math.max(1,photo.getBoundingClientRect().bottom+scrollY-innerHeight*.92);
+      place();
+    }
+    const tick=()=>{ if(!raf) raf=requestAnimationFrame(place); };
+    addEventListener("scroll",tick,{passive:true}); addEventListener("resize",measure); addEventListener("load",measure);
+    (document.fonts&&document.fonts.ready||Promise.resolve()).then(measure); measure();
+  }
+
+  // topic dropdown, styled to the site instead of the native select
+  const dd=$("[data-dd]"), ddBtn=$(".dd__btn",dd), ddList=$(".dd__list",dd), ddVal=$("[data-dd-val]",dd), ddOpts=$$("[role=option]",ddList);
+  let cur=0;
+  const mark=n=>{ cur=clamp(n,0,ddOpts.length-1); ddOpts.forEach((o,j)=>o.classList.toggle("is-cur",j===cur)); };
+  const ddOpen=()=>{ ddList.hidden=false; ddBtn.setAttribute("aria-expanded","true"); dd.classList.add("is-open"); mark(Math.max(0,ddOpts.findIndex(o=>o.dataset.v===dd.dataset.value))); };
+  const ddClose=()=>{ ddList.hidden=true; ddBtn.setAttribute("aria-expanded","false"); dd.classList.remove("is-open"); };
+  function ddPick(n){ dd.dataset.value=ddOpts[n].dataset.v; ddVal.textContent=dd.dataset.value; dd.classList.add("has-val"); dd.classList.remove("is-err"); ddOpts.forEach((o,j)=>o.setAttribute("aria-selected",j===n)); ddClose(); ddBtn.focus(); }
+  ddBtn.addEventListener("click",()=>ddList.hidden?ddOpen():ddClose());
+  ddBtn.addEventListener("keydown",e=>{
+    if(["ArrowDown","ArrowUp","Enter"," "].includes(e.key)){
+      e.preventDefault();
+      if(ddList.hidden) ddOpen(); else if(e.key==="ArrowDown") mark(cur+1); else if(e.key==="ArrowUp") mark(cur-1); else ddPick(cur);
+    } else if(e.key==="Escape"&&!ddList.hidden){ e.preventDefault(); ddClose(); }
+    else if(e.key==="Tab") ddClose();
+  });
+  ddOpts.forEach((o,j)=>{ o.addEventListener("mouseenter",()=>mark(j)); o.addEventListener("click",()=>ddPick(j)); });
+  document.addEventListener("click",e=>{ if(!dd.contains(e.target)) ddClose(); });
+
+  // contact form -> founders' admin
+  $("#cform").addEventListener("submit",e=>{
+    e.preventDefault();
+    if(!dd.dataset.value){ dd.classList.add("is-err"); ddOpen(); ddBtn.focus(); return; }
+    if(!e.target.reportValidity()) return;
+    Store.submitContact({name:$("#k-name").value.trim(),email:$("#k-email").value.trim(),topic:dd.dataset.value,message:$("#k-msg").value.trim()});
+    $("#kdone").innerHTML='<div class="alert alert--ok">Message sent.</div>'; e.target.reset();
+    delete dd.dataset.value; ddVal.textContent="Topic"; dd.classList.remove("has-val"); ddOpts.forEach(o=>o.removeAttribute("aria-selected"));
+  });
+})();
+</script>
+
 </body>
 </html>

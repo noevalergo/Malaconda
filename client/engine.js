@@ -103,6 +103,9 @@
   }
 
   /* Consumer order price: retail price, welcome offer on the first order, no cap. */
+  // VAT contained in a VAT-inclusive amount
+  const vatIncluded = (amount, settings) => round2(amount * settings.vatPct / (100 + settings.vatPct));
+
   function priceConsumerOrder({ boxes, settings, isFirst }) {
     const gross = round2(boxes * settings.retailPrice);
     const welcomePct = isFirst ? settings.consumerWelcomePct : 0;
@@ -201,7 +204,7 @@
 
   return {
     FLAVORS, DEFAULT_SETTINGS, round2, tierPct, listBoxPrice, validateNegotiated, checkPriceInvariant, bestCaseBottle,
-    isFirstOrder, priceProOrder, priceConsumerOrder, priceSheet,
+    isFirstOrder, priceProOrder, priceConsumerOrder, vatIncluded, priceSheet,
     firstPaidOrder, referredStatuses, creditSummary, venueWindow, commissionLines, monthKey, addMonths,
   };
 });

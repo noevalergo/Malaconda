@@ -1,6 +1,6 @@
 const test = require("node:test");
 const assert = require("node:assert/strict");
-const E = require("../client/proto/engine.js");
+const E = require("../client/engine.js");
 const S = E.DEFAULT_SETTINGS;
 
 test("volume tiers: 9 -> 0, 10 -> 5, 20 -> 5, 21 -> 10", () => {
@@ -202,4 +202,9 @@ test("credit from a ledger keeps the percentage frozen when it was earned", () =
   const c = E.creditSummary("R", pros, orders, { ...S, referral: { ...S.referral, pctPer: 9 } }, ledger);
   assert.equal(c.earned, 5, "later settings changes do not rewrite earned credit; revoked entries do not count");
   assert.equal(c.available, 5);
+});
+
+test("VAT contained in a VAT-inclusive amount", () => {
+  assert.equal(E.vatIncluded(117, E.DEFAULT_SETTINGS), 8.77);   // 117 / 1.081 = 108.23, VAT 8.77
+  assert.equal(E.vatIncluded(0, E.DEFAULT_SETTINGS), 0);
 });

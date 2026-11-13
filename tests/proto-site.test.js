@@ -6,7 +6,7 @@ const fs = require("node:fs");
 const path = require("node:path");
 const vm = require("node:vm");
 
-const DIR = path.join(__dirname, "..", "client", "proto");
+const DIR = path.join(__dirname, "..", "client");
 const pages = fs.readdirSync(DIR).filter((f) => f.endsWith(".html"));
 const read = (f) => fs.readFileSync(path.join(DIR, f), "utf8");
 const visible = (html) => html.replace(/<script[\s\S]*?<\/script>/g, "").replace(/<style[\s\S]*?<\/style>/g, "").replace(/<!--[\s\S]*?-->/g, "");
@@ -148,7 +148,7 @@ test("statement page is a real document and never shows prices or discounts", ()
 
 test("order forms record payment, delivery and tracking", () => {
   const js = read("admin.js");
-  for (const id of ["o-pm", "o-paid", "o-inv", "o-car", "o-trk", "o-ship", "o-deliv", "o-via", "o-note"]) assert.ok(js.includes(`id="${id}"`), `admin order form has ${id}`);
+  for (const id of ["o-pm", "o-paid", "o-inv", "o-car", "o-trk", "o-ship", "o-deliv", "o-via", "o-note"]) assert.ok(js.includes(`id="${id}"`) || js.includes(`carrierInput("${id}"`), `admin order form has ${id}`);
   assert.ok(js.includes("Store.updateOrder") && js.includes("Store.createManualOrder"));
 });
 

@@ -1,0 +1,142 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="robots" content="noindex, nofollow">
+<title>Pro payment - MALACONDA</title>
+<meta name="description" content="Pay your Malaconda order with your pro prices.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Chivo:wght@400;500&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<script src="theme.js"></script>
+<script src="i18n.js"></script>
+<link rel="stylesheet" href="proto.css">
+</head>
+<body>
+<div id="site-nav"></div>
+<main id="app"></main>
+<div id="site-footer"></div>
+<script src="engine.js"></script>
+<script src="store.js"></script>
+<script src="common.js"></script>
+<script src="pay.js"></script>
+<script src="auth.js"></script>
+<script>
+Common.mount({active:"pro-checkout.html"});
+/* Pro payment: the same card payment as a consumer, at the pro's own prices (excl. VAT, VAT added at the end).
+   The server knows the pro's prices and prices the order itself; this page only shows it and confirms the payment.
+   Whoever prefers an invoice or a conversation writes to the founders instead. */
+Auth.gate("pro","Pro payment","Log in to pay with your prices.",function(user){
+  const {esc,chf,pct,$}=Common, F=Store.FLAVORS, VAT=Store.get().settings.vatPct;
+  const KEY="mlc_pro_order", eur=c=>chf(c/100);
+  const boxCents=l=>Math.round(l.unitMilli*12/10);
+  let srv=null, q=null, pay=null, intent=null, busy=false;
+  const lines=()=>{ try{ return (JSON.parse(sessionStorage.getItem(KEY))||[]).filter(l=>F[l.flavor]&&l.boxes>0); }catch(e){ return []; } };
+  const steps=()=>`<ol class="steps"><li><a href="index.html#flavors">Prices</a></li><li aria-current="step">Payment</li></ol>`;
+  const root=()=>$("#app");
+
+  function summary(o){
+    return `<p class="label">Your order, ${esc(user.name)}</p>
+      <table class="breakdown">${o.lines.map(l=>`<tr><td>${l.boxes} box${l.boxes>1?"es":""} of ${F[l.flavor].name}<br><span class="small muted">12 bottles of 20 cl each, ${eur(boxCents(l))} per box</span></td><td>${eur(l.boxes*boxCents(l))}</td></tr>`).join("")}
+      ${o.tierPct?`<tr class="neg"><td>Volume −${o.tierPct}%</td><td>−${eur(o.tierCents)}</td></tr>`:""}
+      ${o.welcomePct?`<tr class="neg"><td>Welcome −${o.welcomePct}%</td><td>−${eur(o.extraCents)}</td></tr>`:""}
+      ${o.creditPct?`<tr class="neg"><td>Referral credit −${o.creditPct}%</td><td>−${eur(o.extraCents)}</td></tr>`:""}
+      <tr><td>Total excl. VAT</td><td>${eur(o.netCents)}</td></tr>
+      <tr><td>VAT ${pct(VAT)}</td><td>${eur(o.vatCents)}</td></tr>
+      <tr class="total"><td>Total to pay</td><td>${eur(o.totalCents)}</td></tr></table>`;
+  }
+
+  /* the server needs to know who is paying: same email and password as the pro space */
+  function loginView(msg){
+    root().innerHTML=`<section class="block">${steps()}<form class="card stack narrow" id="srv-login"><h1 class="card__title">Confirm your password</h1>
+      <p>To pay with your pro prices, confirm your password.</p>
+      <div class="field"><label class="label" for="l-email">Email</label><input class="input" id="l-email" autocomplete="username" value="${esc(user.email)}" required></div>
+      <div class="field"><label class="label" for="l-pw">Password</label><input class="input" id="l-pw" type="password" autocomplete="current-password" required></div>
+      <button class="btn" type="submit">Continue</button>${msg||""}<p class="hint demo-only">Staging: demo pros use the password “demo”. See <a class="link-quiet" href="demo.html">demo accounts</a>.</p></form></section>`;
+  }
+
+  function empty(){ root().innerHTML=`<section class="block">${steps()}<div class="stack narrow"><h1 class="display h2">Nothing to pay yet</h1><p>Choose your quantities on the site, with your own prices.</p><div><a class="btn" href="index.html#flavors">See my prices</a></div></div></section>`; }
+
+  async function build(){
+    if(!lines().length) return empty();
+    try{ q=await Pay.api("/pro/quote",{lines:lines()}); }catch(e){ if(/Log in/.test(e.message)){ srv=null; return loginView(); } root().innerHTML=`<section class="block">${steps()}<div class="alert alert--warn">${esc(e.message)}</div></section>`; return; }
+    const u=srv||{};
+    root().innerHTML=`<section class="block">${steps()}
+      <div class="shopgrid"><div class="stack"><h1 class="display h2">Pay your order</h1>
+        <form class="stack" id="co" novalidate>
+          <div class="co-block"><h2 class="co-title"><span>1</span>Delivery</h2><div class="form-grid">
+            <div class="field full"><label class="label" for="c-name">Venue</label><input class="input" id="c-name" value="${esc(u.name||user.name||"")}" required></div>
+            <div class="field full"><label class="label" for="c-address">Street and number</label><input class="input" id="c-address" value="${esc(u.address||user.address||"")}" required></div>
+            <div class="field"><label class="label" for="c-zip">Postcode</label><input class="input" id="c-zip" value="${esc(u.zip||user.zip||"")}" required></div>
+            <div class="field"><label class="label" for="c-city">City</label><input class="input" id="c-city" value="${esc(u.city||user.city||"")}" required></div></div></div>
+          <div class="co-block"><h2 class="co-title"><span>2</span>Payment</h2>
+            <div id="payment-element" class="payment-element"><p class="small muted" id="pay-wait">Loading the secure payment form…</p></div>
+            <p class="hint" id="pay-hint">Card, Apple Pay, Google Pay or TWINT. Payments are handled by Stripe: your card details never touch our server. <span class="badge">Test mode</span></p>
+            <p class="small">The invoice goes to <span class="paper">${esc(user.email)}</span>.</p></div>
+          <button class="btn btn--block" id="pay" type="submit" disabled><span id="pay-label">Pay ${eur(q.totalCents)}</span></button><div id="co-err" aria-live="polite"></div>
+          <p class="small">Prefer an invoice or to talk first? <a class="link-quiet" href="index.html#contact">Message us</a>.</p>
+        </form></div>
+        <aside class="card stack">${summary(q)}<a class="link-quiet" href="index.html#flavors">Change quantities</a></aside></div></section>`;
+    try{ pay=await Pay.mount($("#payment-element"),q.totalCents); pay.onReady(()=>{ const w=$("#pay-wait"); if(w) w.remove(); $("#pay").disabled=false; }); }
+    catch(e){ $("#payment-element").innerHTML=`<div class="alert alert--warn">${esc(e.message)}</div>`; }
+  }
+
+  function mirror(o){   // the pro space and the admin of the prototype read the browser store: keep them in step
+    try{
+      if(Store.get().orders.some(x=>x.payment&&x.payment.reference===o.ref)) return;
+      const c=Store.payProOrder({proId:user.id,lines:o.lines.map(l=>({flavor:l.flavor,boxes:l.boxes})),shipping:{},paymentRef:o.ref});
+      Object.assign(c,{gross:o.grossCents/100,tierPct:o.tierPct,welcomePct:o.welcomePct,creditPct:o.creditPct,net:o.netCents/100}); Store.save();
+    }catch(e){}
+  }
+  function finished(o){
+    root().innerHTML=`<section class="block">${steps()}<div class="shopgrid"><div class="stack"><p class="label">Order ${esc(o.ref)}</p><h1 class="display h2">Thank you.</h1>
+      <p>The invoice goes to <span class="paper">${esc(o.email)}</span>. Delivery within 4 weeks.</p>
+      <div class="row"><a class="btn" href="pro-space.html#orders">Track my order</a><a class="link-quiet" href="index.html">Back to the site</a></div></div>
+      <aside class="card stack"><span class="badge badge--ok">Paid</span>${summary(o)}</aside></div></section>`;
+    scrollTo(0,0);
+  }
+  async function settle(clientSecret){
+    const o=await Pay.api("/order/status",{clientSecret});
+    if(o.paymentStatus==="succeeded"&&o.kind==="pro"){ try{ sessionStorage.removeItem(KEY); }catch(e){} mirror(o); history.replaceState(null,"",location.pathname); finished(o); return true; }
+    return o;
+  }
+  async function returning(clientSecret,redirectStatus){
+    root().innerHTML=`<section class="block">${steps()}<p class="small muted">Checking your payment…</p></section>`;
+    try{ const r=await settle(clientSecret); if(r===true) return;
+      if(r.paymentStatus==="processing"||redirectStatus==="pending"){ root().innerHTML=`<section class="block">${steps()}<div class="stack narrow"><h1 class="display h2">Almost there.</h1><p>Your payment is being confirmed. We email you as soon as it goes through.</p><div><a class="link-quiet" href="index.html">Back to the site</a></div></div></section>`; return; }
+    }catch(e){}
+    history.replaceState(null,"",location.pathname);
+    root().innerHTML=`<section class="block">${steps()}<div class="stack narrow"><h1 class="display h2">Payment not completed.</h1><div class="alert alert--warn">Nothing was charged. Your selection is still here.</div><div><a class="btn" href="pro-checkout.html">Try again</a></div></div></section>`;
+  }
+
+  const fail=t=>{ $("#co-err").innerHTML=`<div class="alert alert--warn">${t}</div>`; };
+  const busyState=on=>{ busy=on; const b=$("#pay"); if(b){ b.disabled=on; $("#pay-label").textContent=on?"Processing…":`Pay ${eur(q.totalCents)}`; } };
+  document.addEventListener("submit",async e=>{
+    if(e.target.id==="srv-login"){ e.preventDefault();
+      try{ const r=await Pay.api("/pro/login",{email:$("#l-email").value,password:$("#l-pw").value}); srv=r.pro; build(); }
+      catch(err){ loginView(`<div class="alert alert--bad">${esc(err.message)}</div>`); } return; }
+    if(e.target.id!=="co") return; e.preventDefault(); if(busy||!pay) return;
+    const v=i=>$("#"+i).value.trim();
+    if(!v("c-name")||!v("c-address")||!v("c-zip")||!v("c-city")) return fail("Fill in the delivery address.");
+    $("#co-err").innerHTML=""; busyState(true);
+    const body={lines:lines(),name:v("c-name"),address:v("c-address"),zip:v("c-zip"),city:v("c-city")}, fp=JSON.stringify([body,q.totalCents]);
+    const r=await pay.pay(async()=>{ if(!intent||intent.fp!==fp){ const c=await Pay.api("/pro/checkout",body); intent={fp,clientSecret:c.clientSecret}; } return intent.clientSecret; },
+      {name:body.name,email:user.email,returnUrl:new URL("pro-checkout.html",location.href).href}).catch(err=>({error:{message:err.message}}));
+    if(r.error){ busyState(false); if(r.error.type!=="validation_error") fail(esc(r.error.message||"The payment did not go through.")); return; }
+    try{ const o=await settle(r.clientSecret); if(o!==true){ busyState(false); fail("Your payment is being confirmed. We email you as soon as it goes through."); } }
+    catch(err){ busyState(false); fail(esc(err.message)); }
+  });
+
+  (async function boot(){
+    const p=new URLSearchParams(location.search), cs=p.get("payment_intent_client_secret");
+    if(cs) return returning(cs,p.get("redirect_status"));
+    try{ srv=(await Pay.api("/pro/me")).pro; }catch(e){}
+    if(srv&&srv.email!==user.email){ try{ await Pay.api("/pro/logout",{}); }catch(e){} srv=null; }   // another venue was signed in on the server
+    if(!srv) return lines().length?loginView():empty();
+    build();
+  })();
+});
+</script>
+</body>
+</html>

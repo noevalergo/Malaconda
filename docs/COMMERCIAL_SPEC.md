@@ -1,7 +1,7 @@
 # MALACONDA Commercial model and site spec (short version)
 
 Status: draft for the founders' presentation. All numbers are **starting values**, editable in the admin settings.
-The clickable prototype in `client/proto/` implements every rule below with fictional data.
+The site in `client/` implements every rule below with fictional data.
 The full price, discount, credit and rights model, with the example profiles, is in [ACCOUNT_MODEL.md](ACCOUNT_MODEL.md). This page is the summary.
 
 ---
@@ -13,7 +13,7 @@ The full price, discount, credit and rights model, with the example profiles, is
 | Visitor | Retail prices, story, flavours | Buy as a guest at the full retail price, or create an account for 10% off the first order |
 | Customer (individual account) | Own orders and delivery details | Order, track orders, edit details and password |
 | Pro (bar, restaurant, club, hotel, shop, distributor) | Retail prices, "wholesale prices after login" | Request access |
-| Logged-in pro | **Own prices in real time on the site** (list or negotiated), live total for any quantity | Request an order (no online checkout), see prices and tiers, track orders, recommend other pros, see referral credit |
+| Logged-in pro | **Own prices in real time on the site** (list or negotiated), live total for any quantity | Order and pay online by card (VAT added at the end), see prices and tiers, track orders, recommend other pros, see referral credit |
 | Ambassador | Own venues and commissions | Share code and link, read statements |
 | Founders (admin) | Everything | Create accounts, enter orders, manage attribution and commissions, edit settings |
 
@@ -117,7 +117,7 @@ Order statuses: placed, invoice sent, paid, shipped, delivered, cancelled. **The
 |---|---|
 | Overview | Revenue, boxes sold, commissions to pay, counts, to-do list, latest orders |
 | Customers | Individual accounts, their orders, password reset, CSV export |
-| Requests | Filters Access, Ambassadors, Orders, Messages. **Order requests** show the quote and any price difference; "Create order" makes the order with today's prices |
+| Inbox | Forms filled in by visitors, with filters Pro access, Ambassadors, Messages. Approving an access request or an application creates the account |
 | Pro accounts | Create, temporary password, reset, company details, **negotiated prices per flavour with reason and change log**, conditions summary, attribution with history, referral credit |
 | Orders | Pro orders (manual order with live price breakdown, invoice and payment steps, cancel) and consumer orders (paid, shipped, delivered, cancel), CSV export |
 | Ambassadors | Create, edit rate, duration and IBAN, activate/deactivate, temporary password |
@@ -143,11 +143,11 @@ Order statuses: placed, invoice sent, paid, shipped, delivered, cancelled. **The
 | Space | Tabs |
 |---|---|
 | Customer | Orders (status steps) · Details (delivery address, password) |
-| Pro | My prices (own prices, tier table, what applies to the next order) · My orders (tracking and pending requests) · Recommend a pro (code, link, credit ledger) · Account (company details, password). No ordering here: prices and the order request are on the site |
+| Pro | My prices (own prices, tier table, what applies to the next order) · My orders (tracking) · Recommend a pro (code, link, credit ledger) · Account (company details, password). Ordering and card payment happen on the site |
 | Ambassador | Venues · Statements · Code and link · Account (IBAN, password) |
-| Founders | Overview · Requests · Customers · Pro accounts · Orders · Ambassadors · Commissions · Settings |
+| Founders | Overview · Inbox · Customers · Pro accounts · Orders (shop and pros apart) · Ambassadors · Commissions · Settings |
 
-**Demo mode.** The prototype has no login: a "View as" menu in the header switches between Visitor, Customer, Pro (with orders, or new), Ambassador (with commissions, or new) and Founders admin, so the founders can see each experience. The login forms and password change flows exist in the code and are switched off by `Store.DEMO_MODE`.
+**Demo accounts (staging only).** An eye in the corner lets the founders and testers switch between Visitor, Customer, Pro, Ambassador and Founders admin to see each experience. It is not shown on the live site, and every demo account and test order is deleted before launch.
 
 ## 11. Design notes (prototype)
 
@@ -160,25 +160,25 @@ Order statuses: placed, invoice sent, paid, shipped, delivered, cancelled. **The
 - Sections are only as tall as their content. Only the flavour picker is forced to one screen. Sections never exceed the viewport and land right under the header from the menu.
 - Story block takes the colour of the flavour selected in the picker (yellow Lulo, coral Guava).
 - Pros and Ambassadors pages: photo hero with centred text and one action, three big benefits, then an open (borderless) form. No hat repeating the page name; form heading is a sentence, button is the action.
-- Contact (home): labelled email and Instagram, form with General, Order, Partner and Press topics. Messages arrive in the admin Requests tab.
+- Contact (home): labelled email and Instagram, form with General, Order, Partner and Press topics. Messages arrive in the admin Inbox.
 - Footer: logo with the turning snake, newsletter, links. Photos: pool table bottles (Pros), coasters (Ambassadors), from the original site and the Instagram account.
 - Hero photo shown in landscape, full width, with a slow zoom on scroll. The Pros section uses the pool table photo.
 - Section hats are kept only for Pros, Ambassadors and Contact.
 
-## 12. Prototype
+## 12. Run it
 
 ```bash
-cd client && python3 -m http.server 8000     # then open http://localhost:8000/proto/demo.html
+python3 tools/devserve.py 8000 client        # then open http://localhost:8000
 node --test tests/*.test.js                  # pricing, referral and commission rules
 ```
 
-Fictional data lives in the browser (localStorage). In production, pro prices are served by the backend only to authenticated pros.
+Without the API, fictional data lives in the browser (localStorage). In production, pro prices are served by the backend only to authenticated pros.
 
-## 13. Not decided / outside the prototype
+## 13. Not decided / still to do
 
 - Exact pro price, VAT handling on invoices, minimum order for pros.
 - Payment-link for pro invoices (Stripe or bank transfer only).
-- Real email delivery of temporary passwords; real password security (the prototype stores demo passwords in the browser).
-- Statement PDF, payout threshold, referral credit ledger with stored percentages (the prototype recomputes credit from current settings).
-- DE, FR, ES translations (the prototype is in English).
+- Real email delivery of temporary passwords; real password security (the browser demo stores demo passwords).
+- Statement PDF, payout threshold, referral credit ledger with stored percentages (the browser demo recomputes credit from current settings).
+- DE, IT, ES translations reviewed by native speakers (the site is available in EN, DE, FR, IT, ES; the admin stays in English).
 - Ingredient list and legal labelling copy, to be supplied by the founders.

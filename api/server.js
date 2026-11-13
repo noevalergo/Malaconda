@@ -49,9 +49,11 @@ app.use((req, res, next) => {
 });
 
 app.use(createApp());
+// the demo accounts page belongs to the staging review: the live site has no such page
+if (!enabled) app.get("/demo.html", (req, res) => res.redirect("/"));
 // the same process also serves the static site (client/), so one Hostinger app is enough
 const clientDir = [path.join(__dirname, "..", "client"), path.join(__dirname, "client")].find((d) => fs.existsSync(d));
-app.get("/", (req, res) => res.redirect("/proto/index.html"));
+app.get(/^\/proto(\/.*)?$/, (req, res) => res.redirect(301, req.path.replace(/^\/proto/, "") || "/"));   // links sent before the move
 app.use(express.static(clientDir, { extensions: ["html"] }));
 
 app.listen(config.port, () => console.log(`Malaconda on ${config.baseUrl} (port ${config.port})`));

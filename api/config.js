@@ -12,7 +12,7 @@ const config = {
   port: Number(env.PORT) || 3000,
   baseUrl: (env.PUBLIC_BASE_URL || "http://localhost:3000").replace(/\/$/, ""),
   db: { host: env.DB_HOST || "127.0.0.1", port: Number(env.DB_PORT) || 3306, user: env.DB_USER || "root", password: env.DB_PASSWORD || "", database: env.DB_NAME || "malaconda" },
-  stripe: { secretKey: env.STRIPE_SECRET_KEY || "", webhookSecret: env.STRIPE_WEBHOOK_SECRET || "" },
+  stripe: { secretKey: env.STRIPE_SECRET_KEY || "", publishableKey: env.STRIPE_PUBLISHABLE_KEY || "", webhookSecret: env.STRIPE_WEBHOOK_SECRET || "" },
   brevo: { apiKey: env.BREVO_API_KEY || "", senderName: env.BREVO_SENDER_NAME || "Malaconda", senderEmail: env.BREVO_SENDER_EMAIL || "", teamEmail: env.TEAM_EMAIL || "" },
   retail: { settings: null },
 };

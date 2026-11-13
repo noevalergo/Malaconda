@@ -14,12 +14,10 @@
   const PAYMENT_METHODS = ["Bank transfer", "Cash", "Card in person", "Card (online)", "Other"];
   const VIA_OPTIONS = ["In person visit", "Email", "Phone", "Website", "Website request", "Other"];
   const CARRIERS = ["Swiss Post", "DHL", "UPS", "DPD", "Own delivery", "Other"];
-  // only carriers with a stable public tracking URL get a link
-  function trackingUrl(carrier, number) {
-    const n = encodeURIComponent(String(number || "").trim()); if (!n) return null;
-    if (carrier === "DHL") return `https://www.dhl.com/ch-en/home/tracking/tracking-parcel.html?submit=1&tracking-id=${n}`;
-    if (carrier === "UPS") return `https://www.ups.com/track?tracknum=${n}`;
-    return null;
+  /* One public tracker for every carrier: the customer lands on the page of their parcel, in their language. */
+  function trackingUrl(carrier, number, lang) {
+    const n = encodeURIComponent(String(number || "").replace(/\s+/g, "")); if (!n) return null;
+    return `https://parcelsapp.com/${["en", "fr", "de", "it", "es"].includes(lang) ? lang : "en"}/tracking/${n}`;
   }
   const DATE_FIELD = { invoiced: "invoicedAt", paid: "paidAt", shipped: "shippedAt", delivered: "deliveredAt" };
   // dates are the source of truth; status and history are rebuilt from them
@@ -295,9 +293,10 @@
 
   /* A manual order: a visit, an email, a phone call. Everything about the deal is recorded when it is created. */
   function createManualOrder(d, by) {
+    if (d.shippedAt) checkShipping(d.carrier, d.tracking, d.noTracking);
     const o = placeProOrder({ proId: d.proId, lines: d.lines, channel: "manual", now: isoDate(d.createdAt) || undefined,
       meta: { via: d.via || "Other", reference: d.reference || "", invoiceNo: d.invoiceNo || "", note: d.note || "", payment: { method: d.paymentMethod || "Bank transfer", reference: d.paymentReference || "" },
-        shipping: { carrier: d.carrier || "", tracking: d.tracking || "", address: d.address, zip: d.zip, city: d.city } } });
+        shipping: { carrier: d.carrier || "", tracking: d.noTracking ? "" : d.tracking || "", noTracking: !!d.noTracking, address: d.address, zip: d.zip, city: d.city } } });
     o.invoicedAt = isoDate(d.invoicedAt); o.paidAt = isoDate(d.paidAt); o.shippedAt = isoDate(d.shippedAt); o.deliveredAt = isoDate(d.deliveredAt);
     o.editLog.push({ at: nowIso(), by: by || "admin", changes: ["Order created"] });
     rebuildHistory(o, STATUS_FLOW);
@@ -308,6 +307,7 @@
   /* Correct an order after the fact. Every change is logged. Prices of the lines are recomputed with the order's own unit prices. */
   function updateOrder(id, patch, by) {
     const s = get(), o = s.orders.find((x) => x.id === id); if (!o) throw new Error("Unknown order");
+    lockWeb("pro", o, patch); guardShipping(o, patch);
     const log = [];
     const L = { createdAt: "Order date", via: "Received", reference: "Reference", invoiceNo: "Invoice number", note: "Note", invoicedAt: "Invoice sent", paidAt: "Paid on", shippedAt: "Shipped on", deliveredAt: "Delivered on" };
     const dateKeys = ["createdAt", "invoicedAt", "paidAt", "shippedAt", "deliveredAt"];
@@ -322,6 +322,7 @@
     const sub = (grp, keys, labels) => keys.forEach((k) => { const key = `${grp}.${k}`; if (!(key in patch)) return; const next = String(patch[key] || "").trim(); if (next !== (o[grp][k] || "")) { log.push(`${labels[k]}: ${o[grp][k] || "none"} → ${next || "none"}`); o[grp][k] = next; } });
     sub("payment", ["method", "reference"], { method: "Payment method", reference: "Payment reference" });
     sub("shipping", ["carrier", "tracking", "address", "zip", "city"], { carrier: "Carrier", tracking: "Tracking number", address: "Delivery address", zip: "Postcode", city: "City" });
+    if ("shipping.noTracking" in patch) { const nv = !!patch["shipping.noTracking"]; if (nv !== !!o.shipping.noTracking) { log.push(`No tracking number: ${o.shipping.noTracking ? "yes" : "no"} → ${nv ? "yes" : "no"}`); o.shipping.noTracking = nv; } }
     if (patch.lines) {
       const clean = cleanLines(patch.lines); if (!clean.length) throw new Error("Add at least one box.");
       const before = JSON.stringify(o.lines);
@@ -393,6 +394,79 @@
     save();
   }
 
+
+  /* Shipping rules, enforced here so no screen can skip them: a parcel that left needs a carrier and a tracking number
+     (own deliveries need no number), and dates cannot be in the future or go back before the previous step. */
+  const TRACKING_RE = /^[A-Za-z0-9][A-Za-z0-9 .\-]{4,39}$/;
+  const isOwn = (c) => /^own delivery$/i.test(String(c || "").trim());
+  function checkShipping(carrier, tracking, noTracking) {
+    const c = String(carrier || "").trim(), t = String(tracking || "").trim();
+    if (!c) throw new Error("Enter the carrier.");
+    if (noTracking || isOwn(c)) return { carrier: c, tracking: "", noTracking: true };
+    if (!t) throw new Error("Enter the tracking number, or tick \"No tracking number\" if this parcel has none.");
+    if (!TRACKING_RE.test(t)) throw new Error("This tracking number looks wrong. Use 5 to 40 letters, digits, dots or dashes.");
+    return { carrier: c, tracking: t, noTracking: false };
+  }
+  function guardShipping(o, patch) {
+    const shipped = "shippedAt" in patch ? patch.shippedAt : o.shippedAt;
+    if (!shipped || o.cancelledAt && !("cancelled" in patch)) return;
+    const sh = o.shipping || {}, pick = (k) => ("shipping." + k) in patch ? patch["shipping." + k] : sh[k];
+    checkShipping(pick("carrier"), pick("tracking"), pick("noTracking"));
+  }
+  /* An order placed on the website is what the customer paid: items, amounts, dates and payment cannot be rewritten.
+     Only the delivery address (until it ships), the parcel details and the note can be corrected. */
+  const isWebOrder = (kind, o) => (kind === "pro" ? o.channel === "site" && (o.payment || {}).method === "Card (online)" : o.channel !== "manual");
+  function lockWeb(kind, o, patch) {
+    if (!isWebOrder(kind, o)) return;
+    const bad = (what) => { throw new Error(`This order was placed on the website: ${what} cannot be changed, it is what the customer paid.`); };
+    const txt = (v) => String(v || "").trim();
+    [["createdAt", "the order date"], ["paidAt", "the payment date"], ["invoicedAt", "the invoice date"]].forEach(([k, w]) => { if (k in patch && dayOf(isoDate(patch[k])) !== dayOf(o[k])) bad(w); });
+    [["via", "how it was received"], ["reference", "the reference"], ["invoiceNo", "the invoice number"]].forEach(([k, w]) => { if (k in patch && txt(patch[k]) !== txt(o[k])) bad(w); });
+    [["method", "the payment method"], ["reference", "the payment reference"]].forEach(([k, w]) => { if (("payment." + k) in patch && txt(patch["payment." + k]) !== txt((o.payment || {})[k])) bad(w); });
+    if (patch.lines && JSON.stringify(cleanLines(patch.lines)) !== JSON.stringify(o.lines)) bad("the items and amounts");
+    const grp = kind === "pro" ? "shipping" : "shipTo";
+    if (o.shippedAt) ["address", "zip", "city"].forEach((k) => { if ((grp + "." + k) in patch && txt(patch[grp + "." + k]) !== txt((o[grp] || {})[k])) bad("the delivery address once the parcel has shipped"); });
+    if ("cancelled" in patch && !!patch.cancelled !== !!o.cancelledAt && (o.paidAt || o.cancelledAt)) throw new Error("A paid website order can only be cancelled with a card refund, which is not available yet.");
+  }
+  const todayDay = () => new Date().toISOString().slice(0, 10);
+  function checkDay(day, notBefore, what, before) {
+    if (!day) throw new Error(`Enter the ${what} date.`);
+    if (day > todayDay()) throw new Error(`The ${what} date cannot be in the future.`);
+    if (notBefore && day < notBefore) throw new Error(`The ${what} date cannot be before ${before} (${notBefore}).`);
+  }
+  /* One guarded step forward for a pro or shop order: invoiced, paid, shipped or delivered. */
+  function progress(kind, id, step, d, by) {
+    d = d || {};
+    const s = get(), pro = kind === "pro", o = (pro ? s.orders : s.consumerOrders).find((x) => x.id === id); if (!o) throw new Error("Unknown order.");
+    const flow = pro ? STATUS_FLOW : CONSUMER_FLOW, next = pro ? nextStatus(o) : nextConsumerStatus(o);
+    if (o.status === "cancelled") throw new Error("This order is cancelled.");
+    if (next !== step) throw new Error(`This order is ${o.status}: the next step is ${next || "none"}.`);
+    if (step === "paid" && isWebOrder(kind, o)) throw new Error("A website order is marked paid by the card payment itself, not by hand.");
+    const day = String(d.at || "").slice(0, 10), log = [];
+    if (step === "invoiced") {
+      const no = String(d.invoiceNo || "").trim(); if (!no) throw new Error("Enter the invoice number.");
+      checkDay(day, dayOf(o.createdAt), "invoice", "the order date");
+      o.invoiceNo = no; log.push(`Invoice ${no} sent on ${day}`);
+    } else if (step === "paid") {
+      const m = String(d.method || "").trim(); if (!m) throw new Error("Choose how it was paid.");
+      checkDay(day, dayOf(o.createdAt), "payment", "the order date");
+      o.payment = { method: m, reference: String(d.reference || "").trim() }; log.push(`Paid on ${day} by ${m}${o.payment.reference ? " (" + o.payment.reference + ")" : ""}`);
+    } else if (step === "shipped") {
+      const sh = checkShipping(d.carrier, d.tracking, d.noTracking);
+      checkDay(day, dayOf(o.paidAt), "shipping", "the payment date");
+      o.shipping = { ...(o.shipping || {}), carrier: sh.carrier, tracking: sh.tracking, noTracking: sh.noTracking };
+      log.push(`Shipped on ${day} with ${sh.carrier}${sh.tracking ? " " + sh.tracking : " (no tracking number)"}${d.email ? "; shipping email to " + d.email : ""}`);
+    } else if (step === "delivered") {
+      checkDay(day, dayOf(o.shippedAt), "delivery", "the shipping date");
+      log.push(`Delivered on ${day}`);
+    } else throw new Error("Unknown step.");
+    o[DATE_FIELD[step]] = isoDate(day);
+    rebuildHistory(o, flow);
+    if (pro && step === "paid") recordQualification(o);
+    (o.editLog = o.editLog || []).push({ at: nowIso(), by: by || "admin", changes: log });
+    save(); return o;
+  }
+
   /* ---- consumers: accounts and shop orders ---------------------------- */
   const CONSUMER_FLOW = ["placed", "paid", "shipped", "delivered"];
   const CONSUMER_LABEL = { placed: "Placed", paid: "Paid", shipped: "Shipped", delivered: "Delivered", cancelled: "Cancelled" };
@@ -446,11 +520,13 @@
   }
   function updateConsumerOrder(id, patch, by) {
     const s = get(), o = s.consumerOrders.find((x) => x.id === id); if (!o) throw new Error("Unknown order");
+    lockWeb("shop", o, patch); guardShipping(o, patch);
     const log = [], dates = { paidAt: "Paid on", shippedAt: "Shipped on", deliveredAt: "Delivered on", createdAt: "Order date" };
     Object.keys(dates).forEach((k) => { if (!(k in patch)) return; const next = isoDate(patch[k]); if (k === "createdAt" && !next) throw new Error("The order needs a date."); if (dayOf(next) !== dayOf(o[k])) { log.push(`${dates[k]}: ${dayOf(o[k]) || "none"} → ${dayOf(next) || "none"}`); o[k] = next; } });
     const sub = (grp, keys, labels) => keys.forEach((k) => { const key = `${grp}.${k}`; if (!(key in patch)) return; const next = String(patch[key] || "").trim(); if (next !== (o[grp][k] || "")) { log.push(`${labels[k]}: ${o[grp][k] || "none"} → ${next || "none"}`); o[grp][k] = next; } });
     sub("payment", ["method", "reference"], { method: "Payment method", reference: "Payment reference" });
     sub("shipping", ["carrier", "tracking"], { carrier: "Carrier", tracking: "Tracking number" });
+    if ("shipping.noTracking" in patch) { const nv = !!patch["shipping.noTracking"]; if (nv !== !!o.shipping.noTracking) { log.push(`No tracking number: ${o.shipping.noTracking ? "yes" : "no"} → ${nv ? "yes" : "no"}`); o.shipping.noTracking = nv; } }
     sub("shipTo", ["address", "zip", "city"], { address: "Delivery address", zip: "Postcode", city: "City" });
     if ("note" in patch && String(patch.note || "").trim() !== o.note) { log.push("Note updated"); o.note = String(patch.note || "").trim(); }
     if (patch.lines) {
@@ -649,7 +725,7 @@
     load, get, save, reset, session, login, logout, currentUser, changePassword, resetPassword,
     resolveRef, refLabel, setAttribution, createPro, createAmbassador, submitProRequest, submitAmbassadorApplication, closeRequest,
     FLAVORS_ALL: FLAVORS, unitPricesOf, priceSheetOf, conditionsOf, setProPrices, priceConflicts, submitOrderRequest, requestDiff, createOrderFromRequest,
-    PAYMENT_METHODS, VIA_OPTIONS, CARRIERS, trackingUrl, createManualOrder, updateOrder, updateConsumerOrder,
+    PAYMENT_METHODS, VIA_OPTIONS, CARRIERS, trackingUrl, checkShipping, isWebOrder, progress, createManualOrder, updateOrder, updateConsumerOrder,
     ordersOfPro, creditOf, previewProOrder, placeProOrder, payProOrder, nextStatus, advanceOrder, cancelOrder,
     CONSUMER_FLOW, CONSUMER_LABEL, registerConsumer, updateProfile, consumerIsFirst, consumerOrdersOf, nextConsumerStatus, advanceConsumerOrder, cancelConsumerOrder, stats,
     consumerPreview, consumerCheckout, ledger, ambassadorView, isPaidOut, markPaidOut, unmarkPaidOut, updateSettings,

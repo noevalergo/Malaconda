@@ -56,7 +56,7 @@ Auth.gate("pro","Pro space","Your prices, your orders and your recommendations."
   }
 
   /* ---- orders: tracking, plus requests waiting for the founders ---- */
-  const parcel=(o)=>{ const sh=o.shipping||{}; if(!sh.tracking&&!sh.carrier) return '<span class="muted">Not shipped yet</span>'; const url=Store.trackingUrl(sh.carrier,sh.tracking); return esc(sh.carrier||"")+(sh.tracking?'<br><span class="small">'+(url?'<a class="link-quiet" href="'+esc(url)+'" target="_blank" rel="noopener">'+esc(sh.tracking)+'</a>':esc(sh.tracking))+'</span>':'<br><span class="small muted">Tracking number to come</span>'); };
+  const parcel=(o)=>{ const sh=o.shipping||{}; if(!sh.tracking&&!sh.carrier) return '<span class="muted">Not shipped yet</span>'; const url=Store.trackingUrl(sh.carrier,sh.tracking,window.I18n?I18n.get():"en"); return esc(sh.carrier||"")+(sh.tracking?'<br><span class="small">'+esc(sh.tracking)+'</span><br><a class="link-quiet small" data-track="'+esc(sh.tracking)+'" href="'+esc(url)+'" target="_blank" rel="noopener">Track parcel</a>':(sh.noTracking?'<br><span class="small muted">No tracking number</span>':'<br><span class="small muted">Tracking number to come</span>')); };
   const pay=(o)=>esc((o.payment||{}).method||"")+'<br><span class="small muted">'+(o.paidAt?"paid "+date(o.paidAt):"waiting for payment")+'</span>';
   function ordersTab(){
     const orders=Store.ordersOfPro(user.id).slice().sort((a,b)=>b.createdAt.localeCompare(a.createdAt));

@@ -1,7 +1,7 @@
 /* Transactional emails (French base). Table layout, inline CSS, safe for Gmail / Apple Mail / Outlook; one <style> block only adds web fonts, base resets and the mobile breakpoint.
    Each template returns { subject, html, text }. Every dynamic value is escaped. No product prices or rates are shown to ambassadors; pro prices are excl. VAT. */
 const config = require("./config");
-const { esc, chf, FLAVOR_NAMES } = require("./lib");   // { lulo: "Biting Lulo", guava: "Sweet Guava" }
+const { esc, chf, FLAVOR_NAMES, SETTINGS } = require("./lib");   // { lulo: "Biting Lulo", guava: "Sweet Guava" }
 
 // Charter (client/css/styles.css)
 const C = { ink: "#131313", surface: "#1B1B1B", charcoal: "#393938", graphite: "#4F4F4D", stone: "#ADADA7", paper: "#E9E9E1", lulo: "#FFD900", guava: "#FF7E6E", berry: "#95F6EE" };
@@ -96,9 +96,28 @@ const T = {
         p(`Votre paiement est bien reçu. Voici le récapitulatif de la commande ${strong(order.ref)}.`) +
         table(rows, { total: ["Total TVA incluse", chf(order.net_cents)] }) +
         box(label("Livraison") + p(`${addr(order)}`, "margin:0 0 8px;color:" + C.paper) + p("Livraison en Suisse sous 4 semaines. Nous vous écrirons dès l’expédition de votre colis.", "margin:0;font-size:14px")) +
-        button("Voir mes commandes", url("/proto/account.html")) +
+        button("Voir mes commandes", url("/account.html")) +
         p("À très vite, et merci de soutenir une petite bande d’amis.", "margin-bottom:0") }),
       text: `Commande ${order.ref} confirmée\n\n${helloText(name)}\n${lines.map((l) => `- ${FLAVOR_NAMES[l.flavor] || l.flavor}: ${l.boxes} caisse(s) de 12 — ${chf(l.boxes * l.unit_cents)}`).join("\n")}\n${order.discount_cents ? `Première commande -${order.welcome_pct} % : -${chf(order.discount_cents)}\n` : ""}Total TVA incluse: ${chf(order.net_cents)}\nLivraison: ${order.ship_address}, ${order.ship_zip} ${order.ship_city}, Suisse, sous 4 semaines.`,
+    };
+  },
+
+  /* 2b. Pro order paid online (prices excl. VAT, VAT added at the end) */
+  proOrderConfirmation({ order, lines, name }) {
+    const rows = lines.map((l) => [`${flavorLabel(l.flavor)}<br><span style="color:${C.stone};font-size:13px">${boxWord(l.boxes)} bouteilles</span>`, chf(l.boxes * Math.round(l.unit_milli * 12 / 10))]);
+    if (order.tier_cents) rows.push([`Remise de volume −${esc(order.tier_pct)} %`, "−" + chf(order.tier_cents), true]);
+    if (order.extra_cents) rows.push([order.welcome_pct ? `Première commande −${esc(order.welcome_pct)} %` : `Crédit de recommandation −${esc(order.credit_pct)} %`, "−" + chf(order.extra_cents), true]);
+    rows.push(["Total hors TVA", chf(order.net_cents), true], [`TVA ${esc(String(SETTINGS.vatPct).replace(".", ","))} %`, chf(order.vat_cents), true]);
+    return {
+      subject: `Votre commande pro Malaconda ${order.ref} est confirmée`,
+      html: layout({ preheader: `Commande ${order.ref} payée. Livraison sous 4 semaines.`, body:
+        label(`Commande ${order.ref}`) + h1("Merci pour votre commande") + p(hello(name)) +
+        p(`Votre paiement est bien reçu. Voici le récapitulatif de la commande ${strong(order.ref)}, à vos prix professionnels.`) +
+        table(rows, { total: ["Total TVA incluse", chf(order.total_cents)] }) +
+        box(label("Livraison") + p(`${addr(order)}`, "margin:0 0 8px;color:" + C.paper) + p("Livraison en Suisse sous 4 semaines. Nous vous écrirons dès l’expédition.", "margin:0;font-size:14px")) +
+        button("Mon espace pro", url("/pro-space.html")) +
+        p("À très vite.", "margin-bottom:0") }),
+      text: `Commande pro ${order.ref} confirmée\n\n${helloText(name)}\n${lines.map((l) => `- ${FLAVOR_NAMES[l.flavor] || l.flavor}: ${l.boxes} caisse(s) de 12`).join("\n")}\nTotal hors TVA: ${chf(order.net_cents)}\nTVA: ${chf(order.vat_cents)}\nTotal TVA incluse: ${chf(order.total_cents)}\nLivraison: ${order.ship_address}, ${order.ship_zip} ${order.ship_city}, Suisse, sous 4 semaines.`,
     };
   },
 
@@ -140,9 +159,9 @@ const T = {
         box(label("Vos accès") + p("Email&nbsp;: " + strong(email), "margin:0 0 10px") + p("Mot de passe temporaire&nbsp;: " + code(tempPassword), "margin:0 0 10px") + p("Vous devrez le changer à la première connexion.", "margin:0;font-size:14px")) +
         box(label("Offre de bienvenue pro") + `<p style="margin:0 0 6px;font:400 44px/1 ${DISPLAY};color:${C.lulo}">−${WELCOME_PCT} %</p><p style="margin:0;font:400 15px/1.5 ${BODY};color:${C.stone}">sur votre première commande. Elle s’applique automatiquement.</p>`) +
         p("Nous vendons par caisses de 12 bouteilles (Sweet Guava et Biting Lulo) et livrons en Suisse uniquement.") +
-        button("Me connecter", url("/proto/pro-space.html")) +
+        button("Me connecter", url("/pro-space.html")) +
         p("Bienvenue dans la famille Malaconda.", "margin-bottom:0") }),
-      text: `Votre compte pro Malaconda est ouvert.\n\n${helloText(name)}\nEmail: ${email}\nMot de passe temporaire: ${tempPassword} (à changer à la première connexion)\n${WELCOME_PCT} % de réduction sur votre première commande.\n${url("/proto/pro-space.html")}`,
+      text: `Votre compte pro Malaconda est ouvert.\n\n${helloText(name)}\nEmail: ${email}\nMot de passe temporaire: ${tempPassword} (à changer à la première connexion)\n${WELCOME_PCT} % de réduction sur votre première commande.\n${url("/pro-space.html")}`,
     };
   },
 
@@ -156,7 +175,7 @@ const T = {
         p(`Nous avons bien reçu votre commande ${strong(ref)}.`) +
         table(rows, netCents != null ? { total: [vatIncluded ? "Total TVA incluse" : "Total hors TVA", chf(netCents)] } : {}) +
         p("Nous vous envoyons la facture par email. La commande part dès réception du paiement par virement. Livraison en Suisse sous 4 semaines.") +
-        button("Voir mes commandes", url("/proto/pro-space.html")) +
+        button("Voir mes commandes", url("/pro-space.html")) +
         p("Merci pour votre confiance.", "margin-bottom:0") }),
       text: `Commande ${ref} reçue.\n${lines.map((l) => `- ${FLAVOR_NAMES[l.flavor] || l.flavor}: ${l.boxes} caisse(s) de 12`).join("\n")}\nFacture à suivre par email; livraison en Suisse sous 4 semaines.`,
     };
@@ -172,9 +191,9 @@ const T = {
         p("Merci de porter Malaconda dans les bars, restaurants et boutiques de Suisse. Voici votre espace personnel&nbsp;: vos établissements, vos relevés mensuels et votre code à partager.") +
         box(label("Votre code") + p(code(ambCode), "margin:0 0 14px") + label("Votre lien") + p(`<a href="${esc(shareLink)}" style="color:${C.paper};word-break:break-all">${esc(shareLink)}</a>`, "margin:0")) +
         box(label("Vos accès") + p("Email&nbsp;: " + strong(email), "margin:0 0 10px") + p("Mot de passe temporaire&nbsp;: " + code(tempPassword), "margin:0 0 10px") + p("Vous devrez le changer à la première connexion.", "margin:0;font-size:14px")) +
-        button("Ouvrir mon espace", url("/proto/ambassador-space.html")) +
+        button("Ouvrir mon espace", url("/ambassador-space.html")) +
         p("Votre relevé de commissions est disponible chaque mois dans votre espace.", "margin-bottom:0") }),
-      text: `Bienvenue parmi les ambassadeurs Malaconda.\n\n${helloText(name)}\nCode: ${ambCode}\nLien: ${shareLink}\nEmail: ${email}\nMot de passe temporaire: ${tempPassword} (à changer à la première connexion)\n${url("/proto/ambassador-space.html")}`,
+      text: `Bienvenue parmi les ambassadeurs Malaconda.\n\n${helloText(name)}\nCode: ${ambCode}\nLien: ${shareLink}\nEmail: ${email}\nMot de passe temporaire: ${tempPassword} (à changer à la première connexion)\n${url("/ambassador-space.html")}`,
     };
   },
 
@@ -187,9 +206,9 @@ const T = {
         p(`Votre relevé de commissions pour ${strong(period)} est prêt${number ? ` (n° ${esc(number)})` : ""}.`) +
         (totalCents != null ? box(label("Commission du mois") + `<p style="margin:0;font:500 28px/1.2 ${MONO};color:${C.paper}">${chf(totalCents)}</p>`) : "") +
         p("Le versement est effectué par virement bancaire sur l’IBAN enregistré dans votre espace.") +
-        button("Voir mon relevé", url("/proto/ambassador-space.html")) +
+        button("Voir mon relevé", url("/ambassador-space.html")) +
         p("Merci pour votre engagement.", "margin-bottom:0") }),
-      text: `Votre relevé de commissions (${period}) est disponible dans votre espace ambassadeur: ${url("/proto/ambassador-space.html")}`,
+      text: `Votre relevé de commissions (${period}) est disponible dans votre espace ambassadeur: ${url("/ambassador-space.html")}`,
     };
   },
 
@@ -201,7 +220,7 @@ const T = {
         label("Recommandation") + h1("Merci pour la recommandation") + p(hello(name)) +
         p(`${strong(referredCompany)} vient de passer sa première commande, grâce à vous.`) +
         box(label("Crédit gagné") + `<p style="margin:0 0 6px;font:400 44px/1 ${DISPLAY};color:${C.lulo}">${esc(creditPct)} %</p><p style="margin:0;font:400 15px/1.5 ${BODY};color:${C.stone}">de réduction sur vos prochaines commandes (15 % au maximum par commande, le reste est reporté). Ce crédit n’est pas remboursable en espèces.</p>`) +
-        button("Voir mon crédit", url("/proto/pro-space.html")) +
+        button("Voir mon crédit", url("/pro-space.html")) +
         p("Merci de faire connaître Malaconda.", "margin-bottom:0") }),
       text: `${referredCompany} a passé sa première commande grâce à vous. Vous gagnez ${creditPct} % de crédit sur vos prochaines commandes (15 % max. par commande).`,
     };

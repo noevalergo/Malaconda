@@ -1,63 +1,35 @@
 # MALACONDA
 
-E-commerce website for **MALACONDA**, a sparkling soda from the Amazon (Biting Lulo · Pink Guava).
+Website and back office for **MALACONDA**, a sparkling soda from the Amazon (Biting Lulo · Sweet Guava).
+One site for everyone: visitors and customers (shop, cart, card payment, "My account"), professionals (bars, hotels, restaurants: pro prices, online ordering, pro space), ambassadors (commission space) and the founders' admin.
 
-> **Status:** project setup. No application code yet.
-> The frontend will come from the owner's existing Claude Artifact design.
-> Backend work starts only after the architecture (Phase 2) is approved.
+## What is where
 
-This repository is the **single source of truth** for the project.
-The project starts from scratch: no code from earlier experimental
-implementations is reused.
+| Folder | Content |
+|---|---|
+| `client/` | The site: static pages, no build step. `index.html` is the home page. |
+| `api/` | Node 22 + Express 5 + MySQL: accounts, orders, Stripe card payments, emails. Also serves `client/`. See [api/README.md](api/README.md). |
+| `docs/` | [COMMERCIAL_SPEC.md](docs/COMMERCIAL_SPEC.md) (prices, discounts, commissions) and [ACCOUNT_MODEL.md](docs/ACCOUNT_MODEL.md) (the rules per type of account). |
+| `tests/` | Tests of the site's price rules and account logic. |
+| `tools/` | Staging build and deploy, local server, email preview. |
 
----
+## Run it
 
-## Goals (initial version)
+```bash
+python3 tools/devserve.py 8000 client      # the site alone, at http://localhost:8000
+node --test tests/*.test.js                # site tests
+cd api && npm install && npm test          # API tests (need MySQL, see api/README.md)
+```
 
-1. Sell the two products individually through **Stripe Checkout**.
-2. Let bars, hotels and restaurants register **B2B pre-orders** with a **20% downpayment**.
-3. Record customers, orders and payments in **Google Sheets**.
-4. Send **confirmation emails** after verified payments or registrations.
-5. Track **promo codes** and **ambassador commissions**.
+The site alone keeps its demo data in the browser. With the API running (`cd api && npm start`), payments, accounts and orders go through the server and the database.
 
-Out of scope for now: customer accounts, admin dashboard, extra pages or features not listed above.
+## Staging
 
-## Planned stack (to be confirmed in Phase 2)
-
-| Area | Choice | Why |
-|---|---|---|
-| Frontend | The existing Artifact (preserved, not redesigned) | It is the approved brand design |
-| Backend | Node.js + Express (REST) | Simple, runs on Hostinger Business Node.js hosting |
-| Payments | Stripe Checkout + webhooks | No card data on our server |
-| Reporting | Google Sheets API (service account) | Business admin already works in Sheets |
-| Email | SMTP via a modular email service | Provider can be swapped by configuration |
-| Hosting | Hostinger Business — Node.js Web App, deployed from GitHub | Owner's existing hosting |
-
-Explicitly **not** used unless a concrete need appears: Next.js, Prisma, Docker, Redis, microservices.
-
-## Development phases
-
-| Phase | Content | Status |
-|---|---|---|
-| 1 | Audit of the existing Artifact and requirements | Done (presented in chat) |
-| 0 | Repository setup, Git workflow, docs | In progress |
-| 2 | Architecture: structure, endpoints, config, integrations, env vars | Waiting for Artifact export |
-| 3 | Frontend integration (move Artifact into project, connect forms/buttons) | — |
-| 4 | Backend (Stripe, webhooks, Sheets, email, promo codes) | — |
-| 5 | Testing (Stripe test mode) | — |
-| 6 | Hostinger deployment | — |
-
-Each phase ends with a Pull Request and the owner's approval before the next one starts.
-
-## Documentation
-
-- [docs/GIT_WORKFLOW.md](docs/GIT_WORKFLOW.md): branches, commits, Pull Requests, releases
-- [docs/FRONTEND_PRESERVATION.md](docs/FRONTEND_PRESERVATION.md): how the Artifact design is protected
-- [.env.example](.env.example): environment variables (names only, provisional)
+`tools/build-staging.sh` builds the archive from a commit, checks that no secret is inside. `tools/deploy-staging.sh` sends it to Hostinger, replaces the whole `client/` folder and restarts the app.
 
 ## Security basics
 
-- Secrets live only in environment variables (`.env` locally, hPanel on Hostinger). Never in code or Git.
+- Secrets live only in environment variables (`.env` locally, hPanel on Hostinger). Never in code or Git. [.env.example](.env.example) lists the names.
 - Development uses **Stripe test mode only**.
-- No card data is ever handled by our server.
-- `main` is changed only through an approved Pull Request.
+- No card data ever reaches our server: the card form is Stripe's.
+- Before going live, all test data is deleted (`npm run reset:data` in `api/`).

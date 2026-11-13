@@ -44,7 +44,7 @@
     ["Flavors", "index.html#flavors"], ["Story", "index.html#story"], ["Pros", "for-pros.html"],
     ["Ambassadors", "ambassadors.html"], ["Contact", "index.html#contact"],
   ];
-  const LOGO = `<img class="logo-inv" src="../images/logo-wordmark.svg" alt="MALACONDA" width="126" height="26">`;
+  const LOGO = `<img class="logo-inv" src="images/logo-wordmark.svg" alt="MALACONDA" width="126" height="26">`;
 
   const EYE = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2 12s3.6-7 10-7 10 7 10 7-3.6 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/></svg>';
   function mountViewSwitch() {
@@ -103,7 +103,7 @@
   }
 
   /* ---- cart: totals, and the side drawer that opens from the header ---- */
-  const IMG = { lulo: "../images/lulo-bottle.jpg", guava: "../images/guava-bottle.jpg" };
+  const IMG = { lulo: "images/lulo-bottle.jpg", guava: "images/guava-bottle.jpg" };
   function cartSummary() {
     const c = Cart.get(), user = Store.currentUser("customer"), F = Store.FLAVORS;
     const lines = Object.keys(F).filter((k) => c[k] > 0).map((k) => ({ flavor: k, name: F[k].name, boxes: c[k] }));
@@ -175,7 +175,7 @@
         <button class="burger" type="button" aria-expanded="false" aria-controls="navlinks">Menu</button></div></div></header>`;
     const footer = `<footer class="footer"><div class="block footer__in">
       <div class="footer__top">
-        <div class="footer__brand"><a href="index.html" aria-label="Malaconda home">${LOGO}</a><img class="footer__badge logo-inv" src="../images/badge.svg" alt="" width="76" height="78" aria-hidden="true"></div>
+        <div class="footer__brand"><a href="index.html" aria-label="Malaconda home">${LOGO}</a><img class="footer__badge logo-inv" src="images/badge.svg" alt="" width="76" height="78" aria-hidden="true"></div>
         <form class="footer__news" data-newsletter><label class="label" for="nl-email">Newsletter</label>
           <div class="footer__news-row"><input class="input" id="nl-email" type="email" placeholder="email@" required autocomplete="email"><button class="btn btn--sm btn--ghost" type="submit">Join</button></div></form>
       </div>
@@ -209,10 +209,17 @@
   }
 
   function wire() {
-    mountViewSwitch();
+    // the "view as" eye and the demo hints are for the staging site only: the live server says so (a plain static server keeps them for local work)
+    fetch("/api/config").then((r) => r.json()).then((c) => { if (c.staging === false) document.documentElement.classList.add("is-live"); else mountViewSwitch(); }).catch(() => mountViewSwitch());
     $$("[data-theme-toggle], [data-theme-menu]").forEach((b) => b.addEventListener("click", () => window.Theme.toggle()));
     paintTheme(); paintCart();
   }
 
   window.Common = { esc, chf, pct, date, monthLabel, monthHtml, $, $$, toast, mount, appHeader, Cart, reveal, cartSummary, openCart: () => Common_open(), IMG };
 })();
+
+/* A parcel link opens the tracker in the language shown at the moment of the click. */
+document.addEventListener("click", (e) => {
+  const a = e.target.closest && e.target.closest("a[data-track]");
+  if (a && window.Store && window.I18n) a.href = Store.trackingUrl("", a.dataset.track, I18n.get());
+}, true);

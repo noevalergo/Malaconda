@@ -25,6 +25,7 @@ set -euo pipefail
 APP="$1"; ZIP="$2"
 export PATH=/opt/alt/alt-nodejs22/root/bin:$PATH
 cd "$APP"
+rm -rf client   # the site folder is replaced as a whole, so no file of an older version stays online
 python3 - "$HOME/malaconda-deploy-tmp/$ZIP" <<'PY'
 import sys, zipfile
 zipfile.ZipFile(sys.argv[1]).extractall('.')

@@ -58,7 +58,7 @@ Rules:
 - A logged-in pro sees their prices and a live total for any quantity on the site.
 - The pro presses **Pay and order**, confirms the delivery address and pays by card (Stripe) on the pro payment page, VAT added at the end. The order is created already **paid**, with the card payment reference; a first paid order of 10 boxes or more credits the recommender.
 - A pro who prefers an invoice, a bank transfer or a negotiation writes through the contact form (**Message us**); the founders create the order by hand (phone, email, visit, message). Every path uses the same engine.
-- Admin Requests tab has filters: Access, Ambassadors, Orders (legacy order requests), Messages.
+- The admin Inbox tab holds what visitors send: pro access requests, ambassador applications, messages (filters Pro access, Ambassadors, Messages).
 
 ## 8. Admin rights
 - Create pro accounts; choose the source; edit company details.
@@ -66,7 +66,7 @@ Rules:
 - **Conditions summary** on every pro: prices, best-case effective price, tier table applied, welcome used or available, credit earned, used, available, source, commission window.
 - Settings: list price, floor, VAT, tiers, welcome offers, referral, commission defaults.
 
-## 9. Example profiles (the prototype shows exactly these)
+## 9. Example profiles (the demo accounts show exactly these)
 | Profile | Prices | Source | History and conditions |
 |---|---|---|---|
 | Bar Cobra (Zurich) | List 2.20 | Camila | Orders: 12 boxes (first, welcome, paid Aug 12), 24 boxes (paid Sep 25). Referred Club Anaconda, Vinyl Room, Bodega Norte (all qualified in Oct and Nov), Cafe Lulo (below threshold). **Credit: 15% earned, 0% used, 15% available** |

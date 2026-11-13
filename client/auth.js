@@ -15,11 +15,13 @@
       <div class="field"><label class="label" for="l-email">Email</label><input class="input" id="l-email" autocomplete="username" required></div>
       <div class="field"><label class="label" for="l-pw">Password</label><input class="input" id="l-pw" type="password" autocomplete="current-password" required></div>
       <button class="btn" type="submit">Log in</button><div id="lerr"></div>${signup}${other}
-      <p class="hint">Prototype: see <a class="link-quiet" href="demo.html">demo accounts</a>.</p></form></div>`;
+      <p class="hint demo-only">Prototype: see <a class="link-quiet" href="demo.html">demo accounts</a>.</p></form></div>`;
     $("#loginform").addEventListener("submit", (e) => {
       e.preventDefault();
       const u = Store.login(role, $("#l-email").value, $("#l-pw").value);
       if (!u) { $("#lerr").innerHTML = '<div class="alert alert--bad">Wrong email or password.</div>'; return; }
+      // a pro also signs in on the server (same password) so the card payment can be priced there; no error if the venue is not on the server
+      if (role === "pro") fetch("/api/pro/login", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ email: $("#l-email").value, password: $("#l-pw").value }) }).catch(() => {});
       if (goNext()) return;
       boot(role, title, intro, opts);
     });

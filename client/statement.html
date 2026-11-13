@@ -47,7 +47,7 @@
   root.innerHTML = `<div class="doc-bar"><a class="link-quiet" href="${viewerAdmin && !viewerAmb ? "admin.html" : "ambassador-space.html#statements"}">← Back</a>
       <div class="row"><button class="btn btn--sm btn--ghost" id="csv" type="button">Download CSV</button><button class="btn btn--sm" id="print" type="button">Print or save as PDF</button></div></div>
     <article class="doc">
-      <header class="doc__head"><img src="../images/logo-wordmark.svg" alt="MALACONDA" width="150" height="31" class="doc__logo"><div><p class="doc__title">Commission statement</p><p class="doc__no">${esc(number)}</p></div></header>
+      <header class="doc__head"><img src="images/logo-wordmark.svg" alt="MALACONDA" width="150" height="31" class="doc__logo"><div><p class="doc__title">Commission statement</p><p class="doc__no">${esc(number)}</p></div></header>
       <dl class="doc__meta">
         <div><dt>Period</dt><dd>${esc(monthLabel(month))}</dd></div>
         <div><dt>Issued</dt><dd>${date(issued.toISOString())}</dd></div>
