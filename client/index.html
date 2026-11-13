@@ -174,7 +174,7 @@ Common.mount({active:"index.html"});
   function paintPrice(){
     const el=$("[data-price]");
     if(pro){ const f=Store.priceSheetOf(pro.id).flavors[i]; el.innerHTML=chf(f.unit)+"<small>per bottle · "+chf(f.boxPrice)+" per box of "+S.proBottlesPerBox+" · excl. VAT</small>"; }
-    else el.innerHTML=chf(S.retailPrice)+"<small>per box · 12 × 20 cl</small>";
+    else el.innerHTML=chf(S.retailPrice)+"<small>per box · 12 × 20&nbsp;cl</small>";
   }
   function show(n){
     i=(n+F.length)%F.length; root.dataset.flavor=F[i].k;
@@ -247,6 +247,7 @@ Common.mount({active:"index.html"});
     const ease=t=>.5-.5*Math.cos(Math.PI*t);
     function place(){
       raf=0;
+      w=fab.offsetWidth; h=fab.offsetHeight;   // read live: the label changes length with the language, a stale width pushes the button off the edge
       const vw=document.documentElement.clientWidth, vh=innerHeight, g=vw<=720?20:24;
       const bx=vw-w-g;
       // the glide is spread over a long run: it ends where the photo's bottom edge sits at 92% of the screen, with the button resting on it
@@ -269,6 +270,9 @@ Common.mount({active:"index.html"});
     }
     const tick=()=>{ if(!raf) raf=requestAnimationFrame(place); };
     addEventListener("scroll",tick,{passive:true}); addEventListener("resize",measure); addEventListener("load",measure);
+    // the label changes length with the language ("Shop now" / "Jetzt kaufen"): measure again whenever the button itself changes size
+    if(window.ResizeObserver) new ResizeObserver(measure).observe(fab);
+    document.addEventListener("langchange",()=>{ measure(); setTimeout(measure,120); });
     (document.fonts&&document.fonts.ready||Promise.resolve()).then(measure); measure();
   }
 

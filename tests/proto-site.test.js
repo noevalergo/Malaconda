@@ -225,3 +225,16 @@ test("the founders' brand copy, ingredients, origin and delivery times are on th
   for (const f of ["for-pros.html", "pro-checkout.html"]) assert.ok(/4 weeks/.test(read(f)), `${f} says 4 weeks to pros`);
   assert.ok(/5 boxes of 24 bottles/.test(read("for-pros.html")), "the pros page states the minimum order and the box size");
 });
+
+test("the floating Shop now button is placed from its live width, so a longer label in another language cannot push it off the screen", () => {
+  const home = read("index.html");
+  assert.ok(/w=fab\.offsetWidth/.test(home), "place() reads the button width every time");
+  assert.ok(/ResizeObserver\(measure\)\.observe\(fab\)/.test(home), "and measures again when the label changes size");
+  assert.ok(/addEventListener\("langchange"/.test(home), "and when the language changes");
+});
+
+test("the hero paragraph is wide enough for three lines on a desktop", () => {
+  const css = read("proto.css");
+  assert.ok(/\.hero__intro \{ max-width:min\(100%,112ch\); \}/.test(css));
+  assert.ok(!/\.hero__intro \{[^}]*max-width:(44|60)ch/.test(css), "no older narrow limit left");
+});

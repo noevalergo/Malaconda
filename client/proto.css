@@ -27,7 +27,7 @@
 @media (max-width:720px) { :root { --edge:20px; } }
 @font-face { font-family:"Andreas"; src:url("fonts/Andreas-Regular.woff2") format("woff2"),url("fonts/Andreas-Regular.woff") format("woff"); font-weight:400; font-display:swap; }
 *,*::before,*::after { box-sizing:border-box; }
-html { scroll-behavior:smooth; scroll-padding-top:calc(var(--nav-h) + 8px); }
+html { overflow-x:clip; scroll-behavior:smooth; scroll-padding-top:calc(var(--nav-h) + 8px); }
 body { margin:0; background:var(--surface); color:var(--stone); font:400 16px/1.55 var(--font-body); -webkit-font-smoothing:antialiased; overflow-x:clip; transition:background .4s,color .4s; }
 @media (max-width:720px) { body { font-size:15px; } }
 img { display:block; max-width:100%; height:auto; }
@@ -124,7 +124,7 @@ main { display:block; }
 /* ---------- hero ---------- */
 .hero { padding-top:clamp(40px,6vw,80px); padding-bottom:clamp(32px,4vw,56px); }
 .hero__bottom { display:flex; justify-content:space-between; align-items:flex-end; gap:32px; margin-top:clamp(24px,4vw,48px); flex-wrap:wrap; }
-.hero__intro { max-width:44ch; font-size:18px; }
+.hero__intro { font-size:18px; }
 .photo { position:relative; }
 .photo__frame { position:relative; overflow:hidden; aspect-ratio:3/2; max-height:92vh; width:100%; background:var(--ink); margin:0; }
 .photo__frame img { width:100%; height:100%; object-fit:cover; transform:scale(calc(1.02 + var(--pz,0) * .08)); transform-origin:50% 60%; will-change:transform; }
@@ -289,7 +289,8 @@ html { scroll-padding-top:var(--nav-h); }
 .ingr { display:grid; gap:6px; padding-top:14px; border-top:1px solid var(--charcoal); font-size:13px; color:var(--stone); max-width:58ch; }
 .ingr .label { color:var(--paper); }
 .price { font:500 28px/1 var(--font-mono); color:var(--paper); }
-.picker__buy { display:grid; grid-template-columns:auto 1fr; gap:12px; }
+.picker__buy { display:grid; grid-template-columns:auto minmax(0,1fr); gap:12px; }
+.picker__buy > * { min-width:0; }
 .picker__meta { grid-column:1/-1; }
 .picker .btn { background:var(--accent); border-color:var(--accent); color:#131313; transition:background .35s, color .35s, border-color .35s, transform .25s var(--ease); }
 .picker .btn:hover { background:transparent; color:var(--accent); }
@@ -498,7 +499,8 @@ dialog form > .label:first-of-type { margin-top:var(--s2); }
 /* =====================================================================
    v6: home. features strip, equal-height sections, contact, floating Shop now
    ===================================================================== */
-.hero__intro { max-width:60ch; }
+/* wide enough for three lines on a desktop in every language; on a narrow screen it simply wraps */
+.hero__intro { max-width:min(100%,112ch); }
 .hero__slot { display:block; flex:none; width:0; }
 
 /* floating Shop now is placed by script: it starts in the hero, rides down, rests on the photo, then fades */
@@ -884,3 +886,23 @@ dialog form > .label:first-of-type { margin-top:var(--s2); }
 /* label / value review lists inside dialogs: values wrap instead of running off the box */
 .breakdown.review td:first-child { width:132px; color:var(--stone); font-family:var(--font-mono); font-size:12px; letter-spacing:.06em; text-transform:uppercase; vertical-align:top; }
 .breakdown.review td:last-child { text-align:left; white-space:normal; overflow-wrap:anywhere; font-family:var(--font-body); padding-left:12px; }
+
+/* ---------- text of any length ----------
+   The design is fixed, only the words change: a long label (German, Italian) must wrap inside its box, never push it past the screen */
+.btn { max-width:100%; }
+@media (max-width:560px) { .btn { white-space:normal; text-align:center; line-height:1.3; } }
+/* header: a little tighter between 1001 and 1200 px so the longest label (Spanish "Comprar") still fits */
+@media (min-width:1001px) and (max-width:1200px) { .nav__in { gap:14px; padding:0 var(--s3); } .nav__links { gap:20px; } .nav__cta { gap:14px; } }
+/* account and admin tabs wrap instead of hiding behind a sideways scroll */
+@media (max-width:900px) { .side { flex-wrap:wrap; overflow:visible; } .side button { flex:1 1 auto; justify-content:center; } }
+/* tablet: the photo badge sits bottom left so the floating Shop now (bottom right) never covers it */
+@media (min-width:721px) and (max-width:900px) { .photo__card { right:auto; left:var(--s2); flex-direction:row-reverse; justify-content:flex-end; } }
+/* the home paragraph keeps three lines a little longer when the screen narrows */
+.hero__intro { font-size:clamp(16px,1.6vw,18px); }
+
+/* a very long word (German compounds) breaks rather than running past its box */
+h1, h2, h3, .display, .lead { overflow-wrap:break-word; }
+@media (max-width:720px) { .benefit h2 { font-size:clamp(28px,8.5vw,40px); } }
+/* small screens: buttons keep their label on at most two lines, and the photo band gets an even dark veil so the copy stays readable */
+@media (max-width:560px) { .btn { padding-left:16px; padding-right:16px; } .picker__buy .qty { min-width:0; } }
+@media (max-width:900px) { .band-photo::before { background:linear-gradient(0deg, rgba(19,19,19,.9) 0%, rgba(19,19,19,.72) 60%, rgba(19,19,19,.55) 100%); } }
