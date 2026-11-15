@@ -9,7 +9,7 @@
     lulo: { name: "Biting Lulo", no: "02", color: "var(--lulo)" },
     guava: { name: "Pink Guava", no: "03", color: "var(--guava)" },
   };
-  const PRO_TYPES = ["Bar", "Restaurant", "Club", "Hotel", "Shop", "Distributor"];
+  const PRO_TYPES = ["Bar", "Restaurant", "Club", "Hotel", "Event", "Shop", "Distributor"];
   const STATUS_FLOW = ["placed", "invoiced", "paid", "shipped", "delivered"];
   const PAYMENT_METHODS = ["Bank transfer", "Cash", "Card in person", "Card (online)", "Other"];
   const VIA_OPTIONS = ["In person visit", "Email", "Phone", "Website", "Other"];
