@@ -15,6 +15,7 @@
     bottlesPerBox: 12,          // consumer box
     shippingFee: 9,             // consumer delivery, VAT included. PLACEHOLDER: the founders have not given the amount yet
     pickupEnabled: true,        // free pickup instead of delivery
+    pickupPlace: "Luzern",       // where shop orders are collected; shown in the ready-for-pickup email and the customer account. PLACEHOLDER until the founders give the address
     vatPct: 8.1,
     proBottlePrice: 2.45,       // list price per bottle, excl. VAT
     proBottlesPerBox: 24,       // pro box

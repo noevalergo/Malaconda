@@ -219,14 +219,14 @@ Auth.gate("admin", "Founders admin", "", function (admin) {
   const payTxt = (o) => `${esc((o.payment || {}).method || "Payment")} · ${o.paidAt ? "paid " + date(o.paidAt) : "not paid yet"}`;
   const STEP = { invoiced: "Mark invoice sent", paid: "Mark as paid", shipped: "Mark as shipped", delivered: "Mark as delivered" };
   // a website order is marked paid by the card payment itself: no hand button, only a note
-  const stepBtn = (kind, o, nx, attr) => (!nx ? "" : nx === "paid" && Store.isWebOrder(kind, o) ? '<span class="small muted">Waiting for the card payment</span>' : `<button class="btn btn--sm" ${attr}="${o.id}">${kind === "shop" && o.delivery === "pickup" && nx === "delivered" ? "Mark as collected" : STEP[nx]}</button>`);
+  const stepBtn = (kind, o, nx, attr) => (!nx ? "" : nx === "paid" && Store.isWebOrder(kind, o) ? '<span class="small muted">Waiting for the card payment</span>' : `<button class="btn btn--sm" ${attr}="${o.id}">${kind === "shop" && o.delivery === "pickup" && nx === "delivered" ? (o.pickup ? "Mark as collected" : "Ready for pickup") : STEP[nx]}</button>`);
   const proLink = (id) => `<button class="link-quiet" data-gopro="${id}" type="button">${esc(proName(id))}</button>`;
   function orderTable(list, withPro) {
     return rowsBox(list.map((o) => { const nx = Store.nextStatus(o);
       return orow({ main: `<span class="orow__id"><b>${esc(o.id)}</b>${statusBadge(o)}</span>${withPro ? `<span>${proLink(o.proId)}</span>` : ""}`, sub: dot(date(o.createdAt), esc(o.invoiceNo || ""), esc(o.via || ""), esc(o.reference || "")),
         meta: `<b>${chf(o.net)}</b> excl. VAT`, metaSub: dot(`${o.boxes} boxes`, o.tierPct ? `volume −${o.tierPct}%` : "", o.welcomePct ? `welcome −${o.welcomePct}%` : "", o.creditPct ? `credit −${o.creditPct}%` : ""),
         more: dot(payTxt(o), trackTxt(o), o.ambassadorId ? "ambassador " + esc(ambName(o.ambassadorId)) : ""),
-        act: `${stepBtn("pro", o, nx, "data-adv")}<button class="btn btn--sm btn--ghost" data-edit="${o.id}">${Store.isWebOrder("pro", o) ? "Details" : "Edit"}</button>` }); }));
+        act: `${stepBtn("pro", o, nx, "data-adv")}${o.status === "cancelled" ? "" : `<button class="btn btn--sm btn--ghost" data-inv="${o.id}">${o.invoiceFile ? "Invoice ✓" : "Add invoice"}</button>`}<button class="btn btn--sm btn--ghost" data-edit="${o.id}">${Store.isWebOrder("pro", o) ? "Details" : "Edit"}</button>` }); }));
   }
   /* ---------- one step forward on an order: asks for what the step needs, then confirms ---------- */
   const todayDay = () => new Date().toISOString().slice(0, 10);
@@ -269,9 +269,9 @@ Auth.gate("admin", "Founders admin", "", function (admin) {
         $("#stgo", d).addEventListener("click", () => { try { const c = Store.checkShipping(v("st-car"), v("st-trk"), $("#st-no", d).checked); review({ ...c, at: v("st-at") }); } catch (e) { fail(e); } });
       };
       const review = (x) => {
-        const url = Store.trackingUrl(x.carrier, x.tracking, "fr");
+        const url = Store.trackingUrl(x.carrier, x.tracking, "en");
         box.innerHTML = head("Check before sending", "Is everything right? The customer will read this.") +
-          `<table class="breakdown review"><tr><td>Email to</td><td>${esc(email)}</td></tr><tr><td>Subject</td><td>Votre commande ${esc(o.id)} est en route</td></tr><tr><td>Carrier</td><td>${esc(x.carrier)}</td></tr>
+          `<table class="breakdown review"><tr><td>Email to</td><td>${esc(email)}</td></tr><tr><td>Subject</td><td>Your MALACONDA is on its way</td></tr><tr><td>Carrier</td><td>${esc(x.carrier)}</td></tr>
            <tr><td>Tracking number</td><td>${x.tracking ? `<b class="paper" style="font-size:18px">${esc(x.tracking)}</b>` : "None: the email shows the carrier only"}</td></tr>
            <tr><td>Tracking link</td><td>${url ? `<a class="link-quiet" href="${esc(url)}" target="_blank" rel="noopener">${esc(url)}</a><br><span class="small muted">Open it to check it finds the parcel.</span>` : "None"}</td></tr>
            <tr><td>Delivering to</td><td>${esc(addr)}</td></tr><tr><td>Contents</td><td>${esc(contents)}</td></tr><tr><td>Shipped on</td><td>${esc(x.at)}</td></tr></table>
@@ -282,10 +282,38 @@ Auth.gate("admin", "Founders admin", "", function (admin) {
       };
       form({ carrier: (o.shipping || {}).carrier || "", tracking: (o.shipping || {}).tracking || "", noTracking: !!(o.shipping || {}).noTracking, at: todayDay() });
     } else if (kind === "shop" && o.delivery === "pickup") {
+      const S = s().settings;
+      const readyForm = (val) => {
+        box.innerHTML = head(o.pickup ? "Change the pickup" : "Ready for pickup", "The customer receives one email with the day, the time and the place. You check it on the next screen before it goes.") +
+          `<div class="form-grid"><div class="field"><label class="label" for="pk-day">Pickup day</label><input class="input" type="date" id="pk-day" value="${esc(val.day)}" min="${dayVal(o.paidAt)}"></div>
+           <div class="field"><label class="label" for="pk-from">From</label><input class="input" type="time" id="pk-from" value="${esc(val.from)}"></div>
+           <div class="field"><label class="label" for="pk-to">To</label><input class="input" type="time" id="pk-to" value="${esc(val.to)}"></div>
+           <div class="field full"><label class="label" for="pk-place">Place</label><input class="input" id="pk-place" value="${esc(val.place)}" placeholder="Street and number, Luzern"></div></div>
+           <p class="small muted">Contents: ${esc(contents)}</p>` + buttons("stgo", "Review the email");
+        cancel();
+        $("#stgo", d).addEventListener("click", () => {
+          const x = { day: v("pk-day"), from: v("pk-from"), to: v("pk-to"), place: v("pk-place") };
+          if (!x.day || !x.from || !x.to || !x.place || x.from >= x.to) return fail(new Error("Fill in the day, the time (from, then a later to) and the place."));
+          review(x);
+        });
+      };
+      const review = (x) => {
+        box.innerHTML = head("Check before sending", "Is everything right? The customer will read this.") +
+          `<table class="breakdown review"><tr><td>Email to</td><td>${esc(email)}</td></tr><tr><td>Subject</td><td>Your MALACONDA order ${esc(o.id)} is ready for pickup</td></tr>
+           <tr><td>Day</td><td><b class="paper">${esc(x.day)}</b></td></tr><tr><td>Time</td><td><b class="paper">${esc(x.from)}–${esc(x.to)}</b></td></tr><tr><td>Place</td><td><b class="paper">${esc(x.place)}</b></td></tr><tr><td>Contents</td><td>${esc(contents)}</td></tr></table>
+           <p class="hint">Prototype: orders live in this browser, so the email is shown here but not sent yet. It goes out for real once orders are stored in the database.</p>
+           <div id="sterr"></div><div class="row"><button class="btn btn--sm" type="button" id="stgo">Confirm and email ${esc(email)}</button><button class="btn btn--sm btn--ghost" type="button" id="stback">Back and edit</button></div>`;
+        $("#stback", d).addEventListener("click", () => readyForm(x));
+        $("#stgo", d).addEventListener("click", () => { try { Store.pickupReady(id, x, admin.name); done(`${o.id}: pickup email sent to ${email}.`); } catch (e) { fail(e); } });
+      };
+      if (!o.pickup) { readyForm({ day: todayDay(), from: "", to: "", place: S.pickupPlace || "" }); return; }
+      const pk = o.pickup;
       box.innerHTML = head("Mark as collected", "Confirm only when the customer has collected the order. This closes the order.") +
-        `<table class="breakdown review"><tr><td>Paid on</td><td>${esc(dayVal(o.paidAt))}</td></tr><tr><td>Contents</td><td>${esc(contents)}</td></tr></table>
-         <div class="form-grid">${dateField("st-at", "Collected on")}</div><p class="hint">Free pickup: nothing is shipped and no email is sent for this step.</p>` + buttons("stgo", "Confirm collected");
+        `<table class="breakdown review"><tr><td>Paid on</td><td>${esc(dayVal(o.paidAt))}</td></tr><tr><td>Pickup</td><td>${esc(pk.day)} · ${esc(pk.from)}–${esc(pk.to)} · ${esc(pk.place)}</td></tr><tr><td>Contents</td><td>${esc(contents)}</td></tr></table>
+         <div class="form-grid">${dateField("st-at", "Collected on")}</div><p class="hint">No email is sent for this step.</p>` + buttons("stgo", "Confirm collected") +
+        `<div><button class="link-quiet small" type="button" id="pkchange">Change the day, time or place (sends a new email)</button></div>`;
       cancel(); $("#stgo", d).addEventListener("click", () => { try { Store.progress(kind, id, "delivered", { at: v("st-at") }, admin.name); done(`${o.id} marked as collected.`); } catch (e) { fail(e); } });
+      $("#pkchange", d).addEventListener("click", () => readyForm(pk));
     } else {
       const sh = o.shipping || {}, url = Store.trackingUrl(sh.carrier, sh.tracking, "en");
       box.innerHTML = head("Mark as delivered", "Confirm only when the customer has the parcel. This closes the order.") +
@@ -295,8 +323,30 @@ Auth.gate("admin", "Founders admin", "", function (admin) {
     }
   }
 
+  /* ---------- pro invoice: attach the PDF, the pro downloads it from their space (email #7 says so) ---------- */
+  function invoiceDialog(id) {
+    const o = s().orders.find((x) => x.id === id); if (!o) return;
+    const d = modal(`<div class="stack"><h2 class="card__title">Invoice for ${esc(o.id)}</h2><p class="small">${esc(proName(o.proId))} · ${o.boxes} boxes · ${chf(o.net)} excl. VAT</p>
+      ${o.invoiceFile ? `<div class="card stack"><p class="label">On file</p><p><a class="link-quiet" href="${esc(o.invoiceFile.dataUrl)}" download="${esc(o.invoiceFile.name)}">${esc(o.invoiceFile.name)}</a> <span class="small muted">· ${Math.round(o.invoiceFile.size / 1024)} KB · ${date(o.invoiceFile.at)}</span></p><div><button class="btn btn--sm btn--ghost" type="button" id="ivdel">Remove</button></div></div>` : ""}
+      <div class="form-grid"><div class="field"><label class="label" for="ivno">Invoice number</label><input class="input" id="ivno" value="${esc(o.invoiceNo || "")}" autocomplete="off"></div>
+      <div class="field"><label class="label" for="ivfile">${o.invoiceFile ? "Replace with" : "Invoice (PDF)"}</label><input class="input" id="ivfile" type="file" accept="application/pdf,.pdf"></div></div>
+      <p class="hint">The pro downloads it from My orders in their space. No email is sent: the order confirmation already says the invoice is in their account.</p>
+      <div id="iverr"></div><div class="row"><button class="btn btn--sm" type="button" id="ivgo">Save invoice</button><button class="btn btn--sm btn--ghost" type="button" id="ivx">Cancel</button></div></div>`);
+    const fail = (e) => { $("#iverr", d).innerHTML = `<div class="alert alert--bad">${esc(e.message)}</div>`; };
+    $("#ivx", d).addEventListener("click", () => closeModal(d));
+    if (o.invoiceFile) $("#ivdel", d).addEventListener("click", () => { Store.removeInvoiceFile(id, admin.name); closeModal(d); render(); Common.toast(`Invoice file removed from ${o.id}.`); });
+    $("#ivgo", d).addEventListener("click", () => {
+      const f = $("#ivfile", d).files[0]; if (!f) return fail(new Error("Choose the invoice as a PDF file."));
+      if (!/pdf$/i.test(f.type) && !/\.pdf$/i.test(f.name)) return fail(new Error("The invoice must be a PDF file."));
+      const r = new FileReader();
+      r.onload = () => { try { Store.setInvoiceFile(id, { name: f.name, size: f.size, dataUrl: String(r.result).replace(/^data:[^;]*;/, "data:application/pdf;") }, $("#ivno", d).value, admin.name); closeModal(d); render(); Common.toast(`Invoice saved for ${o.id}.`); } catch (e) { fail(e); } };
+      r.onerror = () => fail(new Error("The file could not be read."));
+      r.readAsDataURL(f);
+    });
+  }
   function bindOrderButtons() {
     $$("[data-adv]").forEach((b) => b.addEventListener("click", () => stepDialog("pro", b.dataset.adv)));
+    $$("[data-inv]").forEach((b) => b.addEventListener("click", () => invoiceDialog(b.dataset.inv)));
     $$("[data-edit]").forEach((b) => b.addEventListener("click", () => (Store.isWebOrder("pro", s().orders.find((x) => x.id === b.dataset.edit)) ? webOrderDialog("pro", b.dataset.edit) : orderDialog(null, b.dataset.edit))));
     $$("[data-gopro]").forEach((b) => b.addEventListener("click", () => { tab = "pros"; proId = b.dataset.gopro; render(); }));
   }
@@ -304,7 +354,7 @@ Auth.gate("admin", "Founders admin", "", function (admin) {
     return rowsBox(list.map((o) => { const nx = Store.nextConsumerStatus(o); const st = o.shipTo || {};
       return orow({ main: `<span class="orow__id"><b>${esc(o.id)}</b>${statusBadge(o)}</span>${hideWho ? "" : `<span>${o.accountId ? `<button class="link-quiet" data-gocust="${o.accountId}" type="button">${esc(o.name)}</button>` : esc(o.name)}</span>`}`, sub: hideWho ? date(o.createdAt) : dot(date(o.createdAt), esc(o.email), o.accountId ? "" : "guest"),
         meta: `<b>${chf(Store.consumerTotal(o))}</b> incl. VAT`, metaSub: dot(`${o.boxes} boxes`, o.welcomePct ? `first order −${o.welcomePct}%` : "", o.delivery === "pickup" ? "free pickup" : o.shippingFee ? `delivery ${chf(o.shippingFee)}` : ""),
-        more: dot(payTxt(o), o.delivery === "pickup" ? "Pickup: to be collected" : trackTxt(o), o.delivery === "pickup" ? "" : "deliver to " + esc(dot(st.address, ((st.zip || "") + " " + (st.city || "")).trim()))),
+        more: dot(payTxt(o), o.delivery === "pickup" ? (o.pickup ? `Pickup ${esc(o.pickup.day)} ${esc(o.pickup.from)}–${esc(o.pickup.to)}, ${esc(o.pickup.place)}` : "Pickup: day and time not sent yet") : trackTxt(o), o.delivery === "pickup" ? "" : "deliver to " + esc(dot(st.address, ((st.zip || "") + " " + (st.city || "")).trim()))),
         act: `${stepBtn("shop", o, nx, "data-cadv")}<button class="btn btn--sm btn--ghost" data-cedit="${o.id}">Details</button>` }); }));
   }
   function bindShopButtons() {
@@ -572,7 +622,7 @@ Auth.gate("admin", "Founders admin", "", function (admin) {
     const S = s().settings, n = (id, label, v, step) => `<div class="field"><label class="label" for="${id}">${label}</label><input class="input" id="${id}" type="number" step="${step || 1}" min="0" value="${v}"></div>`;
     shell(`<div><p class="label">Settings</p><h1 class="display h2">Numbers</h1></div>
       <form class="stack" id="sform"><div class="card stack"><p class="label">Prices</p><div class="form-grid">${n("s-retail", "Retail price per box (VAT incl.)", S.retailPrice, 0.05)}${n("s-pro", "Pro list price per bottle (excl. VAT)", S.proBottlePrice.toFixed(2), 0.01)}${n("s-floor", "Price floor per bottle (negotiated base)", S.minBottlePrice.toFixed(2), 0.01)}${n("s-vat", "VAT %", S.vatPct, 0.1)}${n("s-pbox", "Bottles in a pro box", S.proBottlesPerBox)}${n("s-moq", "Pro minimum order (boxes)", S.proMinBoxes)}</div><p class="hint">Shop box: ${S.bottlesPerBox} bottles, ${chf(S.retailPrice / S.bottlesPerBox)} per bottle. Pro list price per box: ${chf(S.proBottlePrice * S.proBottlesPerBox)} (${S.proBottlesPerBox} bottles).</p></div>
-      <div class="card stack"><p class="label">Shop delivery</p><div class="form-grid">${n("s-ship", "Delivery fee (VAT incl.)", S.shippingFee.toFixed(2), 0.05)}</div><label class="row small"><input type="checkbox" id="s-pickup" ${S.pickupEnabled ? "checked" : ""}> Offer free pickup at checkout</label><p class="hint">The founders have not confirmed the delivery fee yet: change it here once it is set.</p></div>
+      <div class="card stack"><p class="label">Shop delivery</p><div class="form-grid">${n("s-ship", "Delivery fee (VAT incl.)", S.shippingFee.toFixed(2), 0.05)}</div><label class="row small"><input type="checkbox" id="s-pickup" ${S.pickupEnabled ? "checked" : ""}> Offer free pickup at checkout</label><div class="field"><label class="label" for="s-place">Pickup place</label><input class="input" id="s-place" value="${esc(S.pickupPlace || "")}" placeholder="Street and number, Luzern"></div><p class="hint">The founders have not confirmed the delivery fee yet: change it here once it is set.</p></div>
       <div class="card stack"><p class="label">Welcome offers (first order)</p><div class="form-grid">${n("s-cw", "Consumer %", S.consumerWelcomePct)}${n("s-pw", "Pro %", S.proWelcomePct)}</div></div>
       <div class="card stack"><p class="label">Pro volume tiers (per order, whole order)</p><div class="form-grid">${n("s-t1m", "Tier 1 from (boxes)", S.tiers[0].min)}${n("s-t1p", "Tier 1 discount %", S.tiers[0].pct)}${n("s-t2m", "Tier 2 from (boxes)", S.tiers[1].min)}${n("s-t2p", "Tier 2 discount %", S.tiers[1].pct)}</div></div>
       <div class="card stack"><p class="label">Pro referral</p><div class="form-grid">${n("s-rp", "Credit per referral %", S.referral.pctPer)}${n("s-rm", "Max used per order %", S.referral.maxPerOrder)}${n("s-rb", "Min boxes on referred pro's first order", S.referral.minBoxes)}</div></div>
@@ -582,7 +632,7 @@ Auth.gate("admin", "Founders admin", "", function (admin) {
       e.preventDefault(); const v = (id) => Number($("#" + id).value);
       if (v("s-t1m") <= v("s-moq")) { $("#serr").innerHTML = '<div class="alert alert--bad">Tier 1 must start above the pro minimum order.</div>'; return; }
       if (v("s-t2m") <= v("s-t1m")) { $("#serr").innerHTML = '<div class="alert alert--bad">Tier 2 must start above tier 1.</div>'; return; }
-      const next = { ...S, retailPrice: v("s-retail"), proBottlePrice: v("s-pro"), minBottlePrice: v("s-floor"), vatPct: v("s-vat"), proBottlesPerBox: v("s-pbox"), proMinBoxes: v("s-moq"), shippingFee: v("s-ship"), pickupEnabled: $("#s-pickup").checked, consumerWelcomePct: v("s-cw"), proWelcomePct: v("s-pw"),
+      const next = { ...S, retailPrice: v("s-retail"), proBottlePrice: v("s-pro"), minBottlePrice: v("s-floor"), vatPct: v("s-vat"), proBottlesPerBox: v("s-pbox"), proMinBoxes: v("s-moq"), shippingFee: v("s-ship"), pickupEnabled: $("#s-pickup").checked, pickupPlace: $("#s-place").value.trim(), consumerWelcomePct: v("s-cw"), proWelcomePct: v("s-pw"),
         tiers: [{ min: v("s-t1m"), pct: v("s-t1p") }, { min: v("s-t2m"), pct: v("s-t2p") }],
         referral: { pctPer: v("s-rp"), maxPerOrder: v("s-rm"), minBoxes: v("s-rb") }, commission: { pct: v("s-cp"), months: v("s-cm") } };
       if (next.minBottlePrice > next.proBottlePrice) { $("#serr").innerHTML = '<div class="alert alert--bad">The floor cannot be above the list price.</div>'; return; }

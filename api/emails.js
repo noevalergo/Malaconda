@@ -111,6 +111,21 @@ const T = {
     };
   },
 
+  /* #2C. Ready for pickup, customer: the one email with the day, time and place (sent by the founders once the order is ready) */
+  pickupReady({ order, name, day, from, to, place }) {
+    const when = new Date(`${day}T12:00:00Z`).toLocaleDateString("en-GB", { weekday: "long", day: "numeric", month: "long", year: "numeric", timeZone: "UTC" });
+    return {
+      subject: `Your MALACONDA order ${order.ref} is ready for pickup`,
+      html: layout({ preheader: `Pick it up on ${when}, ${from}–${to}, in Luzern.`, body:
+        label(`Order ${order.ref}`) + h1("Ready for pickup") + p(hello(name)) +
+        p(`Good news! Order ${strong(order.ref)} is ready for collection.`) +
+        box(label("Day") + p(strong(when), "margin:0 0 14px") + label("Time") + p(strong(`${from}–${to}`), "margin:0 0 14px") + label("Place") + p(strong(place), "margin:0")) +
+        p("Bring your order number. The pickup is free.") +
+        button("View my orders", url("/account.html")) + thanks() }),
+      text: `Your order ${order.ref} is ready for pickup\n\n${helloText(name)}\nDay: ${when}\nTime: ${from}-${to}\nPlace: ${place}\nBring your order number. The pickup is free.\n\nThank you for being part of MALACONDA.`,
+    };
+  },
+
   /* #3. Shipment, customer (carrier + tracking; trackingUrl optional) */
   shipped({ order, name, carrier, trackingNumber, trackingUrl }) {
     return {

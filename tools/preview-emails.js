@@ -8,6 +8,7 @@ const samples = {
   "order-confirmation": { order, lines, name: "Claire Dupont" },
   "order-confirmation-pickup": { order: { ...order, delivery_method: "pickup", shipping_cents: 0 }, lines, name: "Claire Dupont" },
   "pro-order-confirmation": { order: { ref: "M-8B31D07", net_cents: 50274, vat_cents: 4072, total_cents: 54346, tier_cents: 2940, tier_pct: 5, extra_cents: 5586, welcome_pct: 10, ship_address: "Bahnhofstrasse 5", ship_zip: "6003", ship_city: "Luzern" }, lines: [{ flavor: "lulo", boxes: 10, unit_milli: 2450 }], name: "Marco Rossi" },
+  "pickup-ready": { order, name: "Claire Dupont", day: "2026-11-20", from: "16:00", to: "18:00", place: "Hertensteinstrasse 1, 6004 Luzern" },
   shipped: { order, name: "Claire Dupont", carrier: "La Poste", trackingNumber: "99.00.123456.78901234", trackingUrl: "https://service.post.ch/" },
   "pro-account": { name: "Marco Rossi", company: "Bar Le Zinc", email: "marco@lezinc.ch", tempPassword: "Tq7-Lm4x-Pz" },
   "ambassador-account": { name: "Sofia Ramirez", email: "sofia@example.ch", tempPassword: "Wk3-Hn8v-Rd", code: "SOFIA-MALA" },

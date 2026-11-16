@@ -345,3 +345,37 @@ test("a manual pro order stays fully editable, and a parcel without tracking is 
   assert.equal(S.isWebOrder("pro", w), true);
   assert.throws(() => S.updateOrder(w.id, { "payment.method": "Cash" }, "t"), /placed on the website/);
 });
+
+test("pro invoice: the founders attach a PDF with its number, the pro can download it; anything else is refused", () => {
+  const S = fresh();
+  const o = S.get().orders.find((x) => x.status !== "cancelled");
+  const pdf = { name: "INV-1.pdf", size: 2048, dataUrl: "data:application/pdf;base64,JVBERi0xLjQK" };
+  assert.throws(() => S.setInvoiceFile(o.id, { ...pdf, dataUrl: "data:image/png;base64,AAAA" }, "INV-1", "Founders"), /PDF/);
+  assert.throws(() => S.setInvoiceFile(o.id, { ...pdf, size: 3 * 1024 * 1024 }, "INV-1", "Founders"), /too large/);
+  const before = o.invoiceNo; if (!before) assert.throws(() => S.setInvoiceFile(o.id, pdf, "", "Founders"), /invoice number/);
+  S.setInvoiceFile(o.id, pdf, "INV-1", "Founders");
+  const saved = S.get().orders.find((x) => x.id === o.id);
+  assert.equal(saved.invoiceNo, "INV-1");
+  assert.equal(saved.invoiceFile.name, "INV-1.pdf");
+  assert.match(saved.editLog.at(-1).changes[0], /Invoice INV-1 added/);
+  S.removeInvoiceFile(o.id, "Founders");
+  assert.equal(S.get().orders.find((x) => x.id === o.id).invoiceFile, undefined);
+});
+
+test("shop pickup: once paid, the founders send the day, time and place once; then the order can be collected", () => {
+  const S = fresh();
+  const o = S.consumerCheckout({ email: "p@y.demo", name: "P", lines: [{ flavor: "guava", boxes: 1 }], paid: true, delivery: "pickup", now: "2026-01-10T10:00:00.000Z" });
+  const ship = S.consumerCheckout({ email: "s@y.demo", name: "S", address: "a", zip: "1", city: "c", lines: [{ flavor: "guava", boxes: 1 }], paid: true });
+  assert.throws(() => S.pickupReady(ship.id, { day: "2026-01-12", from: "16:00", to: "18:00", place: "Luzern" }), /delivered, not collected/);
+  assert.throws(() => S.pickupReady(o.id, { day: "2026-01-09", from: "16:00", to: "18:00", place: "Luzern" }), /before the payment/);
+  assert.throws(() => S.pickupReady(o.id, { day: "2026-01-12", from: "18:00", to: "16:00", place: "Luzern" }), /time/);
+  assert.throws(() => S.pickupReady(o.id, { day: "2026-01-12", from: "16:00", to: "18:00", place: " " }), /where/);
+  S.pickupReady(o.id, { day: "2026-01-12", from: "16:00", to: "18:00", place: "Hertensteinstrasse 1, Luzern" }, "Founders");
+  const r = S.get().consumerOrders.find((x) => x.id === o.id);
+  assert.deepEqual([r.pickup.day, r.pickup.from, r.pickup.to, r.pickup.place], ["2026-01-12", "16:00", "18:00", "Hertensteinstrasse 1, Luzern"]);
+  assert.match(r.editLog.at(-1).changes[0], /Ready for pickup: 2026-01-12 16:00-18:00, Hertensteinstrasse 1, Luzern; email to p@y.demo/);
+  assert.equal(r.status, "paid", "ready for pickup does not close the order");
+  S.progress("shop", o.id, "delivered", { at: "2026-01-12" }, "Founders");
+  assert.equal(S.get().consumerOrders.find((x) => x.id === o.id).status, "delivered");
+  assert.throws(() => S.pickupReady(o.id, { day: "2026-01-13", from: "16:00", to: "18:00", place: "Luzern" }), /already collected/);
+});

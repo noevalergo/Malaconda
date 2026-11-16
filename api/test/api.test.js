@@ -314,11 +314,16 @@ test("emails: the order confirmation tells a delivery from a pickup, with the ri
 test("emails: the founders' set, in English, without the removed #4, #6 and #9", () => {
   const { T } = require("../emails");
   for (const gone of ["requestReceived", "proOrderReceived"]) assert.ok(!(gone in T), `${gone} was removed`);
-  assert.deepEqual(Object.keys(T).sort(), ["ambassadorAccount", "commissionStatement", "contactReceived", "orderConfirmation", "passwordReset", "proAccount", "proOrderConfirmation", "referralCredit", "shipped", "welcome"]);
+  assert.deepEqual(Object.keys(T).sort(), ["ambassadorAccount", "commissionStatement", "contactReceived", "orderConfirmation", "passwordReset", "pickupReady", "proAccount", "proOrderConfirmation", "referralCredit", "shipped", "welcome"]);
+  const ready = T.pickupReady({ order: { ref: "M-1" }, name: "Claire Dupont", day: "2026-11-20", from: "16:00", to: "18:00", place: "Hertensteinstrasse 1, 6004 Luzern" });
+  assert.match(ready.subject, /M-1 is ready for pickup/);
+  assert.match(ready.html, /Friday, 20 November 2026/);
+  assert.match(ready.html, /16:00–18:00/);
+  assert.match(ready.html, /Hertensteinstrasse 1, 6004 Luzern/);
   const amb = T.ambassadorAccount({ name: "Sofia Ramirez", email: "s@x.ch", tempPassword: "Pw1", code: "SOFIA" });
   assert.match(amb.html, /You are an ambassador/);
   assert.doesNotMatch(amb.html, /<img/i, "no bottle photo in the ambassador email");
-  const all = Object.values(T).map((f) => f({ order: { ref: "R", net_cents: 0, ship_address: "", ship_zip: "", ship_city: "" }, lines: [], name: "Ana", email: "a@b.ch", tempPassword: "x", code: "C", period: "October 2026", referredCompany: "Hotel Montana", creditPct: 5, resetUrl: "https://x" }).html).join("");
+  const all = Object.values(T).map((f) => f({ order: { ref: "R", net_cents: 0, ship_address: "", ship_zip: "", ship_city: "" }, lines: [], name: "Ana", email: "a@b.ch", tempPassword: "x", code: "C", period: "October 2026", day: "2026-11-20", from: "16:00", to: "18:00", place: "Luzern", referredCompany: "Hotel Montana", creditPct: 5, resetUrl: "https://x" }).html).join("");
   assert.doesNotMatch(all, /Bonjour|Commande|Merci|caisse|Retrait|Livraison|Voir mes|Choisir|Me connecter|Ouvrir mon|Suivre mon/, "no French left");
   assert.match(all, /lang="en"/);
 });
