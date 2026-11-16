@@ -296,15 +296,29 @@ test("emails: the order confirmation tells a delivery from a pickup, with the ri
   const base = { ref: "M-TEST", net_cents: 11700, discount_cents: 0, welcome_pct: 0, ship_address: "Seestrasse 1", ship_zip: "8002", ship_city: "Zurich" };
   const lines = [{ flavor: "lulo", boxes: 2, unit_cents: 3900 }, { flavor: "guava", boxes: 1, unit_cents: 3900 }];
   const ship = T.orderConfirmation({ order: { ...base, delivery_method: "ship", shipping_cents: 900 }, lines, name: "Anna" });
-  assert.match(ship.html, /sous 5 jours ouvrés/);
-  assert.doesNotMatch(ship.html, /Retrait gratuit/);
-  assert.match(ship.text, /Total TVA incluse: CHF 126\.00/);
+  assert.match(ship.html, /within 5 working days/);
+  assert.doesNotMatch(ship.html, /Free pickup/);
+  assert.match(ship.text, /Total incl\. VAT: CHF 126\.00/);
   assert.match(ship.text, /Seestrasse 1/);
   const pick = T.orderConfirmation({ order: { ...base, delivery_method: "pickup", shipping_cents: 0 }, lines, name: "Anna" });
-  assert.match(pick.html, /Retrait gratuit/);
-  assert.doesNotMatch(pick.html + pick.text, /5 jours ouvrés|Seestrasse/);
-  assert.match(pick.text, /Total TVA incluse: CHF 117\.00/);
+  assert.match(pick.html, /Free pickup/);
+  assert.doesNotMatch(pick.html + pick.text, /5 working days|Seestrasse/);
+  assert.match(pick.text, /Total incl\. VAT: CHF 117\.00/);
   const pro = T.proOrderConfirmation({ order: { ref: "P-1", net_cents: 50274, vat_cents: 4072, total_cents: 54346, tier_cents: 2940, tier_pct: 5, extra_cents: 5586, welcome_pct: 10, ship_address: "a", ship_zip: "1", ship_city: "c" }, lines: [{ flavor: "lulo", boxes: 10, unit_milli: 2450 }], name: "Bar" });
-  assert.match(pro.html, /caisses de 24 bouteilles/);
-  assert.match(pro.html, /sous 4 semaines/);
+  assert.match(pro.html, /boxes of 24 bottles/);
+  assert.match(pro.html, /within 4 weeks/);
+  assert.match(pro.html, /You will find the invoice on your account\./);
+  assert.match(pick.html, /ready for collection in Luzern/);
+});
+
+test("emails: the founders' set, in English, without the removed #4, #6 and #9", () => {
+  const { T } = require("../emails");
+  for (const gone of ["requestReceived", "proOrderReceived"]) assert.ok(!(gone in T), `${gone} was removed`);
+  assert.deepEqual(Object.keys(T).sort(), ["ambassadorAccount", "commissionStatement", "contactReceived", "orderConfirmation", "passwordReset", "proAccount", "proOrderConfirmation", "referralCredit", "shipped", "welcome"]);
+  const amb = T.ambassadorAccount({ name: "Sofia Ramirez", email: "s@x.ch", tempPassword: "Pw1", code: "SOFIA" });
+  assert.match(amb.html, /You are an ambassador/);
+  assert.doesNotMatch(amb.html, /<img/i, "no bottle photo in the ambassador email");
+  const all = Object.values(T).map((f) => f({ order: { ref: "R", net_cents: 0, ship_address: "", ship_zip: "", ship_city: "" }, lines: [], name: "Ana", email: "a@b.ch", tempPassword: "x", code: "C", period: "October 2026", referredCompany: "Hotel Montana", creditPct: 5, resetUrl: "https://x" }).html).join("");
+  assert.doesNotMatch(all, /Bonjour|Commande|Merci|caisse|Retrait|Livraison|Voir mes|Choisir|Me connecter|Ouvrir mon|Suivre mon/, "no French left");
+  assert.match(all, /lang="en"/);
 });
