@@ -448,6 +448,42 @@
     save(); return o;
   }
 
+  /* ---- pro invoices: the founders attach the PDF, the pro downloads it from their space ---- */
+  const INVOICE_MAX = 1.5 * 1024 * 1024;   // the prototype keeps files in the browser, which holds about 5 MB in all
+  function setInvoiceFile(orderId, file, invoiceNo, by) {
+    const o = get().orders.find((x) => x.id === orderId); if (!o) throw new Error("Unknown order.");
+    if (o.status === "cancelled") throw new Error("This order is cancelled.");
+    if (!file || !/^data:application\/pdf;base64,/.test(String(file.dataUrl || ""))) throw new Error("Choose the invoice as a PDF file.");
+    if (file.size > INVOICE_MAX) throw new Error("The PDF is too large for the prototype (1.5 MB at most).");
+    const no = String(invoiceNo || o.invoiceNo || "").trim(); if (!no) throw new Error("Enter the invoice number.");
+    const replaced = !!o.invoiceFile;
+    o.invoiceNo = no; o.invoiceFile = { name: String(file.name || `invoice-${no}.pdf`), size: file.size, dataUrl: file.dataUrl, at: nowIso() };
+    (o.editLog = o.editLog || []).push({ at: nowIso(), by: by || "admin", changes: [`Invoice ${no} ${replaced ? "replaced" : "added"} (${o.invoiceFile.name}): the pro can download it from their space`] });
+    save(); return o;
+  }
+  function removeInvoiceFile(orderId, by) {
+    const o = get().orders.find((x) => x.id === orderId); if (!o || !o.invoiceFile) return o;
+    (o.editLog = o.editLog || []).push({ at: nowIso(), by: by || "admin", changes: [`Invoice file ${o.invoiceFile.name} removed`] });
+    delete o.invoiceFile; save(); return o;
+  }
+
+  /* ---- shop pickups: once paid, the founders set the day, time and place; the customer gets one email (#2C) ---- */
+  function pickupReady(id, d, by) {
+    d = d || {};
+    const o = get().consumerOrders.find((x) => x.id === id); if (!o) throw new Error("Unknown order.");
+    if (o.delivery !== "pickup") throw new Error("This order is delivered, not collected.");
+    if (o.status !== "paid") throw new Error(o.status === "delivered" ? "This order is already collected." : "The order must be paid first.");
+    const day = String(d.day || "").slice(0, 10), from = String(d.from || "").trim(), to = String(d.to || "").trim(), place = String(d.place || "").trim();
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(day)) throw new Error("Choose the pickup day.");
+    if (day < dayOf(o.paidAt)) throw new Error("The pickup day cannot be before the payment date.");
+    if (!/^\d{2}:\d{2}$/.test(from) || !/^\d{2}:\d{2}$/.test(to) || from >= to) throw new Error("Enter the pickup time: from, then to (later).");
+    if (!place) throw new Error("Enter where to collect the order.");
+    const again = !!o.pickup;
+    o.pickup = { day, from, to, place, at: nowIso() };
+    (o.editLog = o.editLog || []).push({ at: nowIso(), by: by || "admin", changes: [`${again ? "Pickup changed" : "Ready for pickup"}: ${day} ${from}-${to}, ${place}; email to ${o.email}`] });
+    save(); return o;
+  }
+
   /* ---- consumers: accounts and shop orders ---------------------------- */
   const CONSUMER_FLOW = ["placed", "paid", "shipped", "delivered"];
   const CONSUMER_LABEL = { placed: "Placed", paid: "Paid", shipped: "Shipped", delivered: "Delivered", cancelled: "Cancelled" };
@@ -714,6 +750,7 @@
     FLAVORS_ALL: FLAVORS, unitPricesOf, priceSheetOf, conditionsOf, setProPrices, priceConflicts,
     PAYMENT_METHODS, VIA_OPTIONS, CARRIERS, trackingUrl, checkShipping, isWebOrder, progress, consumerTotal, createManualOrder, updateOrder, updateConsumerOrder,
     ordersOfPro, creditOf, previewProOrder, placeProOrder, payProOrder, nextStatus, advanceOrder, cancelOrder,
+    setInvoiceFile, removeInvoiceFile, pickupReady,
     CONSUMER_FLOW, CONSUMER_LABEL, registerConsumer, updateProfile, consumerIsFirst, consumerOrdersOf, nextConsumerStatus, advanceConsumerOrder, cancelConsumerOrder, stats,
     consumerPreview, consumerCheckout, ledger, ambassadorView, isPaidOut, markPaidOut, unmarkPaidOut, updateSettings,
   };

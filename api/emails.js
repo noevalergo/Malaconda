@@ -1,4 +1,4 @@
-/* Transactional emails (French base). Table layout, inline CSS, safe for Gmail / Apple Mail / Outlook; one <style> block only adds web fonts, base resets and the mobile breakpoint.
+/* Transactional emails (English, founders' copy Nov 2026; numbers match the Figma file 'Malaconda – Emails'). Table layout, inline CSS, safe for Gmail / Apple Mail / Outlook; one <style> block only adds web fonts, base resets and the mobile breakpoint.
    Each template returns { subject, html, text }. Every dynamic value is escaped. No product prices or rates are shown to ambassadors; pro prices are excl. VAT. */
 const config = require("./config");
 const { esc, chf, FLAVOR_NAMES, SETTINGS } = require("./lib");   // { lulo: "Biting Lulo", guava: "Pink Guava" }
@@ -28,7 +28,7 @@ function table(rows, { total } = {}) {
 
 function layout({ preheader, body, footerNote }) {
   return `<!doctype html>
-<html lang="fr" xmlns="http://www.w3.org/1999/xhtml"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="color-scheme" content="dark light"><meta name="supported-color-schemes" content="dark light"><title>Malaconda</title>
+<html lang="en" xmlns="http://www.w3.org/1999/xhtml"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="color-scheme" content="dark light"><meta name="supported-color-schemes" content="dark light"><title>Malaconda</title>
 <!--[if mso]><style>body,table,td,a{font-family:Arial,Helvetica,sans-serif!important}</style><![endif]-->
 <style>
 @import url("https://fonts.googleapis.com/css2?family=Chivo:wght@400;600&family=DM+Mono:wght@500&display=swap");
@@ -52,8 +52,8 @@ a{color:${C.paper}}
   <tr><td class="px" bgcolor="${C.surface}" style="background:${C.surface};padding:40px 32px 24px;border-radius:0 0 12px 12px">${body}</td></tr>
   <tr><td class="px" style="padding:24px 32px 8px;font:400 12px/1.6 ${BODY};color:${C.stone}">
     ${footerNote ? `<p style="margin:0 0 12px">${footerNote}</p>` : ""}
-    <p style="margin:0 0 4px;font:500 12px/1.6 ${MONO};letter-spacing:.08em;text-transform:uppercase">Malaconda &middot; Boisson gazeuse &middot; Fabriquée en Suisse</p>
-    <p style="margin:0">Une question&nbsp;? Écrivez-nous à <a href="mailto:hello@malaconda.com" style="color:${C.paper}">hello@malaconda.com</a> &middot; <a href="${esc(base())}" style="color:${C.paper}">malaconda.com</a></p>
+    <p style="margin:0 0 4px;font:500 12px/1.6 ${MONO};letter-spacing:.08em;text-transform:uppercase">Malaconda &middot; Sparkling soda &middot; Made in Switzerland</p>
+    <p style="margin:0">A question? Write to us at <a href="mailto:hello@malaconda.com" style="color:${C.paper}">hello@malaconda.com</a> &middot; <a href="${esc(base())}" style="color:${C.paper}">malaconda.com</a></p>
   </td></tr>
 </table>
 <!--[if mso]></td></tr></table><![endif]-->
@@ -62,198 +62,192 @@ a{color:${C.paper}}
 
 const flavorLabel = (f) => esc(FLAVOR_NAMES[f] || f);
 const PRO_PER = SETTINGS.proBottlesPerBox;   // bottles in a pro box (24); a shop box has 12
-const boxWord = (n, per = 12) => `${n}&nbsp;caisse${n > 1 ? "s" : ""} de ${per}`;
-const first = (name) => esc(String(name || "").trim().split(/\s+/)[0] || "");
+const boxWord = (n, per = 12) => `${n}&nbsp;box${n > 1 ? "es" : ""} of ${per}`;
+const boxText = (n, per = 12) => `${n} box${n > 1 ? "es" : ""} of ${per}`;
 const firstRaw = (name) => String(name || "").trim().split(/\s+/)[0] || "";
-const helloText = (name) => `Bonjour${firstRaw(name) ? " " + firstRaw(name) : ""},`;
-const hello = (name) => `Bonjour${first(name) ? " " + first(name) : ""},`;
-const addr = (o) => `${esc(o.ship_address)}<br>${esc(o.ship_zip)} ${esc(o.ship_city)}, Suisse`;
-const AUTH_NOTE = "Vous recevez cet email car une action a été effectuée avec cette adresse sur malaconda.com.";
+const helloText = (name) => `Hi${firstRaw(name) ? " " + firstRaw(name) : ""},`;
+const hello = (name) => esc(helloText(name));
+const addr = (o) => `${esc(o.ship_address)}<br>${esc(o.ship_zip)} ${esc(o.ship_city)}, Switzerland`;
+const TAGLINE = "MALACONDA. EMBRACE THE TEMPTATION.";
+const tagline = () => `<p style="margin:8px 0 0;font:400 22px/1.1 ${DISPLAY};text-transform:uppercase;color:${C.paper}">${TAGLINE}</p>`;
+const thanks = () => p("Thank you for being part of MALACONDA.", "margin-bottom:0");
+const offer = (pct, line) => box(label("Your welcome gift") + `<p style="margin:0 0 6px;font:400 44px/1 ${DISPLAY};color:${C.lulo}">−${pct}%</p><p style="margin:0;font:400 15px/1.5 ${BODY};color:${C.stone}">Enjoy ${pct}% off your first order.<br>${line}</p>`);
+const access = (email, tempPassword) => box(label("Your access") + p("Email: " + strong(email), "margin:0 0 10px") + p("Temporary password: " + code(tempPassword), "margin:0 0 10px") + p("You will be asked to create a new password the first time you log in.", "margin:0;font-size:14px"));
+const AUTH_NOTE = "You are receiving this email because an action was taken with this address on malaconda.com.";
+const linesText = (lines, per) => lines.map((l) => `- ${FLAVOR_NAMES[l.flavor] || l.flavor}: ${boxText(l.boxes, per)}`).join("\n");
 
 const T = {
-  /* 1. Welcome after account creation (customer): 10% on the first order */
+  /* #1. Registration, customer: 10% on the first order */
   welcome({ name }) {
     return {
-      subject: `Bienvenue chez Malaconda : ${WELCOME_PCT} % sur votre première commande`,
-      html: layout({ preheader: `Votre compte est créé. ${WELCOME_PCT} % de réduction sur votre première commande.`, footerNote: AUTH_NOTE, body:
-        label("Compte créé") + h1("Bienvenue chez Malaconda") + p(hello(name)) +
-        p("Votre compte est prêt. Malaconda, c’est le soda d’une bande d’amis colombiens installés en Suisse, en deux saveurs&nbsp;: <b style=\"color:" + C.guava + "\">Pink Guava</b> et <b style=\"color:" + C.lulo + "\">Biting Lulo</b>.") +
-        box(label("Votre cadeau de bienvenue") + `<p style="margin:0 0 6px;font:400 44px/1 ${DISPLAY};color:${C.lulo}">−${WELCOME_PCT} %</p><p style="margin:0;font:400 15px/1.5 ${BODY};color:${C.stone}">sur votre première commande. La réduction s’applique automatiquement lorsque vous êtes connecté, sans code à saisir. Elle est valable une seule fois.</p>`) +
-        p(`Nous vendons par caisses de 12 bouteilles et livrons en Suisse uniquement.`) +
-        button("Choisir mes saveurs", url("/#flavours")) +
-        p("Merci d’avoir rejoint l’aventure. À votre santé&nbsp;!", "margin-bottom:0") }),
-      text: `Bienvenue chez Malaconda\n\n${helloText(name)}\nVotre compte est créé. ${WELCOME_PCT} % de réduction sur votre première commande, appliqués automatiquement quand vous êtes connecté (valable une fois).\nCaisses de 12 bouteilles, livraison en Suisse uniquement.\n${url("/#flavours")}\n\nMalaconda`,
+      subject: `Welcome to MALACONDA: ${WELCOME_PCT}% off your first order`,
+      html: layout({ preheader: `Your account is ready. Enjoy ${WELCOME_PCT}% off your first order.`, footerNote: AUTH_NOTE, body:
+        h1("Welcome to MALACONDA") + p(hello(name)) +
+        p(`Your account is ready. Now it is your turn to discover some of the world’s most extraordinary fruit flavors. Meet <b style="color:${C.lulo}">Biting Lulo</b> and <b style="color:${C.guava}">Pink Guava</b>.`) +
+        offer(WELCOME_PCT, "The discount applies automatically at checkout.") +
+        button("Pick your flavors", url("/#flavors")) + tagline() }),
+      text: `Welcome to MALACONDA\n\n${helloText(name)}\nYour account is ready. Meet Biting Lulo and Pink Guava.\nEnjoy ${WELCOME_PCT}% off your first order. The discount applies automatically at checkout.\n${url("/#flavors")}\n\n${TAGLINE}`,
     };
   },
 
-  /* 2. Order confirmation (paid) */
+  /* #2A (delivery) and #2B (pickup in Luzern). Order confirmation, customer, paid */
   orderConfirmation({ order, lines, name }) {
-    const rows = lines.map((l) => [`${flavorLabel(l.flavor)}<br><span style="color:${C.stone};font-size:13px">${boxWord(l.boxes)} bouteilles</span>`, chf(l.boxes * l.unit_cents)]);
-    if (order.discount_cents) rows.push([`Première commande −${esc(order.welcome_pct)} %`, "−" + chf(order.discount_cents), true]);
+    const rows = lines.map((l) => [`${flavorLabel(l.flavor)}<br><span style="color:${C.stone};font-size:13px">${boxWord(l.boxes)} bottles</span>`, chf(l.boxes * l.unit_cents)]);
+    if (order.discount_cents) rows.push([`First order −${esc(order.welcome_pct)}%`, "−" + chf(order.discount_cents), true]);
     const pickup = order.delivery_method === "pickup", fee = order.shipping_cents || 0, total = order.net_cents + fee;
-    rows.push([pickup ? "Retrait" : "Livraison", pickup || !fee ? "Gratuit" : chf(fee), true]);
+    rows.push([pickup ? "Pickup in Luzern" : "Delivery", pickup || !fee ? "Free" : chf(fee), true]);
+    const after = pickup ? "Free pickup. We will send you another email as soon as your order is ready for collection in Luzern."
+      : "Delivery in Switzerland within 5 working days. We will send you another email as soon as your order is on its way.";
     return {
-      subject: `Votre commande Malaconda ${order.ref} est confirmée`,
-      html: layout({ preheader: `Merci ! Commande ${order.ref} payée. ${pickup ? "Retrait gratuit." : "Livraison sous 5 jours ouvrés."}`, body:
-        label(`Commande ${order.ref}`) + h1("Merci pour votre commande") + p(hello(name)) +
-        p(`Votre paiement est bien reçu. Voici le récapitulatif de la commande ${strong(order.ref)}.`) +
-        table(rows, { total: ["Total TVA incluse", chf(total)] }) +
-        box(pickup
-          ? label("Retrait") + p("Retrait gratuit. Nous vous écrivons très vite pour organiser le retrait de votre commande.", "margin:0;font-size:14px")
-          : label("Livraison") + p(`${addr(order)}`, "margin:0 0 8px;color:" + C.paper) + p("Livraison en Suisse sous 5 jours ouvrés. Nous vous écrirons dès l’expédition de votre colis.", "margin:0;font-size:14px")) +
-        button("Voir mes commandes", url("/account.html")) +
-        p("À très vite, et merci de soutenir une petite bande d’amis.", "margin-bottom:0") }),
-      text: `Commande ${order.ref} confirmée\n\n${helloText(name)}\n${lines.map((l) => `- ${FLAVOR_NAMES[l.flavor] || l.flavor}: ${l.boxes} caisse(s) de 12 — ${chf(l.boxes * l.unit_cents)}`).join("\n")}\n${order.discount_cents ? `Première commande -${order.welcome_pct} % : -${chf(order.discount_cents)}\n` : ""}${pickup ? "Retrait gratuit" : "Livraison: " + chf(fee)}\nTotal TVA incluse: ${chf(total)}\n${pickup ? "Nous vous écrivons très vite pour organiser le retrait." : `Livraison: ${order.ship_address}, ${order.ship_zip} ${order.ship_city}, Suisse, sous 5 jours ouvrés.`}`,
+      subject: `Your MALACONDA order ${order.ref} is confirmed`,
+      html: layout({ preheader: `Order ${order.ref} is paid. ${pickup ? "Free pickup in Luzern." : "Delivery within 5 working days."}`, body:
+        label(`Order ${order.ref}`) + h1("Thank you for your order") + p(hello(name)) +
+        p(`Good choice! We have received your payment and your order is confirmed. Here is the summary of order ${strong(order.ref)}.`) +
+        table(rows, { total: ["Total incl. VAT", chf(total)] }) +
+        box(pickup ? label("Free pickup") + p(after, "margin:0;font-size:14px")
+          : label("Delivery") + p(addr(order), "margin:0 0 8px;color:" + C.paper) + p(after, "margin:0;font-size:14px")) +
+        button("View my orders", url("/account.html")) + thanks() }),
+      text: `Thank you for your order ${order.ref}\n\n${helloText(name)}\nGood choice! We have received your payment and your order is confirmed.\n${lines.map((l) => `- ${FLAVOR_NAMES[l.flavor] || l.flavor}: ${boxText(l.boxes)} - ${chf(l.boxes * l.unit_cents)}`).join("\n")}\n${order.discount_cents ? `First order -${order.welcome_pct}%: -${chf(order.discount_cents)}\n` : ""}${pickup ? "Pickup in Luzern: free" : "Delivery: " + (fee ? chf(fee) : "free")}\nTotal incl. VAT: ${chf(total)}\n${pickup ? "" : `Delivery address: ${order.ship_address}, ${order.ship_zip} ${order.ship_city}, Switzerland.\n`}${after}\n\nThank you for being part of MALACONDA.`,
     };
   },
 
-  /* 2b. Pro order paid online (prices excl. VAT, VAT added at the end) */
-  proOrderConfirmation({ order, lines, name }) {
-    const rows = lines.map((l) => [`${flavorLabel(l.flavor)}<br><span style="color:${C.stone};font-size:13px">${boxWord(l.boxes, PRO_PER)} bouteilles</span>`, chf(l.boxes * Math.round(l.unit_milli * PRO_PER / 10))]);
-    if (order.tier_cents) rows.push([`Remise de volume −${esc(order.tier_pct)} %`, "−" + chf(order.tier_cents), true]);
-    if (order.extra_cents) rows.push([order.welcome_pct ? `Première commande −${esc(order.welcome_pct)} %` : `Crédit de recommandation −${esc(order.credit_pct)} %`, "−" + chf(order.extra_cents), true]);
-    rows.push(["Total hors TVA", chf(order.net_cents), true], [`TVA ${esc(String(SETTINGS.vatPct).replace(".", ","))} %`, chf(order.vat_cents), true]);
+  /* #2C. Ready for pickup, customer: the one email with the day, time and place (sent by the founders once the order is ready) */
+  pickupReady({ order, name, day, from, to, place }) {
+    const when = new Date(`${day}T12:00:00Z`).toLocaleDateString("en-GB", { weekday: "long", day: "numeric", month: "long", year: "numeric", timeZone: "UTC" });
     return {
-      subject: `Votre commande pro Malaconda ${order.ref} est confirmée`,
-      html: layout({ preheader: `Commande ${order.ref} payée. Livraison sous 4 semaines.`, body:
-        label(`Commande ${order.ref}`) + h1("Merci pour votre commande") + p(hello(name)) +
-        p(`Votre paiement est bien reçu. Voici le récapitulatif de la commande ${strong(order.ref)}, à vos prix professionnels.`) +
-        table(rows, { total: ["Total TVA incluse", chf(order.total_cents)] }) +
-        box(label("Livraison") + p(`${addr(order)}`, "margin:0 0 8px;color:" + C.paper) + p("Livraison en Suisse sous 4 semaines. Nous vous écrirons dès l’expédition.", "margin:0;font-size:14px")) +
-        button("Mon espace pro", url("/pro-space.html")) +
-        p("À très vite.", "margin-bottom:0") }),
-      text: `Commande pro ${order.ref} confirmée\n\n${helloText(name)}\n${lines.map((l) => `- ${FLAVOR_NAMES[l.flavor] || l.flavor}: ${l.boxes} caisse(s) de ${PRO_PER}`).join("\n")}\nTotal hors TVA: ${chf(order.net_cents)}\nTVA: ${chf(order.vat_cents)}\nTotal TVA incluse: ${chf(order.total_cents)}\nLivraison: ${order.ship_address}, ${order.ship_zip} ${order.ship_city}, Suisse, sous 4 semaines.`,
+      subject: `Your MALACONDA order ${order.ref} is ready for pickup`,
+      html: layout({ preheader: `Pick it up on ${when}, ${from}–${to}, in Luzern.`, body:
+        label(`Order ${order.ref}`) + h1("Ready for pickup") + p(hello(name)) +
+        p(`Good news! Order ${strong(order.ref)} is ready for collection.`) +
+        box(label("Day") + p(strong(when), "margin:0 0 14px") + label("Time") + p(strong(`${from}–${to}`), "margin:0 0 14px") + label("Place") + p(strong(place), "margin:0")) +
+        p("Bring your order number. The pickup is free.") +
+        button("View my orders", url("/account.html")) + thanks() }),
+      text: `Your order ${order.ref} is ready for pickup\n\n${helloText(name)}\nDay: ${when}\nTime: ${from}-${to}\nPlace: ${place}\nBring your order number. The pickup is free.\n\nThank you for being part of MALACONDA.`,
     };
   },
 
-  /* 3. Shipped (carrier + tracking; trackingUrl optional) */
+  /* #3. Shipment, customer (carrier + tracking; trackingUrl optional) */
   shipped({ order, name, carrier, trackingNumber, trackingUrl }) {
     return {
-      subject: `Votre commande ${order.ref} est en route`,
-      html: layout({ preheader: `Commande ${order.ref} expédiée${trackingNumber ? ` · suivi ${trackingNumber}` : ""}.`, body:
-        label(`Commande ${order.ref}`) + h1("Votre colis est parti") + p(hello(name)) +
-        p(`Bonne nouvelle&nbsp;: la commande ${strong(order.ref)} vient d’être expédiée.`) +
-        box(label("Suivi du colis") + (carrier ? p("Transporteur&nbsp;: " + strong(carrier), "margin:0 0 8px") : "") + (trackingNumber ? p("Numéro de suivi&nbsp;: " + code(trackingNumber), "margin:0 0 8px") : "") + p(`Livraison à&nbsp;:<br>${addr(order)}`, "margin:0;font-size:14px")) +
-        (trackingUrl ? button("Suivre mon colis", safeUrl(trackingUrl)) : "") +
-        p("Pensez à mettre les bouteilles au frais avant de les déguster.", "margin-bottom:0") }),
-      text: `Votre commande ${order.ref} est expédiée.\n${carrier ? `Transporteur: ${carrier}\n` : ""}${trackingNumber ? `Suivi: ${trackingNumber}\n` : ""}${trackingUrl ? trackingUrl + "\n" : ""}Livraison: ${order.ship_address}, ${order.ship_zip} ${order.ship_city}, Suisse.`,
+      subject: `Your MALACONDA is on its way`,
+      html: layout({ preheader: `Order ${order.ref} has been shipped${trackingNumber ? ` · tracking ${trackingNumber}` : ""}.`, body:
+        label(`Order ${order.ref}`) + h1("Your MALACONDA is on its way") + p(hello(name)) +
+        p(`Good news! Order ${strong(order.ref)} has been shipped.`) +
+        ((carrier || trackingNumber) ? box(label("Tracking") + (carrier ? p("Carrier: " + strong(carrier), "margin:0 0 8px") : "") + (trackingNumber ? p("Tracking number: " + code(trackingNumber), "margin:0") : "")) : "") +
+        (trackingUrl ? button("Track my package", safeUrl(trackingUrl)) : "") +
+        p("Store in a cool, dry place. Best served cold.") + tagline() }),
+      text: `Your MALACONDA is on its way\n\n${helloText(name)}\nGood news! Order ${order.ref} has been shipped.\n${carrier ? `Carrier: ${carrier}\n` : ""}${trackingNumber ? `Tracking: ${trackingNumber}\n` : ""}${trackingUrl ? trackingUrl + "\n" : ""}Store in a cool, dry place. Best served cold.\n\n${TAGLINE}`,
     };
   },
 
-  /* 4. Access request received (pro or ambassador) */
-  requestReceived({ name, kind }) {
-    const amb = kind === "ambassador";
-    return {
-      subject: amb ? "Nous avons bien reçu votre candidature d’ambassadeur" : "Nous avons bien reçu votre demande d’accès pro",
-      html: layout({ preheader: amb ? "Votre candidature est entre les mains des fondateurs. Réponse rapide." : "Votre demande est entre les mains des fondateurs. Réponse rapide.", footerNote: AUTH_NOTE, body:
-        label(amb ? "Candidature ambassadeur" : "Demande d’accès pro") + h1("Merci, c’est bien reçu") + p(hello(name)) +
-        p(amb ? "Merci de votre intérêt pour devenir ambassadeur Malaconda. Les fondateurs étudient votre candidature et reviennent vers vous très vite." : "Merci de votre intérêt pour Malaconda. Les fondateurs étudient votre demande d’accès professionnel et reviennent vers vous très vite pour ouvrir votre compte.") +
-        (amb ? "" : p(`À l’ouverture de votre compte, ${WELCOME_PCT} % de réduction vous attendent sur votre première commande.`)) +
-        p("En attendant, une question&nbsp;? Répondez simplement à cet email.", "margin-bottom:0") }),
-      text: `${helloText(name)}\nVotre ${amb ? "candidature d’ambassadeur" : "demande d’accès pro"} est bien reçue. Les fondateurs reviennent vers vous très vite.`,
-    };
-  },
+  /* #4 (access request received) was removed by the founders to keep emails to a minimum. */
 
-  /* 5. Pro account opened (temporary password, first-order welcome 10%) */
+  /* #5. Pro account opened (temporary password, first-order welcome 10%) */
   proAccount({ name, company, email, tempPassword }) {
     return {
-      subject: "Votre compte pro Malaconda est ouvert",
-      html: layout({ preheader: `Compte pro ouvert pour ${company || "votre établissement"}. ${WELCOME_PCT} % sur votre première commande.`, footerNote: AUTH_NOTE, body:
-        label("Compte professionnel") + h1("Votre compte pro est ouvert") + p(hello(name)) +
-        p(`Le compte de ${strong(company || "votre établissement")} est prêt. Une fois connecté, vous voyez vos prix professionnels (hors TVA) directement sur le site.`) +
-        box(label("Vos accès") + p("Email&nbsp;: " + strong(email), "margin:0 0 10px") + p("Mot de passe temporaire&nbsp;: " + code(tempPassword), "margin:0 0 10px") + p("Vous devrez le changer à la première connexion.", "margin:0;font-size:14px")) +
-        box(label("Offre de bienvenue pro") + `<p style="margin:0 0 6px;font:400 44px/1 ${DISPLAY};color:${C.lulo}">−${WELCOME_PCT} %</p><p style="margin:0;font:400 15px/1.5 ${BODY};color:${C.stone}">sur votre première commande. Elle s’applique automatiquement.</p>`) +
-        p(`Nous vendons par caisses de ${PRO_PER} bouteilles (Pink Guava et Biting Lulo), à partir de ${SETTINGS.proMinBoxes} caisses, et livrons en Suisse uniquement, sous 4 semaines.`) +
-        button("Me connecter", url("/pro-space.html")) +
-        p("Bienvenue dans la famille Malaconda.", "margin-bottom:0") }),
-      text: `Votre compte pro Malaconda est ouvert.\n\n${helloText(name)}\nEmail: ${email}\nMot de passe temporaire: ${tempPassword} (à changer à la première connexion)\n${WELCOME_PCT} % de réduction sur votre première commande.\n${url("/pro-space.html")}`,
+      subject: "Your MALACONDA Pro account is open",
+      html: layout({ preheader: `The MALACONDA Pro account for ${company || "your venue"} is now open.`, footerNote: AUTH_NOTE, body:
+        label("MALACONDA Pro") + h1("Welcome to MALACONDA") + p(hello(name)) +
+        p(`The MALACONDA Pro account for ${strong(company || "your venue")} is now open.`) +
+        p("Log in to your account to access your wholesale prices and start ordering Biting Lulo and Pink Guava.") +
+        access(email, tempPassword) +
+        offer(WELCOME_PCT, "This discount applies automatically at checkout.") +
+        button("Log in", url("/pro-space.html")) + tagline() }),
+      text: `Welcome to MALACONDA\n\n${helloText(name)}\nThe MALACONDA Pro account for ${company || "your venue"} is now open.\nEmail: ${email}\nTemporary password: ${tempPassword} (you will create a new one the first time you log in)\nEnjoy ${WELCOME_PCT}% off your first order.\n${url("/pro-space.html")}\n\n${TAGLINE}`,
     };
   },
 
-  /* 6. Pro order received: payment by bank transfer, invoice to follow */
-  proOrderReceived({ name, ref, lines, netCents, vatIncluded }) {
-    const rows = lines.map((l) => [`${flavorLabel(l.flavor)}<br><span style="color:${C.stone};font-size:13px">${boxWord(l.boxes)} bouteilles</span>`, ""]);
+  /* #6 (pro order received, invoice by email) was removed by the founders: pros pay online and find the invoice in their account. */
+
+  /* #7. Order, pro, paid online (prices excl. VAT, VAT added at the end; invoice in the pro account) */
+  proOrderConfirmation({ order, lines, name }) {
+    const rows = lines.map((l) => [`${flavorLabel(l.flavor)}<br><span style="color:${C.stone};font-size:13px">${boxWord(l.boxes, PRO_PER)} bottles</span>`, chf(l.boxes * Math.round(l.unit_milli * PRO_PER / 10))]);
+    if (order.tier_cents) rows.push([`Volume discount −${esc(order.tier_pct)}%`, "−" + chf(order.tier_cents), true]);
+    if (order.extra_cents) rows.push([order.welcome_pct ? `First order −${esc(order.welcome_pct)}%` : `Referral credit −${esc(order.credit_pct)}%`, "−" + chf(order.extra_cents), true]);
+    rows.push(["Total excl. VAT", chf(order.net_cents), true], [`VAT ${esc(String(SETTINGS.vatPct))}%`, chf(order.vat_cents), true]);
     return {
-      subject: `Commande ${ref} reçue`,
-      html: layout({ preheader: `Nous préparons votre facture pour la commande ${ref}.`, body:
-        label(`Commande ${ref}`) + h1("Commande bien reçue") + p(hello(name)) +
-        p(`Nous avons bien reçu votre commande ${strong(ref)}.`) +
-        table(rows, netCents != null ? { total: [vatIncluded ? "Total TVA incluse" : "Total hors TVA", chf(netCents)] } : {}) +
-        p("Nous vous envoyons la facture par email. La commande part dès réception du paiement par virement. Livraison en Suisse sous 4 semaines.") +
-        button("Voir mes commandes", url("/pro-space.html")) +
-        p("Merci pour votre confiance.", "margin-bottom:0") }),
-      text: `Commande ${ref} reçue.\n${lines.map((l) => `- ${FLAVOR_NAMES[l.flavor] || l.flavor}: ${l.boxes} caisse(s) de ${PRO_PER}`).join("\n")}\nFacture à suivre par email; livraison en Suisse sous 4 semaines.`,
+      subject: `Your MALACONDA Pro order ${order.ref} is confirmed`,
+      html: layout({ preheader: `Order ${order.ref} is paid. Delivery within 4 weeks.`, body:
+        label(`Order ${order.ref}`) + h1("Thank you for your order") + p(hello(name)) +
+        p(`Good choice! We’ve received your payment and your order is confirmed. Here is the summary of order ${strong(order.ref)}.`) +
+        table(rows, { total: ["Total incl. VAT", chf(order.total_cents)] }) +
+        box(label("Delivery") + p(addr(order), "margin:0 0 8px;color:" + C.paper) + p("Delivery in Switzerland within 4 weeks.", "margin:0;font-size:14px")) +
+        p("You will find the invoice on your account.") +
+        button("View my orders", url("/pro-space.html")) + thanks() }),
+      text: `Thank you for your order ${order.ref}\n\n${helloText(name)}\nGood choice! We’ve received your payment and your order is confirmed.\n${linesText(lines, PRO_PER)}\nTotal excl. VAT: ${chf(order.net_cents)}\nVAT: ${chf(order.vat_cents)}\nTotal incl. VAT: ${chf(order.total_cents)}\nDelivery: ${order.ship_address}, ${order.ship_zip} ${order.ship_city}, Switzerland, within 4 weeks.\nYou will find the invoice on your account: ${url("/pro-space.html")}\n\nThank you for being part of MALACONDA.`,
     };
   },
 
-  /* 7. Ambassador account opened: code + link */
+  /* #8. Referral credit earned, pro (the referred venue's first order reached the minimum) */
+  referralCredit({ name, referredCompany, creditPct }) {
+    const min = SETTINGS.referral.minBoxes;
+    return {
+      subject: `Thank you for the referral: ${creditPct}% off your next order`,
+      html: layout({ preheader: `${referredCompany} has ordered a minimum of ${min} boxes.`, body:
+        label("Referral") + h1("Thank you for the referral") + p(hello(name)) +
+        p(`${strong(referredCompany)} has ordered a minimum of ${min} boxes.`) +
+        box(label("Credit earned") + `<p style="margin:0 0 6px;font:400 44px/1 ${DISPLAY};color:${C.lulo}">${esc(creditPct)}%</p><p style="margin:0;font:400 15px/1.5 ${BODY};color:${C.stone}">Enjoy ${esc(creditPct)}% off your next order. This credit cannot be paid out in cash.</p>`) +
+        button("See my credit", url("/pro-space.html")) + tagline() }),
+      text: `Thank you for the referral\n\n${helloText(name)}\n${referredCompany} has ordered a minimum of ${min} boxes.\nCredit earned: ${creditPct}%. Enjoy ${creditPct}% off your next order. This credit cannot be paid out in cash.\n${url("/pro-space.html")}\n\n${TAGLINE}`,
+    };
+  },
+
+  /* #9 (ambassador application received) was removed by the founders to keep emails to a minimum. */
+
+  /* #10. Ambassador account opened: code + link */
   ambassadorAccount({ name, email, tempPassword, code: ambCode, link }) {
     const shareLink = link || url("/?ref=" + encodeURIComponent(ambCode || ""));
     return {
-      subject: "Bienvenue parmi les ambassadeurs Malaconda",
-      html: layout({ preheader: "Votre espace, votre code et votre lien à partager.", footerNote: AUTH_NOTE, body:
-        label("Ambassadeur") + h1("Vous êtes ambassadeur") + p(hello(name)) +
-        p("Merci de porter Malaconda dans les bars, restaurants et boutiques de Suisse. Voici votre espace personnel&nbsp;: vos établissements, vos relevés mensuels et votre code à partager.") +
-        box(label("Votre code") + p(code(ambCode), "margin:0 0 14px") + label("Votre lien") + p(`<a href="${esc(shareLink)}" style="color:${C.paper};word-break:break-all">${esc(shareLink)}</a>`, "margin:0")) +
-        box(label("Vos accès") + p("Email&nbsp;: " + strong(email), "margin:0 0 10px") + p("Mot de passe temporaire&nbsp;: " + code(tempPassword), "margin:0 0 10px") + p("Vous devrez le changer à la première connexion.", "margin:0;font-size:14px")) +
-        button("Ouvrir mon espace", url("/ambassador-space.html")) +
-        p("Votre relevé de commissions est disponible chaque mois dans votre espace.", "margin-bottom:0") }),
-      text: `Bienvenue parmi les ambassadeurs Malaconda.\n\n${helloText(name)}\nCode: ${ambCode}\nLien: ${shareLink}\nEmail: ${email}\nMot de passe temporaire: ${tempPassword} (à changer à la première connexion)\n${url("/ambassador-space.html")}`,
+      subject: "You are a MALACONDA ambassador",
+      html: layout({ preheader: "Your personal ambassador account is ready.", footerNote: AUTH_NOTE, body:
+        label("Ambassador") + h1("You are an ambassador") + p(hello(name)) +
+        p("Thank you for helping us to expand Malaconda in Switzerland.") +
+        p("Your personal ambassador account is ready. You will find your referred venues, orders, and monthly commission statements in your space.") +
+        box(label("Your code") + p(code(ambCode), "margin:0 0 14px") + label("Your link") + p(`<a href="${esc(shareLink)}" style="color:${C.paper};word-break:break-all">${esc(shareLink)}</a>`, "margin:0")) +
+        access(email, tempPassword) +
+        button("Open my space", url("/ambassador-space.html")) + tagline() }),
+      text: `You are an ambassador\n\n${helloText(name)}\nThank you for helping us to expand Malaconda in Switzerland. Your personal ambassador account is ready.\nCode: ${ambCode}\nLink: ${shareLink}\nEmail: ${email}\nTemporary password: ${tempPassword} (you will create a new one the first time you log in)\n${url("/ambassador-space.html")}\n\n${TAGLINE}`,
     };
   },
 
-  /* 8. Monthly commission statement available (no prices, no order lines) */
-  commissionStatement({ name, period, totalCents, number }) {
+  /* #11. Monthly commission statement available, ambassador (no prices, no order lines) */
+  commissionStatement({ name, period }) {
     return {
-      subject: `Votre relevé de commissions (${period})`,
-      html: layout({ preheader: `Relevé ${number || ""} disponible dans votre espace ambassadeur.`, body:
-        label("Relevé mensuel") + h1("Votre relevé est disponible") + p(hello(name)) +
-        p(`Votre relevé de commissions pour ${strong(period)} est prêt${number ? ` (n° ${esc(number)})` : ""}.`) +
-        (totalCents != null ? box(label("Commission du mois") + `<p style="margin:0;font:500 28px/1.2 ${MONO};color:${C.paper}">${chf(totalCents)}</p>`) : "") +
-        p("Le versement est effectué par virement bancaire sur l’IBAN enregistré dans votre espace.") +
-        button("Voir mon relevé", url("/ambassador-space.html")) +
-        p("Merci pour votre engagement.", "margin-bottom:0") }),
-      text: `Votre relevé de commissions (${period}) est disponible dans votre espace ambassadeur: ${url("/ambassador-space.html")}`,
+      subject: `Your statement for ${period} is ready`,
+      html: layout({ preheader: "Your commission statement is ready in your space.", body:
+        label("Monthly statement") + h1("Your statement is ready") + p(hello(name)) +
+        p(`Your commission statement for ${strong(period)} is ready.`) +
+        p("Payment will be made by bank transfer to the IBAN registered in your account.") +
+        button("View my statement", url("/ambassador-space.html")) + tagline() }),
+      text: `Your statement is ready\n\n${helloText(name)}\nYour commission statement for ${period} is ready.\nPayment will be made by bank transfer to the IBAN registered in your account.\n${url("/ambassador-space.html")}\n\n${TAGLINE}`,
     };
   },
 
-  /* 9. Referral credit earned (pro-to-pro) */
-  referralCredit({ name, referredCompany, creditPct }) {
-    return {
-      subject: `Vous gagnez ${creditPct} % de crédit sur votre prochaine commande`,
-      html: layout({ preheader: `${referredCompany} a passé sa première commande grâce à vous.`, body:
-        label("Recommandation") + h1("Merci pour la recommandation") + p(hello(name)) +
-        p(`${strong(referredCompany)} vient de passer sa première commande, grâce à vous.`) +
-        box(label("Crédit gagné") + `<p style="margin:0 0 6px;font:400 44px/1 ${DISPLAY};color:${C.lulo}">${esc(creditPct)} %</p><p style="margin:0;font:400 15px/1.5 ${BODY};color:${C.stone}">de réduction sur vos prochaines commandes (15 % au maximum par commande, le reste est reporté). Ce crédit n’est pas remboursable en espèces.</p>`) +
-        button("Voir mon crédit", url("/pro-space.html")) +
-        p("Merci de faire connaître Malaconda.", "margin-bottom:0") }),
-      text: `${referredCompany} a passé sa première commande grâce à vous. Vous gagnez ${creditPct} % de crédit sur vos prochaines commandes (15 % max. par commande).`,
-    };
-  },
-
-  /* 10. Password reset (link valid 1 hour) */
+  /* #12. New password (link valid 1 hour) */
   passwordReset({ name, resetUrl }) {
     return {
-      subject: "Réinitialisez votre mot de passe Malaconda",
-      html: layout({ preheader: "Ce lien est valable une heure.", footerNote: AUTH_NOTE, body:
-        label("Sécurité") + h1("Nouveau mot de passe") + p(hello(name)) +
-        p("Vous avez demandé à réinitialiser votre mot de passe. Cliquez sur le bouton ci-dessous pour en choisir un nouveau. Ce lien est valable une heure.") +
-        button("Choisir un mot de passe", safeUrl(resetUrl)) +
-        p("Le bouton ne fonctionne pas&nbsp;? Copiez ce lien dans votre navigateur&nbsp;:", "margin-bottom:6px;font-size:14px") +
+      subject: "Choose a new MALACONDA password",
+      html: layout({ preheader: "This link is valid for one hour.", footerNote: AUTH_NOTE, body:
+        h1("New password") + p(hello(name)) +
+        p("You requested to reset your password.") +
+        p("Click the button below to choose a new password. This link is valid for one hour.") +
+        button("Choose new password", safeUrl(resetUrl)) +
+        p("Button not working? Copy and paste this link into your browser:", "margin-bottom:6px;font-size:14px") +
         p(`<a href="${esc(resetUrl)}" style="color:${C.paper};word-break:break-all">${esc(resetUrl)}</a>`, "font-size:13px") +
-        p("Si vous n’êtes pas à l’origine de cette demande, ignorez cet email&nbsp;: votre mot de passe actuel reste inchangé.", "margin-bottom:0;font-size:14px") }),
-      text: `${helloText(name)}\nPour choisir un nouveau mot de passe (lien valable 1 heure): ${resetUrl}\nSi vous n’êtes pas à l’origine de cette demande, ignorez cet email.`,
+        p("If you did not request a password reset, simply ignore this email. Your current password will remain unchanged.", "font-size:14px") + tagline() }),
+      text: `${helloText(name)}\nYou requested to reset your password. Choose a new one here (valid for one hour): ${resetUrl}\nIf you did not request a password reset, simply ignore this email. Your current password will remain unchanged.\n\n${TAGLINE}`,
     };
   },
 
-  /* 11. Contact form acknowledgement */
+  /* #13. Message received (contact form) */
   contactReceived({ name }) {
     return {
-      subject: "Nous avons bien reçu votre message",
-      html: layout({ preheader: "Nous vous répondons rapidement.", footerNote: "Vous recevez cet email car vous nous avez écrit depuis malaconda.com.", body:
-        label("Contact") + h1("Message bien reçu") + p(hello(name)) +
-        p("Merci de nous avoir écrit. Nous lisons chaque message et vous répondons dès que possible.", "margin-bottom:0") }),
-      text: `${helloText(name)}\nMerci pour votre message, nous vous répondons dès que possible.`,
+      subject: "Message received",
+      html: layout({ preheader: "We will get back to you as soon as possible.", footerNote: "You are receiving this email because you wrote to us on malaconda.com.", body:
+        h1("Message received") + p(hello(name)) +
+        p("Thank you for getting in touch with MALACONDA.") +
+        p("We will get back to you as soon as possible.") + tagline() }),
+      text: `${helloText(name)}\nThank you for getting in touch with MALACONDA.\nWe will get back to you as soon as possible.\n\n${TAGLINE}`,
     };
   },
 };
