@@ -62,7 +62,7 @@ test("public pages never show the wholesale price or commission rates", () => {
   for (const f of PUBLIC) {
     const t = textOf(read(f));
     assert.ok(!/CHF\s?26/.test(t), `${f} shows the pro price`);
-    assert.ok(!/commission|5\s?%/i.test(t), `${f} mentions commission or a percentage`);
+    assert.ok(!/\b5\s?%/.test(t), `${f} shows a commission rate`);   // the founders' copy names the commission, never its rate
   }
 });
 
@@ -113,8 +113,9 @@ test("fonts follow the brand guide: no other font family is declared", () => {
 
 test("Pros page copy follows the founders' wording", () => {
   const t = read("for-pros.html");
-  assert.ok(t.includes("The best bars, restaurants, clubs, hotels and distributors serve Malaconda to their clients."));
-  assert.ok(t.includes("The more you buy, the cheaper it gets."));
+  assert.ok(t.includes("From bars and clubs to hotels, restaurants and events, MALACONDA is made to be discovered, served and shared."));
+  assert.ok(t.includes("Enjoy progressively better rates as your volumes grow."));
+  assert.ok(t.includes("Ready to serve the temptation?"));
   assert.ok(!t.includes("Order tracking"), "order tracking benefit was removed");
   assert.ok(!t.includes("Pour it at your bar"), "pros are not only bars");
   assert.ok(/object-position:50% 100%/.test(t), "hero photo is centred at the bottom so the hands are not cut");
@@ -204,20 +205,23 @@ test("the picker keeps the bottle still: sticky stage, section grows instead of 
 test("the founders' brand copy, ingredients, origin and delivery times are on the site, translated", () => {
   const home = read("index.html"), tr = read("i18n.js");
   const copy = [
-    "Some days are scripted. Malaconda is for the moment you break the script.",
-    "dangerous amount of fizz", "Switzerland’s Barkeeper of the Year",
-    "It carries the bite of the snake. Born where the jungle keeps watch.",
+    "Some of the world’s most extraordinary flavours have been around for generations.",
+    "every bottle brings together 20% real fruit purée", "Switzerland’s Bartender of the Year",
+    "A drink made to be discovered, shared, mixed and remembered.",
+    "How do you like yours?", "Perfectly sized at 200 ml for enjoying straight from the bottle, poured over ice or mixed to perfection.",
     "The one that bites back.", "She doesn't need to bite. She charms.",
     "Carbonated coconut water, lulo purée (20%), peppermint tea, cane sugar, citric acid.",
     "Carbonated coconut water, guava purée (20%), cane sugar, citric acid, natural guava essence.",
     "Made in Switzerland",
-    "Give your customers something that makes them slither through your doors.", "Stock the temptation. Watch them surrender.",
-    "You already know the right businesses.", "Be the one who brought the snake to town.", "Get rewarded for every order.",
-    "Order. Partnerships. Press.", "Or just a bite of curiosity.",
+    "Born from Latin fruit heritage, shaped by decades of international fruit trade and a passion for building brands.",
+    "MALACONDA. Embrace the temptation.",
+    "Give your customers something different. Bring MALACONDA to your venue and let them discover a new temptation.",
+    "Good connections should pay off.", "Bring the snake to town and earn a commission on every order.",
+    "Business enquiries, partnerships, press or just a little curiosity.",
   ];
   for (const c of copy) assert.ok(home.includes(c), `home has: ${c}`);
-  for (const c of copy.filter((x) => x.length > 20 && !x.startsWith("dangerous") && !x.startsWith("Switzerland"))) assert.ok(tr.includes(`"${c}"`) || tr.includes(c), `translated: ${c}`);
-  assert.ok(!/Bartender/.test(home + tr), "the title is Barkeeper of the Year everywhere");
+  for (const c of copy.filter((x) => x.length > 20 && !x.startsWith("every bottle") && !x.startsWith("Switzerland"))) assert.ok(tr.includes(`"${c}"`) || tr.includes(c), `translated: ${c}`);
+  assert.ok(!/Barkeeper/.test(home), "the title is Bartender of the Year everywhere (founders' copy, Nov 2026)");
   assert.ok(!home.includes("steviol") && !home.includes("TEMPORARY"), "the placeholder ingredient lists are gone");
   // delivery: shop 5 working days or free pickup, pros 4 weeks
   for (const f of ["index.html", "shop.html", "checkout.html"]) assert.ok(/5 working days/.test(read(f)), `${f} promises 5 working days`);
