@@ -714,6 +714,7 @@ dialog form > .label:first-of-type { margin-top:var(--s2); }
 /* photo card: text and badge centred on the same axis */
 .photo__card { align-items:center; }
 .photo__card .small { margin:0; }
+.photo__q { display:block; margin-bottom:6px; font:500 12px/1.4 var(--font-mono); letter-spacing:.08em; text-transform:uppercase; color:#E9E9E1; }   /* the card's question above its sentence */
 .shopfab { height:52px; box-sizing:border-box; }
 
 /* floating Shop now: it stays white all the way (no grey stage); only the label fades and the shadow follows the shape */
