@@ -205,22 +205,22 @@ test("the picker keeps the bottle still: sticky stage, section grows instead of 
 test("the founders' brand copy, ingredients, origin and delivery times are on the site, translated", () => {
   const home = read("index.html"), tr = read("i18n.js");
   const copy = [
-    "Some of the world’s most extraordinary flavours have been around for generations.",
-    "every bottle brings together 20% real fruit purée", "Switzerland’s Bartender of the Year",
-    "A drink made to be discovered, shared, mixed and remembered.",
-    "How do you like yours?", "Perfectly sized at 200 ml for enjoying straight from the bottle, poured over ice or mixed to perfection.",
+    "Some of the world’s most special flavours have been around for generations.",
+    "they’ve been missing from the world of premium sodas", "Switzerland’s Bartender of the Year",
+    "How do you like yours?", "Perfectly sized at 200 ml for enjoying straight from the bottle or mixed to perfection.",
     "The one that bites back.", "She doesn't need to bite. She charms.",
     "Carbonated coconut water, lulo purée (20%), peppermint tea, cane sugar, citric acid.",
     "Carbonated coconut water, guava purée (20%), cane sugar, citric acid, natural guava essence.",
     "Made in Switzerland",
-    "Born from Latin fruit heritage, shaped by decades of international fruit trade and a passion for building brands.",
+    "MALACONDA captures the spirit of following your curiosity, giving in to temptation and embracing the irresistible charm of the snake.",
+    "Together with Switzerland’s Bartender of the Year, we reimagined flavours like Lulo and Guava into something new.",
     "MALACONDA. Embrace the temptation.",
     "Give your customers something different. Bring MALACONDA to your venue and let them discover a new temptation.",
     "Good connections should pay off.", "Bring the snake to town and earn a commission on every order.",
     "Business enquiries, partnerships, press or just a little curiosity.",
   ];
   for (const c of copy) assert.ok(home.includes(c), `home has: ${c}`);
-  for (const c of copy.filter((x) => x.length > 20 && !x.startsWith("every bottle") && !x.startsWith("Switzerland"))) assert.ok(tr.includes(`"${c}"`) || tr.includes(c), `translated: ${c}`);
+  for (const c of copy.filter((x) => x.length > 20 && !x.startsWith("they’ve") && !x.startsWith("Switzerland"))) assert.ok(tr.includes(`"${c}"`) || tr.includes(c), `translated: ${c}`);
   assert.ok(!/Barkeeper/.test(home), "the title is Bartender of the Year everywhere (founders' copy, Nov 2026)");
   assert.ok(!home.includes("steviol") && !home.includes("TEMPORARY"), "the placeholder ingredient lists are gone");
   // delivery: shop 5 working days or free pickup, pros 4 weeks
@@ -241,4 +241,14 @@ test("the hero paragraph is wide enough for three lines on a desktop", () => {
   const css = read("proto.css");
   assert.ok(/\.hero__intro \{ max-width:min\(100%,112ch\); \}/.test(css));
   assert.ok(!/\.hero__intro \{[^}]*max-width:(44|60)ch/.test(css), "no older narrow limit left");
+});
+
+test("the shorter founders' copy (Nov 2026): 200 ml lives in the photo card, no separate section, short story", () => {
+  const home = read("index.html");
+  const card = home.slice(home.indexOf("data-photo-card"), home.indexOf("</aside>"));
+  assert.ok(card.includes("How do you like yours?") && card.includes("Perfectly sized at 200 ml"), "the clickable card on the bottles-on-ice photo carries the question and the 200 ml line");
+  assert.ok(!/class="block serve"/.test(home), "no separate How do you like yours? section");
+  assert.ok(!home.includes("A drink made to be discovered") && !home.includes("Born from Latin fruit heritage") && !home.includes("means bad in Spanish"), "the longer texts are gone");
+  const intro = home.match(/<p class="hero__intro">([^<]*)<\/p>/)[1];
+  assert.ok(intro.length < 360, "the introduction is short");
 });
