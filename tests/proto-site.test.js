@@ -213,7 +213,7 @@ test("the founders' brand copy, ingredients, origin and delivery times are on th
     "Carbonated coconut water, guava purée (20%), cane sugar, citric acid, natural guava essence.",
     "Made in Switzerland",
     "MALACONDA captures the spirit of following your curiosity, giving in to temptation and embracing the irresistible charm of the snake.",
-    "Together with Switzerland’s Bartender of the Year, we reimagined flavours like Lulo and Guava into something new.",
+    "Together with Switzerland’s Barkeeper of the Year, we reimagined flavors like Lulo and Guava into something new.",
     "MALACONDA. Embrace the temptation.",
     "Give your customers something different. Bring MALACONDA to your venue and let them discover a new temptation.",
     "Good connections should pay off.", "Bring the snake to town and earn a commission on every order.",
@@ -221,7 +221,8 @@ test("the founders' brand copy, ingredients, origin and delivery times are on th
   ];
   for (const c of copy) assert.ok(home.includes(c), `home has: ${c}`);
   for (const c of copy.filter((x) => x.length > 20 && !x.startsWith("they’ve") && !x.startsWith("Switzerland"))) assert.ok(tr.includes(`"${c}"`) || tr.includes(c), `translated: ${c}`);
-  assert.ok(!/Barkeeper/.test(home), "the title is Bartender of the Year everywhere (founders' copy, Nov 2026)");
+  // the story says "Barkeeper of the Year" (founders' story copy, 17 Nov 2026); the rest of the home page says Bartender
+  assert.ok(!/Barkeeper/.test(home.replace(/<section class="band-flower" id="story"[\s\S]*?<\/section>/, "")), "outside the story, the title is Bartender of the Year");
   assert.ok(!home.includes("steviol") && !home.includes("TEMPORARY"), "the placeholder ingredient lists are gone");
   // delivery: shop 5 working days or free pickup, pros 4 weeks
   for (const f of ["index.html", "shop.html", "checkout.html"]) assert.ok(/5 working days/.test(read(f)), `${f} promises 5 working days`);
